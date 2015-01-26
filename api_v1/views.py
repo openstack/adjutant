@@ -14,6 +14,7 @@ from django.conf import settings
 
 
 def create_token(registration):
+    # needs to be made configurable.
     expire = timezone.now() + timedelta(hours=24)
     uuid = uuid4().hex
     token = Token.objects.create(

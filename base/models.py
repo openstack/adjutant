@@ -88,6 +88,10 @@ class NewUser(BaseAction):
         # user = keystone.users.get(self.username)
         user = None
 
+        # TODO(Adriant): Ensure that the project_id given is for a
+        # real project, and that it matches the project in the token
+        # if the token isn't an admin one.
+
         if user:
             if user.email == self.email:
                 self.action.valid = True
@@ -128,6 +132,8 @@ class NewProject(BaseAction):
         'username',
         'email'
     ]
+
+    default_role = "project_owner"
 
     token_fields = ['password']
 
@@ -176,10 +182,10 @@ class NewProject(BaseAction):
         if self.valid:
             if self.action.state == "default":
                 return [('User %s has been created, and given role %s in project %s.'
-                         % (self.username, self.role, self.project_id)), ]
+                         % (self.username, self.default_role, self.project_name)), ]
             elif self.action.state == "existing":
                 return [('Existing user %s has been given role %s in project %s.'
-                         % (self.username, self.role, self.project_id)), ]
+                         % (self.username, self.default_role, self.project_name)), ]
 
 
 class ResetUser(BaseAction):
