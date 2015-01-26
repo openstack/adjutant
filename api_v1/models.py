@@ -1,9 +1,16 @@
 from django.db import models
 import json
+from uuid import uuid4
+
+
+def hex_uuid():
+    return uuid4().hex
 
 
 class Registration(models.Model):
     """"""
+    uuid = models.CharField(max_length=200, default=hex_uuid,
+                            primary_key=True)
     # who is this:
     reg_ip = models.GenericIPAddressField()
 
@@ -30,7 +37,7 @@ class Registration(models.Model):
         return {
             "ip_address": self.reg_ip, "notes": json.loads(self.notes),
             "approved": self.approved, "completed": self.completed,
-            "actions": actions, "id": self.id
+            "actions": actions, "uuid": self.uuid
         }
 
 
@@ -38,5 +45,5 @@ class Token(models.Model):
     """"""
 
     registration = models.ForeignKey(Registration)
-    token = models.TextField(primary_key=True)
+    token = models.CharField(max_length=200, primary_key=True)
     expires = models.DateTimeField()

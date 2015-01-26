@@ -13,6 +13,17 @@ from base.models import ACTION_CLASSES
 from django.conf import settings
 
 
+def create_token(registration):
+    expire = timezone.now() + timedelta(hours=24)
+    uuid = uuid4().hex
+    token = Token.objects.create(
+        registration=registration,
+        token=uuid,
+        expires=expire
+    )
+    token.save()
+
+
 class RegistrationList(APIView):
 
     def get(self, request, format=None):
@@ -25,8 +36,9 @@ class RegistrationList(APIView):
 
 class RegistrationDetail(APIView):
 
-    def get(self, request, id, format=None):
-        registration = Registration.objects.get(id=id)
+    def get(self, request, uuid, format=None):
+        print uuid
+        registration = Registration.objects.get(uuid=uuid)
         return Response(registration.as_dict())
 
     def patch(self, request, id, format=None):
@@ -38,16 +50,20 @@ class RegistrationDetail(APIView):
 
 class RegistrationApprove(APIView):
 
-    def post(self, request, id, format=None):
-        registration = Registration.objects.get(id=id)
+    def post(self, request, uuid, format=None):
+        registration = Registration.objects.get(uuid=uuid)
         registration.approved = True
 
         need_token = False
         valid = True
         notes = json.loads(registration.notes)
 
+        actions = []
+
         for action in registration.actions:
-            notes[action.__unicode__()] += action.post_approve()
+            action_model = action.get_action()
+            actions.append(action_model)
+            notes[action_model.__unicode__()] += action_model.post_approve()
 
             if not action.valid:
                 valid = False
@@ -59,10 +75,10 @@ class RegistrationApprove(APIView):
 
         if valid:
             if need_token:
-                self.create_token(registration)
+                create_token(registration)
                 return Response({'notes': ['created token']}, status=200)
             else:
-                for action in registration.actions:
+                for action in actions:
                     notes[action.__unicode__()] += [action.submit(data),]
 
                 registration.notes = json.dumps(notes)
@@ -181,16 +197,6 @@ class ActionView(APIView):
                 errors.update(value['serializer'].errors)
             return {'errors': errors}
 
-    def create_token(self, registration):
-        expire = timezone.now() + timedelta(hours=24)
-        uuid = uuid4().hex
-        token = Token.objects.create(
-            registration=registration,
-            token=uuid,
-            expires=expire
-        )
-        token.save()
-
 
 class CreateProject(ActionView):
 
@@ -250,7 +256,7 @@ class AttachUser(ActionView):
             registration.save()
 
             if valid:
-                self.create_token(registration)
+                create_token(registration)
                 return Response({'notes': ['created token']}, status=200)
 
 
