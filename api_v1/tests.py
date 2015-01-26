@@ -39,8 +39,8 @@ class WorkFlowTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         new_registration = Registration.objects.all()[0]
-        url = "/api_v1/registration/" + new_registration.uuid + "/approve"
-        response = self.client.post(url, {}, format='json')
+        url = "/api_v1/registration/" + new_registration.uuid
+        response = self.client.post(url, {'approved': True}, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         new_token = Token.objects.all()[0]

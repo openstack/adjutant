@@ -7,8 +7,6 @@ urlpatterns = patterns(
     # url(r'^$', 'user_reg.views.home', name='home'),
     # url(r'^blog/', include('blog.urls')),
 
-    url(r'^registration/(?P<uuid>\w+)/approve',
-        views.RegistrationApprove.as_view()),
     url(r'^registration/(?P<uuid>\w+)', views.RegistrationDetail.as_view()),
     url(r'^registration', views.RegistrationList.as_view()),
     url(r'^project', views.CreateProject.as_view()),

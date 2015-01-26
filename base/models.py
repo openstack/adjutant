@@ -6,7 +6,7 @@ from serializers import NewUserSerializer, NewProjectSerializer
 
 
 class Action(models.Model):
-
+    """Database model representation of the related action."""
     action_name = models.CharField(max_length=200)
     action_data = models.TextField()
     state = models.CharField(max_length=200, default="default")
@@ -17,16 +17,24 @@ class Action(models.Model):
     created = models.DateTimeField(default=timezone.now)
 
     def get_action(self):
+        """"""
         data = json.loads(self.action_data)
         return ACTION_CLASSES[self.action_name][0](data=data,
-                                                            action_model=self)
+                                                   action_model=self)
 
 
 class BaseAction(object):
+    """Base class for the object wrapping around the database model.
+       Setup to allow multiple action types and different internal logic
+       per type but built from a single database type.
+       - 'required' defines what fields to setup from the data.
+       - 'token_fields' defined which fields are needed by this action
+         at the token stage."""
 
     def __init__(self, data, action_model=None, registration=None):
-        # constructor builds a NEW object to DB,
-        # or loads one from an action
+        """Build itself around an existing database model,
+           or build itself and creates a new database model.
+           Sets up required data as fields."""
 
         for field in self.required:
             field_data = data[field]
@@ -71,7 +79,10 @@ class BaseAction(object):
 
 
 class NewUser(BaseAction):
-    """"""
+    """Setup a new user with a role on the given project.
+       Creates the user if they don't exist, otherwise
+       if the username and email for the request match the
+       existing one, will simply add the project role."""
 
     required = [
         'username',
@@ -91,6 +102,8 @@ class NewUser(BaseAction):
         # TODO(Adriant): Ensure that the project_id given is for a
         # real project, and that it matches the project in the token
         # if the token isn't an admin one.
+        # TODO(Adriant): Figure out how to best propagate the request
+        # data to here, or if the above validation needs to happen elsewhere.
 
         if user:
             if user.email == self.email:
@@ -126,7 +139,9 @@ class NewUser(BaseAction):
 
 
 class NewProject(BaseAction):
-    """"""
+    """Similar functionality as the NewUser action,
+       but will create the project if valid. Will setup
+       the user (existing or new) with the 'default_role'."""
     required = [
         'project_name',
         'username',
@@ -189,12 +204,8 @@ class NewProject(BaseAction):
 
 
 class ResetUser(BaseAction):
-    """"""
+    """Simple action to reset a password for a given user."""
 
-    # The validity of these fields need to be checked
-    # via the api, so that simple stuff like
-    # "is this a valid username format"
-    # and other checks we can send back to the user safely
     username = models.CharField(max_length=200)
     email = models.EmailField()
 
@@ -221,6 +232,9 @@ class ResetUser(BaseAction):
         return msg
 
 
+# this needs to be moved to settings... somehow, or some better plugin
+# functionality needs to be setup. Maybe all app model functions attach their
+# 'ACTION_CLASSES' to a global one in settings on import.
 ACTION_CLASSES = {
     'NewUser': (NewUser, NewUserSerializer),
     'NewProject': (NewProject, NewProjectSerializer)

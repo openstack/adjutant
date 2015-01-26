@@ -16,6 +16,8 @@ from django.conf import settings
 def create_token(registration):
     # needs to be made configurable.
     expire = timezone.now() + timedelta(hours=24)
+
+    # is this a good way to create tokens?
     uuid = uuid4().hex
     token = Token.objects.create(
         registration=registration,
@@ -28,6 +30,8 @@ def create_token(registration):
 class RegistrationList(APIView):
 
     def get(self, request, format=None):
+        """A list of dict representations of Registration objects
+           and their related actions."""
         registrations = Registration.objects.all()
         reg_list = []
         for registration in registrations:
@@ -38,58 +42,58 @@ class RegistrationList(APIView):
 class RegistrationDetail(APIView):
 
     def get(self, request, uuid, format=None):
-        print uuid
+        """Dict representation of a Registration object
+           and its related actions."""
         registration = Registration.objects.get(uuid=uuid)
         return Response(registration.as_dict())
 
-    def patch(self, request, id, format=None):
-        pass
-
-    def delete(self, request, id, format=None):
-        pass
-
-
-class RegistrationApprove(APIView):
-
     def post(self, request, uuid, format=None):
-        registration = Registration.objects.get(uuid=uuid)
-        registration.approved = True
+        """Will approve the Registration specified,
+           followed by running the post_approve ations
+           and if valid will setup and create a related token. """
+        if request.data.get('approved', False) == True:
+            registration = Registration.objects.get(uuid=uuid)
+            registration.approved = True
 
-        need_token = False
-        valid = True
-        notes = json.loads(registration.notes)
+            need_token = False
+            valid = True
+            notes = json.loads(registration.notes)
 
-        actions = []
+            actions = []
 
-        for action in registration.actions:
-            action_model = action.get_action()
-            actions.append(action_model)
-            notes[action_model.__unicode__()] += action_model.post_approve()
+            for action in registration.actions:
+                action_model = action.get_action()
+                actions.append(action_model)
+                notes[action_model.__unicode__()] += action_model.post_approve()
 
-            if not action.valid:
-                valid = False
-            if action.need_token:
-                need_token = True
+                if not action.valid:
+                    valid = False
+                if action.need_token:
+                    need_token = True
 
-        registration.notes = json.dumps(notes)
-        registration.save()
+            registration.notes = json.dumps(notes)
+            registration.save()
 
-        if valid:
-            if need_token:
-                create_token(registration)
-                return Response({'notes': ['created token']}, status=200)
-            else:
-                for action in actions:
-                    notes[action.__unicode__()] += [action.submit(data),]
+            if valid:
+                if need_token:
+                    create_token(registration)
+                    return Response({'notes': ['created token']}, status=200)
+                else:
+                    for action in actions:
+                        notes[action.__unicode__()] += [action.submit(data),]
 
-                registration.notes = json.dumps(notes)
-                registration.completed = True
-                registration.save()
+                    registration.notes = json.dumps(notes)
+                    registration.completed = True
+                    registration.save()
 
-            return Response({'notes': notes}, status=200)
+                return Response({'notes': notes}, status=200)
+        else:
+            return Response({'approve': ["this field is required."]}, status=400)
+
 
 
 class TokenList(APIView):
+    """Admin functionality for managing monitoring tokens."""
 
     def get(self, request, format=None):
         return Response({'stuff': 'things'})
@@ -101,6 +105,8 @@ class TokenList(APIView):
 class TokenDetail(APIView):
 
     def get(self, request, id, format=None):
+        """Returns a response with the list of required fields
+           and what actions those go towards."""
         token = Token.objects.get(token=id)
 
         required_fields = set()
@@ -116,6 +122,9 @@ class TokenDetail(APIView):
                          'required_fields': required_fields})
 
     def post(self, request, id, format=None):
+        """Ensures the required fields are present,
+           will then pass those to the actions via the submit
+           function."""
         token = Token.objects.get(token=id)
 
         required_fields = set()
@@ -153,8 +162,18 @@ class TokenDetail(APIView):
 
 
 class ActionView(APIView):
+    """Base class for api calls that start a Registration.
+       Main functionality is the process_actions for dealing
+       with setup and validation of actions.
+       Until it is moved to settings, 'default_action' is a
+       required hardcoded field."""
 
     def process_actions(self, request):
+        """Will ensure the request data contains the required data
+           based on the action serializer, and if present will create
+           a Registration and the linked actions, attaching notes
+           based on running of the the pre_approve validation
+           function on all the actions."""
 
         actions = [self.default_action,]
 
@@ -204,6 +223,7 @@ class CreateProject(ActionView):
     default_action = "NewProject"
 
     def post(self, request, format=None):
+        """Runs internal process_actions and sends back notes or errors."""
         processed = self.process_actions(request)
 
         errors = processed.get('errors', None)
@@ -220,7 +240,11 @@ class AttachUser(ActionView):
     # Need decorators?:
     # @admin_or_owner
     def post(self, request, format=None):
-
+        """This endpoint required either Admin access or the 
+           request to come from a project_owner.
+           As such this Registration is considered pre-approved.
+           Runs process_actions, then does the approve and 
+           post_approve validation, and creates a Token if valid."""
         processed = self.process_actions(request)
 
         errors = processed.get('errors', None)
