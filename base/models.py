@@ -2,7 +2,9 @@ from django.db import models
 import json
 from django.utils import timezone
 # from openstack_clients import get_keystoneclient
-from serializers import NewUserSerializer, NewProjectSerializer
+from serializers import (NewUserSerializer, NewProjectSerializer,
+                         ResetUserSerializer)
+from django.conf import settings
 
 
 class Action(models.Model):
@@ -19,8 +21,8 @@ class Action(models.Model):
     def get_action(self):
         """"""
         data = json.loads(self.action_data)
-        return ACTION_CLASSES[self.action_name][0](data=data,
-                                                   action_model=self)
+        return settings.ACTION_CLASSES[self.action_name][0](
+            data=data, action_model=self)
 
 
 class BaseAction(object):
@@ -94,11 +96,21 @@ class NewUser(BaseAction):
     token_fields = ['password']
 
     def _validate(self):
+        # TODO(Adriant): Figure out how to set this up as a generic
+        # user store object/module that can handle most of this and
+        # be made pluggable down the line.
         # keystone = get_keystoneclient()
+        # try:
+            # HACK(Adriant): Not exactly a hack, but a way to get user by
+            # name based on how the commandline handles it.
+            # user = keystone.users.find(name=self.username)
 
-        # user = keystone.users.get(self.username)
+        # need to ideally except the right exception, NotFound I believe
+        # except Exception as e:
+        #     user = None
+        #     print e
         user = None
-
+        
         # TODO(Adriant): Ensure that the project_id given is for a
         # real project, and that it matches the project in the token
         # if the token isn't an admin one.
@@ -117,7 +129,7 @@ class NewUser(BaseAction):
         else:
             self.action.valid = True
             self.action.save()
-            return ['No user present with existing username']
+            return ['No user present with username']
 
     def _pre_approve(self):
         return self._validate()
@@ -130,10 +142,21 @@ class NewUser(BaseAction):
         self._validate()
 
         if self.valid:
+            # keystone = get_keystoneclient()
+
             if self.action.state == "default":
+                # user = keystone.users.create(
+                #     name=self.username, password=token_data['password'],
+                #     email=self.email, tenant_id=self.project_id)
+                # role = keystone.roles.find(name=self.role)
+                # keystone.roles.add_user_role(user, role, self.project_id)
+
                 return [('User %s has been created, and given role %s in project %s.'
                          % (self.username, self.role, self.project_id)), ]
             elif self.action.state == "existing":
+                # user = keystone.users.find(name=self.username)
+                # role = keystone.roles.find(name=self.role)
+                # keystone.roles.add_user_role(user, role, self.project_id)
                 return [('Existing user %s has been given role %s in project %s.'
                          % (self.username, self.role, self.project_id)), ]
 
@@ -142,6 +165,7 @@ class NewProject(BaseAction):
     """Similar functionality as the NewUser action,
        but will create the project if valid. Will setup
        the user (existing or new) with the 'default_role'."""
+
     required = [
         'project_name',
         'username',
@@ -155,9 +179,15 @@ class NewProject(BaseAction):
     def _validate(self):
         # keystone = get_keystoneclient()
 
-        # user = keystone.users.get(self.username)
-        # project = keystone.users.get(self.username)
+        # try:
+        #     user = keystone.users.find(name=self.username)
+        # except Exception:
+        #     user = None
         user = None
+        # try:
+        #     project = keystone.users.find(name=self.project_name)
+        # except Exception:
+        #     project = None
         project = None
 
         notes = []
@@ -165,8 +195,7 @@ class NewProject(BaseAction):
         if user:
             if user.email == self.email:
                 self.action.valid = True
-                self.action.need_token = True
-                self.action.state = "attach"
+                self.action.state = "existing"
                 self.action.save()
                 notes.append("Existing user '%s' with matching email." %
                              self.email)
@@ -176,13 +205,16 @@ class NewProject(BaseAction):
         else:
             self.action.valid = True
             self.action.save()
-            notes.append("No user present with existing username '%s'." %
+            notes.append("No user present with username '%s'." %
                          self.username)
 
         if project:
+            self.action.valid = False
+            self.action.save()
             notes.append("Existing project with name '%s'." % self.project_name)
         else:
             notes.append("No existing project with name '%s'." % self.project_name)
+
         return notes
 
     def _pre_approve(self):
@@ -196,9 +228,11 @@ class NewProject(BaseAction):
 
         if self.valid:
             if self.action.state == "default":
+
                 return [('User %s has been created, and given role %s in project %s.'
                          % (self.username, self.default_role, self.project_name)), ]
             elif self.action.state == "existing":
+
                 return [('Existing user %s has been given role %s in project %s.'
                          % (self.username, self.default_role, self.project_name)), ]
 
@@ -216,26 +250,45 @@ class ResetUser(BaseAction):
 
     token_fields = ['password']
 
-    def _pre_approve(self):
-        msg = "Not implemented yet."
+    def _validate(self):
+        # keystone = get_keystoneclient()
 
-        return msg
+        # try:
+        #     user = keystone.users.find(name=self.username)
+        # except Exception:
+        #     user = None
+        user = None
+        
+        if user:
+            if user.email == self.email:
+                self.action.valid = True
+                self.action.need_token = True
+                self.action.save()
+                return ['Existing user with matching email.']
+            else:
+                return ['Existing user with non-matching email.']
+        else:
+            return ['No user present with username']
+
+
+    def _pre_approve(self):
+        return self._validate()   
 
     def _post_approve(self):
-        msg = "Not implemented yet."
-
-        return msg
+        return self._validate()
 
     def _submit(self, token_data):
-        msg = "Not implemented yet."
+        self._validate()
 
-        return msg
+        if self.valid:
+            return [('User %s password has been changed.' % self.username), ]
 
 
-# this needs to be moved to settings... somehow, or some better plugin
-# functionality needs to be setup. Maybe all app model functions attach their
-# 'ACTION_CLASSES' to a global one in settings on import.
-ACTION_CLASSES = {
+action_classes = {
     'NewUser': (NewUser, NewUserSerializer),
-    'NewProject': (NewProject, NewProjectSerializer)
+    'NewProject': (NewProject, NewProjectSerializer),
+    'ResetUser': (ResetUser, ResetUserSerializer)
 }
+
+# setup action classes and serializers for global access
+settings.ACTION_CLASSES.update(action_classes)

@@ -1,6 +1,7 @@
 # from keystoneclient.auth.identity import v3
 # from keystoneclient import session
 # from keystoneclient import client as KeystoneClient
+from keystoneclient.v2_0 import client
 
 # clients = {}
 
@@ -17,5 +18,12 @@ def get_keystoneclient():
     #     sess = session.Session(auth=auth)
     #     keystone = KeystoneClient.Client(session=sess)
     #     clients['keystone'] = keystone
-    pass
+    auth = client.Client(
+        username="admin",
+        password="openstack",
+        tenant_name="demo",
+        auth_url="http://localhost:5000/v2.0",
+        insecure=True
+    )
+    return auth
     

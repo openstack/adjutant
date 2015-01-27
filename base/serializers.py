@@ -15,3 +15,7 @@ class NewProjectSerializer(serializers.Serializer):
     project_name = serializers.CharField(max_length=200)
     username = serializers.CharField(max_length=200)
     email = serializers.EmailField()
+
+class ResetUserSerializer(serializers.Serializer):
+    username = serializers.CharField(max_length=200)
+    email = serializers.EmailField()

@@ -90,3 +90,6 @@ STATIC_URL = '/static/'
 
 API_ACTIONS = {}
 
+# This is populated from the various model modules dynamically:
+ACTION_CLASSES = {}
+

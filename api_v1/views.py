@@ -8,13 +8,12 @@ import json
 from django.utils import timezone
 from datetime import timedelta
 from uuid import uuid4
-from base.models import ACTION_CLASSES
 
 from django.conf import settings
 
 
 def create_token(registration):
-    # needs to be made configurable.
+    # expire needs to be made configurable.
     expire = timezone.now() + timedelta(hours=24)
 
     # is this a good way to create tokens?
@@ -88,7 +87,7 @@ class RegistrationDetail(APIView):
 
                 return Response({'notes': notes}, status=200)
         else:
-            return Response({'approve': ["this field is required."]}, status=400)
+            return Response({'approved': ["this field is required."]}, status=400)
 
 
 
@@ -125,7 +124,9 @@ class TokenDetail(APIView):
         """Ensures the required fields are present,
            will then pass those to the actions via the submit
            function."""
+
         token = Token.objects.get(token=id)
+        # TODO(Adriant): Handle expire status properly.
 
         required_fields = set()
         actions = []
@@ -183,7 +184,7 @@ class ActionView(APIView):
 
         valid = True
         for action in actions:
-            act_tuple = ACTION_CLASSES[action]
+            act_tuple = settings.ACTION_CLASSES[action]
 
             serializer = act_tuple[1](data=request.data)
 
@@ -216,6 +217,37 @@ class ActionView(APIView):
             for value in act_dict.values():
                 errors.update(value['serializer'].errors)
             return {'errors': errors}
+
+    def approve(self, registration):
+        registration.approved = True
+
+        action_models = registration.actions
+        actions = []
+
+        valid = True
+        for action in action_models:
+            act = action.get_action()
+            actions.append(act)
+
+            if not act.valid:
+                valid = False
+
+        if valid:
+            notes = json.loads(registration.notes)
+
+            for action in actions:
+                notes[action.__unicode__()] += action.post_approve()
+
+                if not action.valid:
+                    valid = False
+
+            registration.notes = json.dumps(notes)
+            registration.save()
+
+            if valid:
+                create_token(registration)
+                return Response({'notes': ['created token']}, status=200)
+        return Response({'notes': ['action invalid']}, status=400)
 
 
 class CreateProject(ActionView):
@@ -254,38 +286,21 @@ class AttachUser(ActionView):
 
         registration = processed['registration']
 
-        # auto approved if this endpoint is used
-        registration.approved = True
-
-        action_models = registration.actions
-        actions = []
-
-        valid = True
-        for action in action_models:
-            act = action.get_action()
-            actions.append(act)
-
-            if not act.valid:
-                valid = False
-
-        if valid:
-            notes = json.loads(registration.notes)
-
-            for action in actions:
-                notes[action.__unicode__()] += action.post_approve()
-
-                if not action.valid:
-                    valid = False
-
-            registration.notes = json.dumps(notes)
-            registration.save()
-
-            if valid:
-                create_token(registration)
-                return Response({'notes': ['created token']}, status=200)
+        return self.approve(registration)
 
 
 class ResetPassword(ActionView):
 
+    default_action = 'ResetUser'
+
     def post(self, request, format=None):
-        pass
+        processed = self.process_actions(request)
+
+        errors = processed.get('errors', None)
+        if errors:
+            return Response(errors, status=400)
+
+
+        registration = processed['registration']
+
+        return self.approve(registration)
