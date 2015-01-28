@@ -1,7 +1,7 @@
 from django.db import models
 import json
 from django.utils import timezone
-# from openstack_clients import get_keystoneclient
+from openstack_clients import get_keystoneclient
 from serializers import (NewUserSerializer, NewProjectSerializer,
                          ResetUserSerializer)
 from django.conf import settings
@@ -99,28 +99,37 @@ class NewUser(BaseAction):
         # TODO(Adriant): Figure out how to set this up as a generic
         # user store object/module that can handle most of this and
         # be made pluggable down the line.
-        # keystone = get_keystoneclient()
-        # try:
+        keystone = get_keystoneclient()
+        try:
             # HACK(Adriant): Not exactly a hack, but a way to get user by
             # name based on how the commandline handles it.
-            # user = keystone.users.find(name=self.username)
+            user = keystone.users.find(name=self.username)
 
-        # need to ideally except the right exception, NotFound I believe
-        # except Exception as e:
-        #     user = None
-        #     print e
-        user = None
-        
-        # TODO(Adriant): Ensure that the project_id given is for a
-        # real project, and that it matches the project in the token
-        # if the token isn't an admin one.
-        # TODO(Adriant): Figure out how to best propagate the request
-        # data to here, or if the above validation needs to happen elsewhere.
+        # need to ideally import and except the right exception: NotFound
+        except Exception as e:
+            user = None
+            print e
+
+        # user = None
+
+        keystone_user = json.loads(self.action.registration.keystone_user)
+
+        if not ("admin" in keystone_user['roles'] or
+                keystone_user['project_id'] == self.project_id):
+            return ['Project id does not match keystone user project.']
+
+        try:
+            project = keystone.users.find(name=self.project_name)
+        except Exception:
+            project = None
+
+        if not project:
+            return ['Project does exist.']
 
         if user:
             if user.email == self.email:
                 self.action.valid = True
-                self.action.need_token = True
+                self.action.need_token = False
                 self.action.state = "existing"
                 self.action.save()
                 return ['Existing user with matching email.']
@@ -133,7 +142,6 @@ class NewUser(BaseAction):
 
     def _pre_approve(self):
         return self._validate()
-        
 
     def _post_approve(self):
         return self._validate()
@@ -142,23 +150,25 @@ class NewUser(BaseAction):
         self._validate()
 
         if self.valid:
-            # keystone = get_keystoneclient()
+            keystone = get_keystoneclient()
 
             if self.action.state == "default":
-                # user = keystone.users.create(
-                #     name=self.username, password=token_data['password'],
-                #     email=self.email, tenant_id=self.project_id)
-                # role = keystone.roles.find(name=self.role)
-                # keystone.roles.add_user_role(user, role, self.project_id)
+                user = keystone.users.create(
+                    name=self.username, password=token_data['password'],
+                    email=self.email, tenant_id=self.project_id)
+                role = keystone.roles.find(name=self.role)
+                keystone.roles.add_user_role(user, role, self.project_id)
 
-                return [('User %s has been created, and given role %s in project %s.'
-                         % (self.username, self.role, self.project_id)), ]
+                return [
+                    ('User %s has been created, with role %s in project %s.'
+                     % (self.username, self.role, self.project_id)), ]
             elif self.action.state == "existing":
-                # user = keystone.users.find(name=self.username)
-                # role = keystone.roles.find(name=self.role)
-                # keystone.roles.add_user_role(user, role, self.project_id)
-                return [('Existing user %s has been given role %s in project %s.'
-                         % (self.username, self.role, self.project_id)), ]
+                user = keystone.users.find(name=self.username)
+                role = keystone.roles.find(name=self.role)
+                keystone.roles.add_user_role(user, role, self.project_id)
+                return [
+                    ('Existing user %s has been given role %s in project %s.'
+                     % (self.username, self.role, self.project_id)), ]
 
 
 class NewProject(BaseAction):
@@ -177,18 +187,18 @@ class NewProject(BaseAction):
     token_fields = ['password']
 
     def _validate(self):
-        # keystone = get_keystoneclient()
+        keystone = get_keystoneclient()
 
-        # try:
-        #     user = keystone.users.find(name=self.username)
-        # except Exception:
-        #     user = None
-        user = None
-        # try:
-        #     project = keystone.users.find(name=self.project_name)
-        # except Exception:
-        #     project = None
-        project = None
+        try:
+            user = keystone.users.find(name=self.username)
+        except Exception:
+            user = None
+        # user = None
+        try:
+            project = keystone.users.find(name=self.project_name)
+        except Exception:
+            project = None
+        # project = None
 
         notes = []
 
@@ -196,6 +206,7 @@ class NewProject(BaseAction):
             if user.email == self.email:
                 self.action.valid = True
                 self.action.state = "existing"
+                self.action.need_token = False
                 self.action.save()
                 notes.append("Existing user '%s' with matching email." %
                              self.email)
@@ -211,14 +222,16 @@ class NewProject(BaseAction):
         if project:
             self.action.valid = False
             self.action.save()
-            notes.append("Existing project with name '%s'." % self.project_name)
+            notes.append("Existing project with name '%s'." %
+                         self.project_name)
         else:
-            notes.append("No existing project with name '%s'." % self.project_name)
+            notes.append("No existing project with name '%s'." %
+                         self.project_name)
 
         return notes
 
     def _pre_approve(self):
-        return self._validate()   
+        return self._validate()
 
     def _post_approve(self):
         return self._validate()
@@ -227,14 +240,27 @@ class NewProject(BaseAction):
         self._validate()
 
         if self.valid:
+            keystone = get_keystoneclient()
+
             if self.action.state == "default":
+                project = keystone.tenants.create(self.project_name)
+                user = keystone.users.create(
+                    name=self.username, password=token_data['password'],
+                    email=self.email, tenant_id=project)
+                role = keystone.roles.find(name=self.default_role)
+                keystone.roles.add_user_role(user, role, project)
 
-                return [('User %s has been created, and given role %s in project %s.'
-                         % (self.username, self.default_role, self.project_name)), ]
+                return [
+                    ("New project '%s' created with user '%s'."
+                     % (self.project_name, self.username)), ]
             elif self.action.state == "existing":
-
-                return [('Existing user %s has been given role %s in project %s.'
-                         % (self.username, self.default_role, self.project_name)), ]
+                project = keystone.tenants.create(self.project_name)
+                user = keystone.users.find(name=self.username)
+                role = keystone.roles.find(name=self.default_role)
+                keystone.roles.add_user_role(user, role, project)
+                return [
+                    ("New project '%s' created for existing user '%s'."
+                     % (self.project_name, self.username)), ]
 
 
 class ResetUser(BaseAction):
@@ -251,18 +277,17 @@ class ResetUser(BaseAction):
     token_fields = ['password']
 
     def _validate(self):
-        # keystone = get_keystoneclient()
+        keystone = get_keystoneclient()
 
-        # try:
-        #     user = keystone.users.find(name=self.username)
-        # except Exception:
-        #     user = None
-        user = None
-        
+        try:
+            user = keystone.users.find(name=self.username)
+        except Exception:
+            user = None
+        # user = None
+
         if user:
             if user.email == self.email:
                 self.action.valid = True
-                self.action.need_token = True
                 self.action.save()
                 return ['Existing user with matching email.']
             else:
@@ -270,9 +295,8 @@ class ResetUser(BaseAction):
         else:
             return ['No user present with username']
 
-
     def _pre_approve(self):
-        return self._validate()   
+        return self._validate()
 
     def _post_approve(self):
         return self._validate()
@@ -281,6 +305,10 @@ class ResetUser(BaseAction):
         self._validate()
 
         if self.valid:
+            keystone = get_keystoneclient()
+
+            user = keystone.users.find(name=self.username)
+            keystone.users.update_password(user, token_data['password'])
             return [('User %s password has been changed.' % self.username), ]
 
 

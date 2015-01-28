@@ -1,14 +1,13 @@
 from rest_framework import status
 from rest_framework.test import APITestCase
-from base.models import NewUser, NewProject
 from api_v1.models import Registration, Token
+
 
 class WorkFlowTests(APITestCase):
     """Tests to ensure the approval/token workflow does
-       what is expected. These test don't check final 
+       what is expected. These test don't check final
        results for actions, simply that the registrations,
        action, and tokens are created/updated. """
-
 
     def test_new_user(self):
         """
@@ -26,7 +25,6 @@ class WorkFlowTests(APITestCase):
         data = {'password': 'testpassword'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-
 
     def test_new_project(self):
         """
@@ -52,7 +50,6 @@ class WorkFlowTests(APITestCase):
 
 class BaseModelTests(APITestCase):
     """"""
-
 
     def test_newuser_action(self):
         """

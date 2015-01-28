@@ -49,6 +49,7 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'user_reg.middleware.KeystoneHeaderUnwrapper'
 )
 
 ROOT_URLCONF = 'user_reg.urls'
@@ -92,4 +93,3 @@ API_ACTIONS = {}
 
 # This is populated from the various model modules dynamically:
 ACTION_CLASSES = {}
-

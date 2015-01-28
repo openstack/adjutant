@@ -13,6 +13,7 @@ class Registration(models.Model):
                             primary_key=True)
     # who is this:
     reg_ip = models.GenericIPAddressField()
+    keystone_user = models.TextField(default="{}")
 
     # what do we know about them:
     notes = models.TextField(default="{}")
@@ -25,7 +26,7 @@ class Registration(models.Model):
     def actions(self):
         return self.action_set.all()
 
-    def as_dict(self):
+    def to_dict(self):
         actions = []
         for action in self.actions:
             actions.append({
@@ -47,3 +48,9 @@ class Token(models.Model):
     registration = models.ForeignKey(Registration)
     token = models.CharField(max_length=200, primary_key=True)
     expires = models.DateTimeField()
+
+    def to_dict(self):
+        return {
+            "registration": self.registration.uuid,
+            "token": self.token, "expires": self.expires
+        }
