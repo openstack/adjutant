@@ -84,6 +84,7 @@ class RegistrationDetail(APIView):
            followed by running the post_approve ations
            and if valid will setup and create a related token. """
         if request.data.get('approved', False) is True:
+            # TODO(adriant): Handle the NotFound case
             registration = Registration.objects.get(uuid=uuid)
             registration.approved = True
 
@@ -119,6 +120,7 @@ class RegistrationDetail(APIView):
                     registration.save()
 
                 return Response({'notes': notes}, status=200)
+            return Response({'notes': ['actions invalid']}, status=400)
         else:
             return Response({'approved': ["this field is required."]},
                             status=400)
@@ -229,7 +231,7 @@ class ActionView(APIView):
 
         actions += settings.API_ACTIONS.get(self.__class__.__name__, [])
 
-        act_dict = {}
+        act_list = []
 
         valid = True
         for action in actions:
@@ -237,8 +239,10 @@ class ActionView(APIView):
 
             serializer = act_tuple[1](data=request.data)
 
-            act_dict[action] = {'action': act_tuple[0],
-                                'serializer': serializer}
+            act_list.append({
+                'name': action,
+                'action': act_tuple[0],
+                'serializer': serializer})
 
             if not serializer.is_valid():
                 valid = False
@@ -252,12 +256,16 @@ class ActionView(APIView):
             registration.save()
 
             notes = {}
-            for name, value in act_dict.iteritems():
-                action = value['action'](
-                    data=value['serializer'].data, registration=registration)
+            i = 1
+            for act in act_list:
+                action = act['action'](
+                    data=act['serializer'].data, registration=registration,
+                    order=i
+                )
+                i += 1
 
-                notes[name] = []
-                notes[name] += action.pre_approve()
+                notes[act['name']] = []
+                notes[act['name']] += action.pre_approve()
 
             registration.notes = json.dumps(notes)
             registration.save()
@@ -265,8 +273,8 @@ class ActionView(APIView):
                     'notes': notes}
         else:
             errors = {}
-            for value in act_dict.values():
-                errors.update(value['serializer'].errors)
+            for act in act_list:
+                errors.update(act['serializer'].errors)
             return {'errors': errors}
 
     def approve(self, registration):

@@ -24,7 +24,7 @@ class Registration(models.Model):
 
     @property
     def actions(self):
-        return self.action_set.all()
+        return self.action_set.order_by('order')
 
     def to_dict(self):
         actions = []

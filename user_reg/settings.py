@@ -39,6 +39,7 @@ INSTALLED_APPS = (
     'rest_framework',
     'base',
     'api_v1',
+    'tenant_setup',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -89,7 +90,9 @@ STATIC_URL = '/static/'
 
 # App apecific settings:
 
-API_ACTIONS = {}
+# the order of the actions matters. These will run after the default action,
+# in the given order.
+API_ACTIONS = {'CreateProject': ['NewNetwork', 'NewRouter']}
 
 # This is populated from the various model modules dynamically:
 ACTION_CLASSES = {}

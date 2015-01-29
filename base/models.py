@@ -16,6 +16,8 @@ class Action(models.Model):
     need_token = models.BooleanField(default=True)
     registration = models.ForeignKey('api_v1.Registration')
 
+    order = models.IntegerField()
+
     created = models.DateTimeField(default=timezone.now)
 
     def get_action(self):
@@ -33,7 +35,12 @@ class BaseAction(object):
        - 'token_fields' defined which fields are needed by this action
          at the token stage."""
 
-    def __init__(self, data, action_model=None, registration=None):
+    required = []
+
+    token_fields = []
+
+    def __init__(self, data, action_model=None, registration=None,
+                 order=None):
         """Build itself around an existing database model,
            or build itself and creates a new database model.
            Sets up required data as fields."""
@@ -49,7 +56,8 @@ class BaseAction(object):
             action = Action.objects.create(
                 action_name=self.__class__.__name__,
                 action_data=json.dumps(data),
-                registration=registration
+                registration=registration,
+                order=order
             )
             action.save()
             self.action = action
@@ -237,6 +245,7 @@ class NewProject(BaseAction):
         return self._validate()
 
     def _submit(self, token_data):
+        print "make project"
         self._validate()
 
         if self.valid:
@@ -312,6 +321,7 @@ class ResetUser(BaseAction):
             return [('User %s password has been changed.' % self.username), ]
 
 
+# A dict of tuples in the format: (<ActionClass>, <ActionSerializer>)
 action_classes = {
     'NewUser': (NewUser, NewUserSerializer),
     'NewProject': (NewProject, NewProjectSerializer),
