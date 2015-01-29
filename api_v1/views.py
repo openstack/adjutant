@@ -1,6 +1,17 @@
-# from django.shortcuts import render
-# from base.models import User, Tenant
-# from models import Registration
+# Copyright (C) 2014 Catalyst IT Ltd
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
 from decorator import decorator
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -146,14 +157,15 @@ class TokenDetail(APIView):
            and what actions those go towards."""
         token = Token.objects.get(token=id)
 
-        required_fields = set()
+        required_fields = []
         actions = []
 
         for action in token.registration.actions:
             action = action.get_action()
             actions.append(action)
             for field in action.token_fields:
-                required_fields.add(field)
+                if field not in required_fields:
+                    required_fields.append(field)
 
         return Response({'actions': [act.__unicode__() for act in actions],
                          'required_fields': required_fields})
@@ -210,12 +222,13 @@ class ActionView(APIView):
 
         actions += settings.API_ACTIONS.get(self.__class__.__name__, [])
 
-        required_fields = set()
+        required_fields = []
 
         for action in actions:
             act_tuple = settings.ACTION_CLASSES[action]
             for field in act_tuple[0].required:
-                required_fields.add(field)
+                if field not in required_fields:
+                    required_fields.append(field)
 
         return Response({'actions': actions,
                          'required_fields': required_fields})
@@ -334,8 +347,6 @@ class AttachUser(ActionView):
     def get(self, request):
         return super(AttachUser, self).get(request)
 
-    # Need decorators?:
-    # @admin_or_owner
     @admin_or_owner
     def post(self, request, format=None):
         """This endpoint requires either Admin access or the
