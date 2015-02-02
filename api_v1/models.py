@@ -36,6 +36,9 @@ class Registration(models.Model):
 
     completed = models.BooleanField(default=False)
 
+    # in memory dict to be used for passing data between actions:
+    cache = {}
+
     @property
     def actions(self):
         return self.action_set.order_by('order')

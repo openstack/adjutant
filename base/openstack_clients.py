@@ -13,8 +13,9 @@
 #    under the License.
 
 from keystoneclient.v2_0 import client
+from neutronclient.v2_0 import client as neutron_client
 
-# clients = {}
+from django.conf import settings
 
 
 def get_keystoneclient():
@@ -31,10 +32,18 @@ def get_keystoneclient():
     #     keystone = KeystoneClient.Client(session=sess)
     #     clients['keystone'] = keystone
     auth = client.Client(
-        username="admin",
-        password="openstack",
-        tenant_name="demo",
-        auth_url="http://localhost:5000/v2.0",
-        insecure=True
+        username=settings.KEYSTONE['username'],
+        password=settings.KEYSTONE['password'],
+        tenant_name=settings.KEYSTONE['project_name'],
+        auth_url=settings.KEYSTONE['auth_url']
     )
     return auth
+
+
+def get_neutronclient():
+    neutron = neutron_client.Client(
+        username=settings.KEYSTONE['username'],
+        password=settings.KEYSTONE['password'],
+        tenant_name=settings.KEYSTONE['project_name'],
+        auth_url=settings.KEYSTONE['auth_url'])
+    return neutron

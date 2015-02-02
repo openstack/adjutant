@@ -13,16 +13,28 @@
 #    under the License.
 
 from base.models import BaseAction
-from serializers import NewNetworkSerializer, NewRouterSerializer
+from serializers import DefaultProjectResourcesSerializer
 from django.conf import settings
+from base import openstack_clients
 
 
-class NewNetwork(BaseAction):
+class DefaultProjectResources(BaseAction):
     """"""
 
     required = [
-        'network_name'
+        'setup_resources'
     ]
+
+    defaults = {
+        'network_name': 'somenetwork',
+        'subnet_name': 'somesubnet',
+        'router_name': 'somerouter',
+        'public_network': '6a930855-88e2-4312-9ed0-6a1b0544b6d4',
+        'DNS_NAMESERVERS': ['202.78.240.213',
+                            '202.78.240.214',
+                            '202.78.240.215'],
+        'SUBNET_CIDR': '192.168.1.0/24'
+    }
 
     def _pre_approve(self):
         self.action.valid = True
@@ -37,15 +49,65 @@ class NewNetwork(BaseAction):
         return []
 
     def _submit(self, token_data):
-        print "Network Created"
+        if self.setup_resources:
+            neutron = openstack_clients.get_neutronclient()
+
+            notes = []
+
+            project_id = self.action.registration.cache['project_id']
+
+            network_body = {
+                "network": {
+                    "name": self.defaults['network_name'],
+                    'tenant_id': project_id,
+                    "admin_state_up": True
+                }
+            }
+            network = neutron.create_network(body=network_body)
+            notes.append("Network %s created for project %s" %
+                         (self.defaults['network_name'],
+                          self.action.registration.cache['project_id']))
+
+            subnet_body = {
+                "subnet": {
+                    "network_id": network['network']['id'],
+                    "ip_version": 4,
+                    'tenant_id': project_id,
+                    'dns_nameservers': self.defaults['DNS_NAMESERVERS'],
+                    "cidr": self.defaults['SUBNET_CIDR']
+                }
+            }
+            subnet = neutron.create_subnet(body=subnet_body)
+            notes.append("Subnet created for network %s" %
+                         self.defaults['network_name'])
+
+            router_body = {
+                "router": {
+                    "name": self.defaults['router_name'],
+                    "external_gateway_info": {
+                        "network_id": self.defaults['public_network']
+                    },
+                    'tenant_id': project_id,
+                    "admin_state_up": True
+                }
+            }
+            router = neutron.create_router(body=router_body)
+            notes.append("Router created for project %s" %
+                         self.action.registration.cache['project_id'])
+
+            interface_body = {
+                "subnet_id": subnet['subnet']['id']
+            }
+            neutron.add_interface_router(router['router']['id'],
+                                         body=interface_body)
+            notes.append("Interface added to router for subnet")
+
+            return notes
+        return []
 
 
-class NewRouter(BaseAction):
+class AddAdminToProject(BaseAction):
     """"""
-
-    required = [
-        'router_name'
-    ]
 
     def _pre_approve(self):
         self.action.valid = True
@@ -60,12 +122,21 @@ class NewRouter(BaseAction):
         return []
 
     def _submit(self, token_data):
-        print "router Created"
+        keystone = openstack_clients.get_keystoneclient()
+
+        project = keystone.tenants.get(
+            self.action.registration.cache['project_id'])
+        user = keystone.users.find(name="admin")
+        role = keystone.roles.find(name="admin")
+        keystone.roles.add_user_role(user, role, project)
+        return [('Admin has been added to %s.' %
+                 self.action.registration.cache['project_id'])]
 
 
 action_classes = {
-    'NewNetwork': (NewNetwork, NewNetworkSerializer),
-    'NewRouter': (NewRouter, NewRouterSerializer)
+    'DefaultProjectResources': (DefaultProjectResources,
+                                DefaultProjectResourcesSerializer),
+    'AddAdminToProject': (AddAdminToProject, None)
 }
 
 

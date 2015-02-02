@@ -104,9 +104,18 @@ STATIC_URL = '/static/'
 
 # App apecific settings:
 
+# Keystone admin credentials:
+KEYSTONE = {
+    'username': 'admin',
+    'password': 'openstack',
+    'project_name': 'admin',
+    'auth_url': "http://localhost:5000/v2.0"
+}
+
 # the order of the actions matters. These will run after the default action,
 # in the given order.
-API_ACTIONS = {'CreateProject': ['NewNetwork', 'NewRouter']}
+API_ACTIONS = {'CreateProject': ['AddAdminToProject',
+                                 'DefaultProjectResources']}
 
 # This is populated from the various model modules dynamically:
 ACTION_CLASSES = {}

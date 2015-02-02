@@ -26,19 +26,15 @@ from django.conf import settings
 
 @decorator
 def admin_or_owner(func, *args, **kwargs):
-    req_roles = ['admin', 'project_owner']
+    req_roles = {'admin', 'project_owner'}
     request = args[1]
-    roles = request.keystone_user.get('roles', [])
-    has_role = False
-    for role in roles:
-        if role in req_roles:
-            has_role = True
-            break
+    roles = set(request.keystone_user.get('roles', []))
 
-    if has_role:
+    if roles & req_roles:
         return func(*args, **kwargs)
 
-    return Response("Must have one of the following roles: %s" % req_roles,
+    return Response({'notes': ["Must have one of the following roles: %s" %
+                               req_roles]},
                     403)
 
 
@@ -49,7 +45,7 @@ def admin(func, *args, **kwargs):
     if "admin" in roles:
         return func(*args, **kwargs)
 
-    return Response("Must be admin.",
+    return Response({'notes': ["Must be admin."]},
                     403)
 
 
@@ -129,8 +125,7 @@ class RegistrationDetail(APIView):
                     registration.notes = json.dumps(notes)
                     registration.completed = True
                     registration.save()
-
-                return Response({'notes': notes}, status=200)
+                    return Response({'notes': notes}, status=200)
             return Response({'notes': ['actions invalid']}, status=400)
         else:
             return Response({'approved': ["this field is required."]},
@@ -250,14 +245,17 @@ class ActionView(APIView):
         for action in actions:
             act_tuple = settings.ACTION_CLASSES[action]
 
-            serializer = act_tuple[1](data=request.data)
+            if act_tuple[1] is not None:
+                serializer = act_tuple[1](data=request.data)
+            else:
+                serializer = None
 
             act_list.append({
                 'name': action,
                 'action': act_tuple[0],
                 'serializer': serializer})
 
-            if not serializer.is_valid():
+            if serializer is not None and not serializer.is_valid():
                 valid = False
 
         if valid:
@@ -271,8 +269,12 @@ class ActionView(APIView):
             notes = {}
             i = 1
             for act in act_list:
+                if act['serializer'] is not None:
+                    data = act['serializer'].data
+                else:
+                    data = {}
                 action = act['action'](
-                    data=act['serializer'].data, registration=registration,
+                    data=data, registration=registration,
                     order=i
                 )
                 i += 1
@@ -287,7 +289,8 @@ class ActionView(APIView):
         else:
             errors = {}
             for act in act_list:
-                errors.update(act['serializer'].errors)
+                if act['serializer'] is not None:
+                    errors.update(act['serializer'].errors)
             return {'errors': errors}
 
     def approve(self, registration):
@@ -297,6 +300,7 @@ class ActionView(APIView):
         actions = []
 
         valid = True
+        need_token = False
         for action in action_models:
             act = action.get_action()
             actions.append(act)
@@ -312,15 +316,25 @@ class ActionView(APIView):
 
                 if not action.valid:
                     valid = False
+                if action.need_token:
+                    need_token = True
 
             registration.notes = json.dumps(notes)
             registration.save()
 
-            # TODO(Adriant): Need to check if token is required.
-            # if not, just submit if valid.
             if valid:
-                create_token(registration)
-                return Response({'notes': ['created token']}, status=200)
+                if need_token:
+                    create_token(registration)
+                    return Response({'notes': ['created token']}, status=200)
+                else:
+                    for action in actions:
+                        notes[action.__unicode__()] += [action.submit({}), ]
+
+                    registration.notes = json.dumps(notes)
+                    registration.completed = True
+                    registration.save()
+                    return Response({'notes': notes}, status=200)
+            return Response({'notes': ['actions invalid']}, status=400)
         return Response({'notes': ['action invalid']}, status=400)
 
 

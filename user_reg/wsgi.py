@@ -30,12 +30,13 @@ application = get_wsgi_application()
 from urlparse import urlparse
 from keystonemiddleware.auth_token import AuthProtocol
 
-# TODO(Adriant): Get this data from a conf or settings.
-identity_url = urlparse("http://localhost:5000/v2.0")
+from django.conf import settings
+
+identity_url = urlparse(settings.KEYSTONE['auth_url'])
 conf = {
-    'admin_user': "admin",
-    'admin_password': "openstack",
-    'admin_tenant_name': "admin",
+    'admin_user': settings.KEYSTONE['username'],
+    'admin_password': settings.KEYSTONE['password'],
+    'admin_tenant_name': settings.KEYSTONE['project_name'],
     'auth_host': identity_url.hostname,
     'auth_port': identity_url.port,
     'auth_protocol': identity_url.scheme,

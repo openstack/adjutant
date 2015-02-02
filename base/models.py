@@ -16,6 +16,7 @@ from django.db import models
 import json
 from django.utils import timezone
 from openstack_clients import get_keystoneclient
+from keystoneclient.openstack.common.apiclient import exceptions
 from serializers import (NewUserSerializer, NewProjectSerializer,
                          ResetUserSerializer)
 from django.conf import settings
@@ -123,16 +124,9 @@ class NewUser(BaseAction):
         # be made pluggable down the line.
         keystone = get_keystoneclient()
         try:
-            # HACK(Adriant): Not exactly a hack, but a way to get user by
-            # name based on how the commandline handles it.
             user = keystone.users.find(name=self.username)
-
-        # need to ideally import and except the right exception: NotFound
-        except Exception as e:
+        except exceptions.NotFound:
             user = None
-            print e
-
-        # user = None
 
         keystone_user = json.loads(self.action.registration.keystone_user)
 
@@ -141,8 +135,8 @@ class NewUser(BaseAction):
             return ['Project id does not match keystone user project.']
 
         try:
-            project = keystone.users.find(name=self.project_name)
-        except Exception:
+            project = keystone.tenants.find(name=self.project_name)
+        except exceptions.NotFound:
             project = None
 
         if not project:
@@ -213,14 +207,13 @@ class NewProject(BaseAction):
 
         try:
             user = keystone.users.find(name=self.username)
-        except Exception:
+        except exceptions.NotFound:
             user = None
-        # user = None
+
         try:
-            project = keystone.users.find(name=self.project_name)
-        except Exception:
+            project = keystone.tenants.find(name=self.project_name)
+        except exceptions.NotFound:
             project = None
-        # project = None
 
         notes = []
 
@@ -267,20 +260,24 @@ class NewProject(BaseAction):
 
             if self.action.state == "default":
                 project = keystone.tenants.create(self.project_name)
+                # put project_id into action cache:
+                self.action.registration.cache['project_id'] = project.id
                 user = keystone.users.create(
                     name=self.username, password=token_data['password'],
-                    email=self.email, tenant_id=project)
+                    email=self.email, tenant_id=project.id)
                 role = keystone.roles.find(name=self.default_role)
-                keystone.roles.add_user_role(user, role, project)
+                keystone.roles.add_user_role(user, role, project.id)
 
                 return [
                     ("New project '%s' created with user '%s'."
                      % (self.project_name, self.username)), ]
             elif self.action.state == "existing":
                 project = keystone.tenants.create(self.project_name)
+                # put project_id into action cache:
+                self.action.registration.cache['project_id'] = project.id
                 user = keystone.users.find(name=self.username)
                 role = keystone.roles.find(name=self.default_role)
-                keystone.roles.add_user_role(user, role, project)
+                keystone.roles.add_user_role(user, role, project.id)
                 return [
                     ("New project '%s' created for existing user '%s'."
                      % (self.project_name, self.username)), ]
@@ -304,9 +301,8 @@ class ResetUser(BaseAction):
 
         try:
             user = keystone.users.find(name=self.username)
-        except Exception:
+        except exceptions.NotFound:
             user = None
-        # user = None
 
         if user:
             if user.email == self.email:
