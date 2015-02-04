@@ -88,7 +88,7 @@ class RegistrationDetail(APIView):
     @admin
     def post(self, request, uuid, format=None):
         """Will approve the Registration specified,
-           followed by running the post_approve ations
+           followed by running the post_approve actions
            and if valid will setup and create a related token. """
         if request.data.get('approved', False) is True:
             # TODO(adriant): Handle the NotFound case
@@ -270,7 +270,7 @@ class ActionView(APIView):
             i = 1
             for act in act_list:
                 if act['serializer'] is not None:
-                    data = act['serializer'].data
+                    data = act['serializer'].validated_data
                 else:
                     data = {}
                 action = act['action'](

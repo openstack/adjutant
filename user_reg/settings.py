@@ -104,6 +104,8 @@ STATIC_URL = '/static/'
 
 # App apecific settings:
 
+USERNAME_IS_EMAIL = True
+
 # Keystone admin credentials:
 KEYSTONE = {
     'username': 'admin',
@@ -117,5 +119,5 @@ KEYSTONE = {
 API_ACTIONS = {'CreateProject': ['AddAdminToProject',
                                  'DefaultProjectResources']}
 
-# This is populated from the various model modules dynamically:
+# This is populated from the various model modules at startup:
 ACTION_CLASSES = {}

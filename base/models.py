@@ -81,6 +81,10 @@ class BaseAction(object):
     def valid(self):
         return self.action.valid
 
+    @property
+    def need_token(self):
+        return self.action.need_token
+
     def pre_approve(self):
         return self._pre_approve()
 
@@ -118,6 +122,19 @@ class NewUser(BaseAction):
 
     token_fields = ['password']
 
+    def __init__(self, *args, **kwargs):
+
+        if settings.USERNAME_IS_EMAIL:
+            try:
+                self.required.remove('username')
+            except ValueError:
+                pass
+                # nothing to remove
+            super(NewUser, self).__init__(*args, **kwargs)
+            self.username = self.email
+        else:
+            super(NewUser, self).__init__(*args, **kwargs)
+
     def _validate(self):
         # TODO(Adriant): Figure out how to set this up as a generic
         # user store object/module that can handle most of this and
@@ -135,7 +152,7 @@ class NewUser(BaseAction):
             return ['Project id does not match keystone user project.']
 
         try:
-            project = keystone.tenants.find(name=self.project_name)
+            project = keystone.tenants.get(self.project_id)
         except exceptions.NotFound:
             project = None
 
@@ -201,6 +218,19 @@ class NewProject(BaseAction):
     default_role = "project_owner"
 
     token_fields = ['password']
+
+    def __init__(self, *args, **kwargs):
+
+        if settings.USERNAME_IS_EMAIL:
+            try:
+                self.required.remove('username')
+            except ValueError:
+                pass
+                # nothing to remove
+            super(NewProject, self).__init__(*args, **kwargs)
+            self.username = self.email
+        else:
+            super(NewProject, self).__init__(*args, **kwargs)
 
     def _validate(self):
         keystone = get_keystoneclient()
@@ -295,6 +325,19 @@ class ResetUser(BaseAction):
     ]
 
     token_fields = ['password']
+
+    def __init__(self, *args, **kwargs):
+
+        if settings.USERNAME_IS_EMAIL:
+            try:
+                self.required.remove('username')
+            except ValueError:
+                pass
+                # nothing to remove
+            super(ResetUser, self).__init__(*args, **kwargs)
+            self.username = self.email
+        else:
+            super(ResetUser, self).__init__(*args, **kwargs)
 
     def _validate(self):
         keystone = get_keystoneclient()

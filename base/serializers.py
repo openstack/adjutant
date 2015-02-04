@@ -13,6 +13,7 @@
 #    under the License.
 
 from rest_framework import serializers
+from django.conf import settings
 
 
 class NewUserSerializer(serializers.Serializer):
@@ -24,13 +25,31 @@ class NewUserSerializer(serializers.Serializer):
                     ('Member', "Project Member (can't add new users)"))
     role = serializers.ChoiceField(choices=role_options)
 
+    def __init__(self, *args, **kwargs):
+        super(NewUserSerializer, self).__init__(*args, **kwargs)
+
+        if settings.USERNAME_IS_EMAIL:
+            self.fields.pop('username')
+
 
 class NewProjectSerializer(serializers.Serializer):
     project_name = serializers.CharField(max_length=200)
     username = serializers.CharField(max_length=200)
     email = serializers.EmailField()
 
+    def __init__(self, *args, **kwargs):
+        super(NewProjectSerializer, self).__init__(*args, **kwargs)
+
+        if settings.USERNAME_IS_EMAIL:
+            self.fields.pop('username')
+
 
 class ResetUserSerializer(serializers.Serializer):
     username = serializers.CharField(max_length=200)
     email = serializers.EmailField()
+
+    def __init__(self, *args, **kwargs):
+        super(ResetUserSerializer, self).__init__(*args, **kwargs)
+
+        if settings.USERNAME_IS_EMAIL:
+            self.fields.pop('username')

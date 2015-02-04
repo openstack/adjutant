@@ -19,20 +19,22 @@ from base import openstack_clients
 
 
 class DefaultProjectResources(BaseAction):
-    """"""
+    """This action will setup all required basic networking
+       resources so that a new user can launch instances
+       right away."""
 
     required = [
         'setup_resources'
     ]
 
+    # TODO(Adriant): Ideally move these to the settings file
     defaults = {
         'network_name': 'somenetwork',
         'subnet_name': 'somesubnet',
         'router_name': 'somerouter',
         'public_network': '6a930855-88e2-4312-9ed0-6a1b0544b6d4',
-        'DNS_NAMESERVERS': ['202.78.240.213',
-                            '202.78.240.214',
-                            '202.78.240.215'],
+        'DNS_NAMESERVERS': ['193.168.1.2',
+                            '193.168.1.2'],
         'SUBNET_CIDR': '192.168.1.0/24'
     }
 
