@@ -32,107 +32,122 @@ class DefaultProjectResources(BaseAction):
         'network_name': 'somenetwork',
         'subnet_name': 'somesubnet',
         'router_name': 'somerouter',
+        # this depends on region and needs to be pulled from somewhere:
         'public_network': '6a930855-88e2-4312-9ed0-6a1b0544b6d4',
         'DNS_NAMESERVERS': ['193.168.1.2',
                             '193.168.1.2'],
         'SUBNET_CIDR': '192.168.1.0/24'
     }
 
-    def _pre_approve(self):
+    def _validate(self):
+        # need to check, does tenant exist.
         self.action.valid = True
         self.action.need_token = False
         self.action.save()
         return []
 
+    def _setup_resources(self):
+        neutron = openstack_clients.get_neutronclient()
+
+        notes = []
+
+        project_id = self.action.registration.cache['project_id']
+
+        # TODO(Adriant): Setup proper exception handling
+        # and error logging so we know where it died.
+
+        network_body = {
+            "network": {
+                "name": self.defaults['network_name'],
+                'tenant_id': project_id,
+                "admin_state_up": True
+            }
+        }
+        network = neutron.create_network(body=network_body)
+        notes.append("Network %s created for project %s" %
+                     (self.defaults['network_name'],
+                      self.action.registration.cache['project_id']))
+
+        subnet_body = {
+            "subnet": {
+                "network_id": network['network']['id'],
+                "ip_version": 4,
+                'tenant_id': project_id,
+                'dns_nameservers': self.defaults['DNS_NAMESERVERS'],
+                "cidr": self.defaults['SUBNET_CIDR']
+            }
+        }
+        subnet = neutron.create_subnet(body=subnet_body)
+        notes.append("Subnet created for network %s" %
+                     self.defaults['network_name'])
+
+        router_body = {
+            "router": {
+                "name": self.defaults['router_name'],
+                "external_gateway_info": {
+                    "network_id": self.defaults['public_network']
+                },
+                'tenant_id': project_id,
+                "admin_state_up": True
+            }
+        }
+        router = neutron.create_router(body=router_body)
+        notes.append("Router created for project %s" %
+                     self.action.registration.cache['project_id'])
+
+        interface_body = {
+            "subnet_id": subnet['subnet']['id']
+        }
+        neutron.add_interface_router(router['router']['id'],
+                                     body=interface_body)
+        notes.append("Interface added to router for subnet")
+
+        return notes
+
+    def _pre_approve(self):
+        return self._validate()
+
     def _post_approve(self):
-        self.action.valid = True
-        self.action.need_token = False
-        self.action.save()
+        self._validate()
+        if self.setup_resources and self.valid:
+            return self._setup_resources()
         return []
 
     def _submit(self, token_data):
-        if self.setup_resources:
-            neutron = openstack_clients.get_neutronclient()
-
-            notes = []
-
-            project_id = self.action.registration.cache['project_id']
-
-            network_body = {
-                "network": {
-                    "name": self.defaults['network_name'],
-                    'tenant_id': project_id,
-                    "admin_state_up": True
-                }
-            }
-            network = neutron.create_network(body=network_body)
-            notes.append("Network %s created for project %s" %
-                         (self.defaults['network_name'],
-                          self.action.registration.cache['project_id']))
-
-            subnet_body = {
-                "subnet": {
-                    "network_id": network['network']['id'],
-                    "ip_version": 4,
-                    'tenant_id': project_id,
-                    'dns_nameservers': self.defaults['DNS_NAMESERVERS'],
-                    "cidr": self.defaults['SUBNET_CIDR']
-                }
-            }
-            subnet = neutron.create_subnet(body=subnet_body)
-            notes.append("Subnet created for network %s" %
-                         self.defaults['network_name'])
-
-            router_body = {
-                "router": {
-                    "name": self.defaults['router_name'],
-                    "external_gateway_info": {
-                        "network_id": self.defaults['public_network']
-                    },
-                    'tenant_id': project_id,
-                    "admin_state_up": True
-                }
-            }
-            router = neutron.create_router(body=router_body)
-            notes.append("Router created for project %s" %
-                         self.action.registration.cache['project_id'])
-
-            interface_body = {
-                "subnet_id": subnet['subnet']['id']
-            }
-            neutron.add_interface_router(router['router']['id'],
-                                         body=interface_body)
-            notes.append("Interface added to router for subnet")
-
-            return notes
         return []
 
 
 class AddAdminToProject(BaseAction):
-    """"""
+    """Action to add 'admin' user to project for
+       monitoring purposes."""
+
+    def _validate(self):
+        self.action.valid = True
+        self.action.need_token = False
+        self.action.save()
+        return []
 
     def _pre_approve(self):
-        self.action.valid = True
-        self.action.need_token = False
-        self.action.save()
-        return []
+        return self._validate()
 
     def _post_approve(self):
-        self.action.valid = True
-        self.action.need_token = False
-        self.action.save()
-        return []
+        notes = self._validate()
+        if self.valid:
+            keystone = openstack_clients.get_keystoneclient()
+
+            project = keystone.tenants.get(
+                self.action.registration.cache['project_id'])
+            user = keystone.users.find(name="admin")
+            role = keystone.roles.find(name="admin")
+            keystone.roles.add_user_role(user, role, project)
+            notes.append(
+                'Admin has been added to %s.' %
+                self.action.registration.cache['project_id'])
+            return notes
+        return notes
 
     def _submit(self, token_data):
-        keystone = openstack_clients.get_keystoneclient()
-
-        project = keystone.tenants.get(
-            self.action.registration.cache['project_id'])
-        user = keystone.users.find(name="admin")
-        role = keystone.roles.find(name="admin")
-        keystone.roles.add_user_role(user, role, project)
-        return [('Admin has been added to %s.' %
-                 self.action.registration.cache['project_id'])]
+        return []
 
 
 action_classes = {

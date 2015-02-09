@@ -15,6 +15,7 @@
 from django.db import models
 import json
 from uuid import uuid4
+from django.utils import timezone
 
 
 def hex_uuid():
@@ -35,6 +36,10 @@ class Registration(models.Model):
     approved = models.BooleanField(default=False)
 
     completed = models.BooleanField(default=False)
+
+    created = models.DateTimeField(default=timezone.now)
+    approved_on = models.DateTimeField(null=True)
+    completed_on = models.DateTimeField(null=True)
 
     # in memory dict to be used for passing data between actions:
     cache = {}

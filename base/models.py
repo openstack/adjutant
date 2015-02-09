@@ -26,6 +26,7 @@ class Action(models.Model):
     """Database model representation of the related action."""
     action_name = models.CharField(max_length=200)
     action_data = models.TextField()
+    cache = models.TextField(default="{}")
     state = models.CharField(max_length=200, default="default")
     valid = models.BooleanField(default=False)
     need_token = models.BooleanField(default=True)
@@ -53,6 +54,8 @@ class BaseAction(object):
     required = []
 
     token_fields = []
+
+    cache = None
 
     def __init__(self, data, action_model=None, registration=None,
                  order=None):
@@ -84,6 +87,24 @@ class BaseAction(object):
     @property
     def need_token(self):
         return self.action.need_token
+
+    def get_cache(self, key):
+        if self.cache:
+            return self.cache[key]
+        else:
+            self.cache = json.loads(self.action.cache)
+            return self.cache[key]
+
+    def set_cache(self, key, value):
+        if self.cache:
+            self.cache[key] = value
+            self.action.cache = json.dumps(self.cache)
+            self.action.save()
+        else:
+            self.cache = json.loads(self.action.cache)
+            self.cache[key] = value
+            self.action.cache = json.dumps(self.cache)
+            self.action.save()
 
     def pre_approve(self):
         return self._pre_approve()
@@ -180,7 +201,7 @@ class NewUser(BaseAction):
         return self._validate()
 
     def _submit(self, token_data):
-        self._validate()
+        notes = self._validate()
 
         if self.valid:
             keystone = get_keystoneclient()
@@ -192,16 +213,19 @@ class NewUser(BaseAction):
                 role = keystone.roles.find(name=self.role)
                 keystone.roles.add_user_role(user, role, self.project_id)
 
-                return [
-                    ('User %s has been created, with role %s in project %s.'
-                     % (self.username, self.role, self.project_id)), ]
+                notes.append(
+                    'User %s has been created, with role %s in project %s.'
+                    % (self.username, self.role, self.project_id))
+                return notes
             elif self.action.state == "existing":
                 user = keystone.users.find(name=self.username)
                 role = keystone.roles.find(name=self.role)
                 keystone.roles.add_user_role(user, role, self.project_id)
-                return [
-                    ('Existing user %s has been given role %s in project %s.'
-                     % (self.username, self.role, self.project_id)), ]
+
+                notes.append(
+                    'Existing user %s has been given role %s in project %s.'
+                    % (self.username, self.role, self.project_id))
+                return notes
 
 
 class NewProject(BaseAction):
@@ -232,7 +256,7 @@ class NewProject(BaseAction):
         else:
             super(NewProject, self).__init__(*args, **kwargs)
 
-    def _validate(self):
+    def _validate_project(self):
         keystone = get_keystoneclient()
 
         try:
@@ -275,42 +299,80 @@ class NewProject(BaseAction):
 
         return notes
 
+    def _validate_user(self):
+        keystone = get_keystoneclient()
+
+        try:
+            user = keystone.users.find(name=self.username)
+        except exceptions.NotFound:
+            user = None
+
+        notes = []
+
+        if user:
+            if user.email == self.email:
+                self.action.valid = True
+                self.action.state = "existing"
+                self.action.need_token = False
+                self.action.save()
+                notes.append("Existing user '%s' with matching email." %
+                             self.email)
+            else:
+                notes.append("Existing user '%s' with non-matching email." %
+                             self.username)
+        else:
+            self.action.valid = True
+            self.action.save()
+            notes.append("No user present with username '%s'." %
+                         self.username)
+
+        return notes
+
     def _pre_approve(self):
-        return self._validate()
+        return self._validate_project()
 
     def _post_approve(self):
-        return self._validate()
-
-    def _submit(self, token_data):
-        print "make project"
-        self._validate()
+        notes = self._validate_project()
 
         if self.valid:
             keystone = get_keystoneclient()
 
+            project = keystone.tenants.create(self.project_name)
+            # put project_id into action cache:
+            self.action.registration.cache['project_id'] = project.id
+            self.set_cache('project_id', project.id)
+            notes.append("New project '%s' created." % self.project_name)
+            return notes
+        return notes
+
+    def _submit(self, token_data):
+        notes = self._validate_user()
+
+        if self.valid:
+            keystone = get_keystoneclient()
+
+            project_id = self.get_cache('project_id')
+            self.action.registration.cache['project_id'] = project_id
+            project = keystone.tenants.get(project_id)
+
             if self.action.state == "default":
-                project = keystone.tenants.create(self.project_name)
-                # put project_id into action cache:
-                self.action.registration.cache['project_id'] = project.id
                 user = keystone.users.create(
                     name=self.username, password=token_data['password'],
                     email=self.email, tenant_id=project.id)
                 role = keystone.roles.find(name=self.default_role)
-                keystone.roles.add_user_role(user, role, project.id)
+                keystone.roles.add_user_role(user, role, project)
 
-                return [
-                    ("New project '%s' created with user '%s'."
-                     % (self.project_name, self.username)), ]
+                notes.append(("New user '%s' created for project %s."
+                              % (self.username, self.project_name)))
+                return notes
             elif self.action.state == "existing":
-                project = keystone.tenants.create(self.project_name)
-                # put project_id into action cache:
-                self.action.registration.cache['project_id'] = project.id
                 user = keystone.users.find(name=self.username)
                 role = keystone.roles.find(name=self.default_role)
-                keystone.roles.add_user_role(user, role, project.id)
-                return [
-                    ("New project '%s' created for existing user '%s'."
-                     % (self.project_name, self.username)), ]
+                keystone.roles.add_user_role(user, role, project)
+                notes.append(("Existing user '%s' attached to project %s."
+                              % (self.username, self.project_name)))
+                return notes
+        return notes
 
 
 class ResetUser(BaseAction):
@@ -364,14 +426,16 @@ class ResetUser(BaseAction):
         return self._validate()
 
     def _submit(self, token_data):
-        self._validate()
+        notes = self._validate()
 
         if self.valid:
             keystone = get_keystoneclient()
 
             user = keystone.users.find(name=self.username)
             keystone.users.update_password(user, token_data['password'])
-            return [('User %s password has been changed.' % self.username), ]
+            notes.append('User %s password has been changed.' % self.username)
+            return notes
+        return notes
 
 
 # A dict of tuples in the format: (<ActionClass>, <ActionSerializer>)
