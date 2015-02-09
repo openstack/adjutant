@@ -128,7 +128,23 @@ class BaseAction(object):
         return self.__class__.__name__
 
 
-class NewUser(BaseAction):
+class UserAction(BaseAction):
+
+    def __init__(self, *args, **kwargs):
+
+        if settings.USERNAME_IS_EMAIL:
+            try:
+                self.required.remove('username')
+            except ValueError:
+                pass
+                # nothing to remove
+            super(UserAction, self).__init__(*args, **kwargs)
+            self.username = self.email
+        else:
+            super(UserAction, self).__init__(*args, **kwargs)
+
+
+class NewUser(UserAction):
     """Setup a new user with a role on the given project.
        Creates the user if they don't exist, otherwise
        if the username and email for the request match the
@@ -142,19 +158,6 @@ class NewUser(BaseAction):
     ]
 
     token_fields = ['password']
-
-    def __init__(self, *args, **kwargs):
-
-        if settings.USERNAME_IS_EMAIL:
-            try:
-                self.required.remove('username')
-            except ValueError:
-                pass
-                # nothing to remove
-            super(NewUser, self).__init__(*args, **kwargs)
-            self.username = self.email
-        else:
-            super(NewUser, self).__init__(*args, **kwargs)
 
     def _validate(self):
         # TODO(Adriant): Figure out how to set this up as a generic
@@ -228,7 +231,7 @@ class NewUser(BaseAction):
                 return notes
 
 
-class NewProject(BaseAction):
+class NewProject(UserAction):
     """Similar functionality as the NewUser action,
        but will create the project if valid. Will setup
        the user (existing or new) with the 'default_role'."""
@@ -242,19 +245,6 @@ class NewProject(BaseAction):
     default_role = "project_owner"
 
     token_fields = ['password']
-
-    def __init__(self, *args, **kwargs):
-
-        if settings.USERNAME_IS_EMAIL:
-            try:
-                self.required.remove('username')
-            except ValueError:
-                pass
-                # nothing to remove
-            super(NewProject, self).__init__(*args, **kwargs)
-            self.username = self.email
-        else:
-            super(NewProject, self).__init__(*args, **kwargs)
 
     def _validate_project(self):
         keystone = get_keystoneclient()
@@ -375,7 +365,7 @@ class NewProject(BaseAction):
         return notes
 
 
-class ResetUser(BaseAction):
+class ResetUser(UserAction):
     """Simple action to reset a password for a given user."""
 
     username = models.CharField(max_length=200)
@@ -387,19 +377,6 @@ class ResetUser(BaseAction):
     ]
 
     token_fields = ['password']
-
-    def __init__(self, *args, **kwargs):
-
-        if settings.USERNAME_IS_EMAIL:
-            try:
-                self.required.remove('username')
-            except ValueError:
-                pass
-                # nothing to remove
-            super(ResetUser, self).__init__(*args, **kwargs)
-            self.username = self.email
-        else:
-            super(ResetUser, self).__init__(*args, **kwargs)
 
     def _validate(self):
         keystone = get_keystoneclient()
