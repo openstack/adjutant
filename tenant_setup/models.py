@@ -33,9 +33,9 @@ class DefaultProjectResources(BaseAction):
         'subnet_name': 'somesubnet',
         'router_name': 'somerouter',
         # this depends on region and needs to be pulled from somewhere:
-        'public_network': '6a930855-88e2-4312-9ed0-6a1b0544b6d4',
+        'public_network': 'aed4df5a-1a1f-42e4-b105-aa7f2edc7a95',
         'DNS_NAMESERVERS': ['193.168.1.2',
-                            '193.168.1.2'],
+                            '193.168.1.3'],
         'SUBNET_CIDR': '192.168.1.0/24'
     }
 
@@ -122,6 +122,7 @@ class AddAdminToProject(BaseAction):
        monitoring purposes."""
 
     def _validate(self):
+        # need to check, does tenant exist.
         self.action.valid = True
         self.action.need_token = False
         self.action.save()

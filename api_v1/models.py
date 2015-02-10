@@ -13,9 +13,9 @@
 #    under the License.
 
 from django.db import models
-import json
 from uuid import uuid4
 from django.utils import timezone
+from jsonfield import JSONField
 
 
 def hex_uuid():
@@ -28,10 +28,11 @@ class Registration(models.Model):
                             primary_key=True)
     # who is this:
     reg_ip = models.GenericIPAddressField()
-    keystone_user = models.TextField(default="{}")
+    keystone_user = JSONField(default={})
 
     # what do we know about them:
-    notes = models.TextField(default="{}")
+    notes = JSONField(default={})
+    errors = JSONField(default={})
 
     approved = models.BooleanField(default=False)
 
@@ -53,12 +54,12 @@ class Registration(models.Model):
         for action in self.actions:
             actions.append({
                 "action_name": action.action_name,
-                "data": json.loads(action.action_data),
+                "data": action.action_data,
                 "valid": action.valid
             })
 
         return {
-            "ip_address": self.reg_ip, "notes": json.loads(self.notes),
+            "ip_address": self.reg_ip, "notes": self.notes,
             "approved": self.approved, "completed": self.completed,
             "actions": actions, "uuid": self.uuid
         }
@@ -69,10 +70,28 @@ class Token(models.Model):
 
     registration = models.ForeignKey(Registration)
     token = models.CharField(max_length=200, primary_key=True)
+    created = models.DateTimeField(default=timezone.now)
     expires = models.DateTimeField()
 
     def to_dict(self):
         return {
             "registration": self.registration.uuid,
             "token": self.token, "expires": self.expires
+        }
+
+
+class Notification(models.Model):
+    """"""
+
+    notes = JSONField(default={})
+    registration = models.ForeignKey(Registration)
+    created = models.DateTimeField(default=timezone.now)
+    acknowledged = models.BooleanField(default=False)
+
+    def to_dict(self):
+        return {
+            "notes": self.notes,
+            "registration": self.registration.uuid,
+            "acknowledged": self.acknowledged,
+            "created": self.created
         }

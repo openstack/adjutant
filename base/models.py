@@ -13,20 +13,19 @@
 #    under the License.
 
 from django.db import models
-import json
 from django.utils import timezone
-from openstack_clients import get_keystoneclient
-from keystoneclient.openstack.common.apiclient import exceptions
+from user_store import IdentityManager
 from serializers import (NewUserSerializer, NewProjectSerializer,
                          ResetUserSerializer)
 from django.conf import settings
+from jsonfield import JSONField
 
 
 class Action(models.Model):
     """Database model representation of the related action."""
     action_name = models.CharField(max_length=200)
-    action_data = models.TextField()
-    cache = models.TextField(default="{}")
+    action_data = JSONField(default={})
+    cache = JSONField(default={})
     state = models.CharField(max_length=200, default="default")
     valid = models.BooleanField(default=False)
     need_token = models.BooleanField(default=True)
@@ -38,7 +37,7 @@ class Action(models.Model):
 
     def get_action(self):
         """"""
-        data = json.loads(self.action_data)
+        data = self.action_data
         return settings.ACTION_CLASSES[self.action_name][0](
             data=data, action_model=self)
 
@@ -54,8 +53,6 @@ class BaseAction(object):
     required = []
 
     token_fields = []
-
-    cache = None
 
     def __init__(self, data, action_model=None, registration=None,
                  order=None):
@@ -73,7 +70,7 @@ class BaseAction(object):
             # make new model and save in db
             action = Action.objects.create(
                 action_name=self.__class__.__name__,
-                action_data=json.dumps(data),
+                action_data=data,
                 registration=registration,
                 order=order
             )
@@ -89,22 +86,11 @@ class BaseAction(object):
         return self.action.need_token
 
     def get_cache(self, key):
-        if self.cache:
-            return self.cache[key]
-        else:
-            self.cache = json.loads(self.action.cache)
-            return self.cache[key]
+        return self.action.cache[key]
 
     def set_cache(self, key, value):
-        if self.cache:
-            self.cache[key] = value
-            self.action.cache = json.dumps(self.cache)
-            self.action.save()
-        else:
-            self.cache = json.loads(self.action.cache)
-            self.cache[key] = value
-            self.action.cache = json.dumps(self.cache)
-            self.action.save()
+        self.action.cache[key] = value
+        self.action.save()
 
     def pre_approve(self):
         return self._pre_approve()
@@ -163,22 +149,17 @@ class NewUser(UserAction):
         # TODO(Adriant): Figure out how to set this up as a generic
         # user store object/module that can handle most of this and
         # be made pluggable down the line.
-        keystone = get_keystoneclient()
-        try:
-            user = keystone.users.find(name=self.username)
-        except exceptions.NotFound:
-            user = None
+        id_manager = IdentityManager()
 
-        keystone_user = json.loads(self.action.registration.keystone_user)
+        user = id_manager.find_user(self.username)
+
+        keystone_user = self.action.registration.keystone_user
 
         if not ("admin" in keystone_user['roles'] or
                 keystone_user['project_id'] == self.project_id):
             return ['Project id does not match keystone user project.']
 
-        try:
-            project = keystone.tenants.get(self.project_id)
-        except exceptions.NotFound:
-            project = None
+        project = id_manager.get_project(self.project_id)
 
         if not project:
             return ['Project does exist.']
@@ -207,28 +188,29 @@ class NewUser(UserAction):
         notes = self._validate()
 
         if self.valid:
-            keystone = get_keystoneclient()
+            id_manager = IdentityManager()
 
             if self.action.state == "default":
-                user = keystone.users.create(
+                user = id_manager.create_user(
                     name=self.username, password=token_data['password'],
-                    email=self.email, tenant_id=self.project_id)
-                role = keystone.roles.find(name=self.role)
-                keystone.roles.add_user_role(user, role, self.project_id)
+                    email=self.email, project_id=self.project_id)
+                role = id_manager.find_role(self.role)
+                id_manager.add_user_role(user, role, self.project_id)
 
                 notes.append(
                     'User %s has been created, with role %s in project %s.'
                     % (self.username, self.role, self.project_id))
                 return notes
             elif self.action.state == "existing":
-                user = keystone.users.find(name=self.username)
-                role = keystone.roles.find(name=self.role)
-                keystone.roles.add_user_role(user, role, self.project_id)
+                user = id_manager.find_user(self.username)
+                role = id_manager.find_role(self.role)
+                id_manager.add_user_role(user, role, self.project_id)
 
                 notes.append(
                     'Existing user %s has been given role %s in project %s.'
                     % (self.username, self.role, self.project_id))
                 return notes
+        return notes
 
 
 class NewProject(UserAction):
@@ -242,22 +224,16 @@ class NewProject(UserAction):
         'email'
     ]
 
-    default_role = "project_owner"
+    default_roles = ["Member", "project_owner"]
 
     token_fields = ['password']
 
     def _validate_project(self):
-        keystone = get_keystoneclient()
+        id_manager = IdentityManager()
 
-        try:
-            user = keystone.users.find(name=self.username)
-        except exceptions.NotFound:
-            user = None
+        user = id_manager.find_user(self.username)
 
-        try:
-            project = keystone.tenants.find(name=self.project_name)
-        except exceptions.NotFound:
-            project = None
+        project = id_manager.find_project(self.project_name)
 
         notes = []
 
@@ -290,12 +266,9 @@ class NewProject(UserAction):
         return notes
 
     def _validate_user(self):
-        keystone = get_keystoneclient()
+        id_manager = IdentityManager()
 
-        try:
-            user = keystone.users.find(name=self.username)
-        except exceptions.NotFound:
-            user = None
+        user = id_manager.find_user(self.username)
 
         notes = []
 
@@ -325,9 +298,9 @@ class NewProject(UserAction):
         notes = self._validate_project()
 
         if self.valid:
-            keystone = get_keystoneclient()
+            id_manager = IdentityManager()
 
-            project = keystone.tenants.create(self.project_name)
+            project = id_manager.create_project(self.project_name)
             # put project_id into action cache:
             self.action.registration.cache['project_id'] = project.id
             self.set_cache('project_id', project.id)
@@ -339,28 +312,36 @@ class NewProject(UserAction):
         notes = self._validate_user()
 
         if self.valid:
-            keystone = get_keystoneclient()
+            id_manager = IdentityManager()
 
             project_id = self.get_cache('project_id')
             self.action.registration.cache['project_id'] = project_id
-            project = keystone.tenants.get(project_id)
+            project = id_manager.get_project(project_id)
 
             if self.action.state == "default":
-                user = keystone.users.create(
+                user = id_manager.create_user(
                     name=self.username, password=token_data['password'],
-                    email=self.email, tenant_id=project.id)
-                role = keystone.roles.find(name=self.default_role)
-                keystone.roles.add_user_role(user, role, project)
+                    email=self.email, project_id=project.id)
 
-                notes.append(("New user '%s' created for project %s."
-                              % (self.username, self.project_name)))
+                for role in self.default_roles:
+                    ks_role = id_manager.find_role(role)
+                    id_manager.add_user_role(user, ks_role, project)
+
+                notes.append(
+                    "New user '%s' created for project %s with roles: %s" %
+                    (self.username, self.project_name, self.default_roles))
                 return notes
             elif self.action.state == "existing":
-                user = keystone.users.find(name=self.username)
-                role = keystone.roles.find(name=self.default_role)
-                keystone.roles.add_user_role(user, role, project)
-                notes.append(("Existing user '%s' attached to project %s."
-                              % (self.username, self.project_name)))
+                user = id_manager.find_user(self.username)
+
+                for role in self.default_roles:
+                    ks_role = id_manager.find_role(role)
+                    id_manager.add_user_role(user, ks_role, project)
+
+                notes.append("Existing user '%s' attached to project %s" +
+                             " with roles: %s"
+                             % (self.username, self.project_name,
+                                self.default_roles))
                 return notes
         return notes
 
@@ -379,12 +360,9 @@ class ResetUser(UserAction):
     token_fields = ['password']
 
     def _validate(self):
-        keystone = get_keystoneclient()
+        id_manager = IdentityManager()
 
-        try:
-            user = keystone.users.find(name=self.username)
-        except exceptions.NotFound:
-            user = None
+        user = id_manager.find_user(self.username)
 
         if user:
             if user.email == self.email:
@@ -406,10 +384,10 @@ class ResetUser(UserAction):
         notes = self._validate()
 
         if self.valid:
-            keystone = get_keystoneclient()
+            id_manager = IdentityManager()
 
-            user = keystone.users.find(name=self.username)
-            keystone.users.update_password(user, token_data['password'])
+            user = id_manager.find_user(self.username)
+            id_manager.update_user_password(user, token_data['password'])
             notes.append('User %s password has been changed.' % self.username)
             return notes
         return notes

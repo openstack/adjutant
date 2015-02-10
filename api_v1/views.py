@@ -16,7 +16,6 @@ from decorator import decorator
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from models import Registration, Token
-import json
 from django.utils import timezone
 from datetime import timedelta
 from uuid import uuid4
@@ -97,21 +96,21 @@ class RegistrationDetail(APIView):
 
             need_token = False
             valid = True
-            notes = json.loads(registration.notes)
+            notes = registration.notes
 
             actions = []
 
             for action in registration.actions:
                 act_model = action.get_action()
                 actions.append(act_model)
-                notes[act_model.__unicode__()] += act_model.post_approve()
+                notes[unicode(act_model)] += act_model.post_approve()
 
                 if not action.valid:
                     valid = False
                 if action.need_token:
                     need_token = True
 
-            registration.notes = json.dumps(notes)
+            registration.notes = notes
             registration.save()
 
             if valid:
@@ -120,9 +119,9 @@ class RegistrationDetail(APIView):
                     return Response({'notes': ['created token']}, status=200)
                 else:
                     for action in actions:
-                        notes[action.__unicode__()] += [action.submit({}), ]
+                        notes[unicode(action)] += [action.submit({}), ]
 
-                    registration.notes = json.dumps(notes)
+                    registration.notes = notes
                     registration.completed = True
                     registration.save()
                     return Response({'notes': notes}, status=200)
@@ -152,6 +151,9 @@ class TokenDetail(APIView):
            and what actions those go towards."""
         token = Token.objects.get(token=id)
 
+        if token.expires < timezone.now():
+            return Response({'notes': ['This token has expired.']}, status=400)
+
         required_fields = []
         actions = []
 
@@ -162,7 +164,7 @@ class TokenDetail(APIView):
                 if field not in required_fields:
                     required_fields.append(field)
 
-        return Response({'actions': [act.__unicode__() for act in actions],
+        return Response({'actions': [unicode(act) for act in actions],
                          'required_fields': required_fields})
 
     def post(self, request, id, format=None):
@@ -171,7 +173,9 @@ class TokenDetail(APIView):
            function."""
 
         token = Token.objects.get(token=id)
-        # TODO(Adriant): Handle expire status properly.
+
+        if token.expires < timezone.now():
+            return Response({'notes': ['This token has expired.']}, status=400)
 
         required_fields = set()
         actions = []
@@ -195,14 +199,18 @@ class TokenDetail(APIView):
             return Response(errors, status=400)
 
         try:
-            notes = {}
+            notes = token.registration.notes
+            tk_notes = {}
             for action in actions:
-                notes[action.__unicode__()] = [action.submit(data), ]
+                note = action.submit(data)
+                notes[unicode(action)] += note
+                tk_notes[unicode(action)] = note
             token.registration.completed = True
+            token.registration.notes = notes
             token.registration.save()
             token.delete()
 
-            return Response({'notes': notes}, status=200)
+            return Response({'notes': tk_notes}, status=200)
         except KeyError:
             pass
 
@@ -220,8 +228,8 @@ class ActionView(APIView):
         required_fields = []
 
         for action in actions:
-            act_tuple = settings.ACTION_CLASSES[action]
-            for field in act_tuple[0].required:
+            action_class, action_serializer = settings.ACTION_CLASSES[action]
+            for field in action_class.required:
                 if field not in required_fields:
                     required_fields.append(field)
 
@@ -243,16 +251,16 @@ class ActionView(APIView):
 
         valid = True
         for action in actions:
-            act_tuple = settings.ACTION_CLASSES[action]
+            action_class, action_serializer = settings.ACTION_CLASSES[action]
 
-            if act_tuple[1] is not None:
-                serializer = act_tuple[1](data=request.data)
+            if action_serializer is not None:
+                serializer = action_serializer(data=request.data)
             else:
                 serializer = None
 
             act_list.append({
                 'name': action,
-                'action': act_tuple[0],
+                'action': action_class,
                 'serializer': serializer})
 
             if serializer is not None and not serializer.is_valid():
@@ -263,12 +271,11 @@ class ActionView(APIView):
             keystone_user = request.keystone_user
 
             registration = Registration.objects.create(
-                reg_ip=ip_addr, keystone_user=json.dumps(keystone_user))
+                reg_ip=ip_addr, keystone_user=keystone_user)
             registration.save()
 
             notes = {}
-            i = 1
-            for act in act_list:
+            for i, act in enumerate(act_list):
                 if act['serializer'] is not None:
                     data = act['serializer'].validated_data
                 else:
@@ -277,12 +284,10 @@ class ActionView(APIView):
                     data=data, registration=registration,
                     order=i
                 )
-                i += 1
 
-                notes[act['name']] = []
-                notes[act['name']] += action.pre_approve()
+                notes[act['name']] = action.pre_approve()
 
-            registration.notes = json.dumps(notes)
+            registration.notes = notes
             registration.save()
             return {'registration': registration,
                     'notes': notes}
@@ -309,17 +314,17 @@ class ActionView(APIView):
                 valid = False
 
         if valid:
-            notes = json.loads(registration.notes)
+            notes = registration.notes
 
             for action in actions:
-                notes[action.__unicode__()] += action.post_approve()
+                notes[unicode(action)] += action.post_approve()
 
                 if not action.valid:
                     valid = False
                 if action.need_token:
                     need_token = True
 
-            registration.notes = json.dumps(notes)
+            registration.notes = notes
             registration.save()
 
             if valid:
@@ -328,9 +333,9 @@ class ActionView(APIView):
                     return Response({'notes': ['created token']}, status=200)
                 else:
                     for action in actions:
-                        notes[action.__unicode__()] += [action.submit({}), ]
+                        notes[unicode(action)] += [action.submit({}), ]
 
-                    registration.notes = json.dumps(notes)
+                    registration.notes = notes
                     registration.completed = True
                     registration.save()
                     return Response({'notes': notes}, status=200)
