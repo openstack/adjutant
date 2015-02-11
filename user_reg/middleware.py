@@ -1,4 +1,4 @@
-# Copyright (C) 2014 Catalyst IT Ltd
+# Copyright (C) 2015 Catalyst IT Ltd
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -24,6 +24,23 @@ class KeystoneHeaderUnwrapper(object):
                 'username': request.META['HTTP_X_USER_NAME'],
                 'user_id': request.META['HTTP_X_USER_ID'],
                 'authenticated': request.META['HTTP_X_IDENTITY_STATUS']
+            }
+        except KeyError:
+            token_data = {}
+        request.keystone_user = token_data
+
+
+class TestingHeaderUnwrapper(object):
+    """"""
+    def process_request(self, request):
+        try:
+            token_data = {
+                'project_name': request.META['headers']['project_name'],
+                'project_id': request.META['headers']['project_id'],
+                'roles': request.META['headers']['roles'].split(','),
+                'username': request.META['headers']['username'],
+                'user_id': request.META['headers']['user_id'],
+                'authenticated': request.META['headers']['authenticated']
             }
         except KeyError:
             token_data = {}

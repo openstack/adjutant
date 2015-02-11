@@ -1,4 +1,4 @@
-# Copyright (C) 2014 Catalyst IT Ltd
+# Copyright (C) 2015 Catalyst IT Ltd
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -24,6 +24,7 @@ https://docs.djangoproject.com/en/1.7/ref/settings/
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
+import sys
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 
@@ -66,6 +67,12 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'user_reg.middleware.KeystoneHeaderUnwrapper'
 )
+
+if 'test' in sys.argv:
+    # modify MIDDLEWARE_CLASSES
+    MIDDLEWARE_CLASSES = list(MIDDLEWARE_CLASSES)
+    MIDDLEWARE_CLASSES.remove('user_reg.middleware.KeystoneHeaderUnwrapper')
+    MIDDLEWARE_CLASSES.append('user_reg.middleware.TestingHeaderUnwrapper')
 
 ROOT_URLCONF = 'user_reg.urls'
 

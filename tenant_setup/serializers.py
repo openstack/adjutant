@@ -1,4 +1,4 @@
-# Copyright (C) 2014 Catalyst IT Ltd
+# Copyright (C) 2015 Catalyst IT Ltd
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain

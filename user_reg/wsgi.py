@@ -1,4 +1,4 @@
-# Copyright (C) 2014 Catalyst IT Ltd
+# Copyright (C) 2015 Catalyst IT Ltd
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -27,10 +27,11 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "user_reg.settings")
 from django.core.wsgi import get_wsgi_application
 application = get_wsgi_application()
 
-from urlparse import urlparse
-from keystonemiddleware.auth_token import AuthProtocol
 
 from django.conf import settings
+
+from urlparse import urlparse
+from keystonemiddleware.auth_token import AuthProtocol
 
 identity_url = urlparse(settings.KEYSTONE['auth_url'])
 conf = {

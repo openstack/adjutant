@@ -1,4 +1,4 @@
-# Copyright (C) 2014 Catalyst IT Ltd
+# Copyright (C) 2015 Catalyst IT Ltd
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -33,7 +33,7 @@ def admin_or_owner(func, *args, **kwargs):
         return func(*args, **kwargs)
 
     return Response({'notes': ["Must have one of the following roles: %s" %
-                               req_roles]},
+                               list(req_roles)]},
                     403)
 
 
@@ -118,13 +118,16 @@ class RegistrationDetail(APIView):
                     create_token(registration)
                     return Response({'notes': ['created token']}, status=200)
                 else:
+                    submit_notes = {}
                     for action in actions:
-                        notes[unicode(action)] += [action.submit({}), ]
+                        note = action.submit({})
+                        notes[unicode(action)] += note
+                        submit_notes[unicode(action)] = note
 
                     registration.notes = notes
                     registration.completed = True
                     registration.save()
-                    return Response({'notes': notes}, status=200)
+                    return Response({'notes': submit_notes}, status=200)
             return Response({'notes': ['actions invalid']}, status=400)
         else:
             return Response({'approved': ["this field is required."]},
@@ -340,7 +343,7 @@ class ActionView(APIView):
                     registration.save()
                     return Response({'notes': notes}, status=200)
             return Response({'notes': ['actions invalid']}, status=400)
-        return Response({'notes': ['action invalid']}, status=400)
+        return Response({'notes': ['actions invalid']}, status=400)
 
 
 class CreateProject(ActionView):

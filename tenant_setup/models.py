@@ -1,4 +1,4 @@
-# Copyright (C) 2014 Catalyst IT Ltd
+# Copyright (C) 2015 Catalyst IT Ltd
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -15,6 +15,7 @@
 from base.models import BaseAction
 from serializers import DefaultProjectResourcesSerializer
 from django.conf import settings
+from base.user_store import IdentityManager
 from base import openstack_clients
 
 
@@ -40,11 +41,15 @@ class DefaultProjectResources(BaseAction):
     }
 
     def _validate(self):
+
+        project_id = self.action.registration.cache.get('project_id', None)
         # need to check, does tenant exist.
-        self.action.valid = True
-        self.action.need_token = False
-        self.action.save()
-        return []
+        if project_id:
+            self.action.valid = True
+            self.action.need_token = False
+            self.action.save()
+            return ['project_id given: %s' % project_id]
+        return ['No project_id given.']
 
     def _setup_resources(self):
         neutron = openstack_clients.get_neutronclient()
@@ -105,7 +110,9 @@ class DefaultProjectResources(BaseAction):
         return notes
 
     def _pre_approve(self):
-        return self._validate()
+        if self.setup_resources:
+            return self._validate()
+        return []
 
     def _post_approve(self):
         self._validate()
@@ -122,25 +129,29 @@ class AddAdminToProject(BaseAction):
        monitoring purposes."""
 
     def _validate(self):
+
+        project_id = self.action.registration.cache.get('project_id', None)
         # need to check, does tenant exist.
-        self.action.valid = True
-        self.action.need_token = False
-        self.action.save()
-        return []
+        if project_id:
+            self.action.valid = True
+            self.action.need_token = False
+            self.action.save()
+            return ['project_id given: %s' % project_id]
+        return ['No project_id given.']
 
     def _pre_approve(self):
-        return self._validate()
+        return []
 
     def _post_approve(self):
         notes = self._validate()
         if self.valid:
-            keystone = openstack_clients.get_keystoneclient()
+            id_manager = IdentityManager()
 
-            project = keystone.tenants.get(
+            project = id_manager.get_project(
                 self.action.registration.cache['project_id'])
-            user = keystone.users.find(name="admin")
-            role = keystone.roles.find(name="admin")
-            keystone.roles.add_user_role(user, role, project)
+            user = id_manager.find_user(name="admin")
+            role = id_manager.find_role(name="admin")
+            id_manager.add_user_role(user, role, project.id)
             notes.append(
                 'Admin has been added to %s.' %
                 self.action.registration.cache['project_id'])

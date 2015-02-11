@@ -1,4 +1,4 @@
-# Copyright (C) 2014 Catalyst IT Ltd
+# Copyright (C) 2015 Catalyst IT Ltd
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -42,8 +42,10 @@ class Registration(models.Model):
     approved_on = models.DateTimeField(null=True)
     completed_on = models.DateTimeField(null=True)
 
-    # in memory dict to be used for passing data between actions:
-    cache = {}
+    def __init__(self, *args, **kwargs):
+        super(Registration, self).__init__(*args, **kwargs)
+        # in memory dict to be used for passing data between actions:
+        self.cache = {}
 
     @property
     def actions(self):

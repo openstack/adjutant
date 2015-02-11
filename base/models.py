@@ -1,4 +1,4 @@
-# Copyright (C) 2014 Catalyst IT Ltd
+# Copyright (C) 2015 Catalyst IT Ltd
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -36,7 +36,7 @@ class Action(models.Model):
     created = models.DateTimeField(default=timezone.now)
 
     def get_action(self):
-        """"""
+        """Returns self as the appropriate action wrapper type."""
         data = self.action_data
         return settings.ACTION_CLASSES[self.action_name][0](
             data=data, action_model=self)
@@ -48,7 +48,20 @@ class BaseAction(object):
        per type but built from a single database type.
        - 'required' defines what fields to setup from the data.
        - 'token_fields' defined which fields are needed by this action
-         at the token stage."""
+         at the token stage.
+
+       The Action can do anything it needs at one of the three functions
+       called by the views:
+       - 'pre_approve'
+       - 'post_approve'
+       - 'submit'
+
+       By using 'get_cache' and 'set_cache' they can pass data along which
+       may be needed by the action later. This cache is backed to the database.
+
+       Passing data along to other actions is done via the registration and
+       it's cache, but this is in memory only so only useful during the
+       same function step ('post_approve', etc.)."""
 
     required = []
 
@@ -115,6 +128,8 @@ class BaseAction(object):
 
 
 class UserAction(BaseAction):
+    """Base action for dealing with users. Removes username if
+       USERNAME_IS_EMAIL and sets email to be username."""
 
     def __init__(self, *args, **kwargs):
 
@@ -325,7 +340,7 @@ class NewProject(UserAction):
 
                 for role in self.default_roles:
                     ks_role = id_manager.find_role(role)
-                    id_manager.add_user_role(user, ks_role, project)
+                    id_manager.add_user_role(user, ks_role, project.id)
 
                 notes.append(
                     "New user '%s' created for project %s with roles: %s" %
@@ -336,10 +351,10 @@ class NewProject(UserAction):
 
                 for role in self.default_roles:
                     ks_role = id_manager.find_role(role)
-                    id_manager.add_user_role(user, ks_role, project)
+                    id_manager.add_user_role(user, ks_role, project.id)
 
-                notes.append("Existing user '%s' attached to project %s" +
-                             " with roles: %s"
+                notes.append(("Existing user '%s' attached to project %s" +
+                             " with roles: %s")
                              % (self.username, self.project_name,
                                 self.default_roles))
                 return notes

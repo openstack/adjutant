@@ -53,8 +53,8 @@ class IdentityManager(object):
             role = None
         return role
 
-    def add_user_role(self, user, role, project):
-        self.ks_client.roles.add_user_role(user, role, project)
+    def add_user_role(self, user, role, project_id):
+        self.ks_client.roles.add_user_role(user, role, project_id)
 
     def find_project(self, project_name):
         try:
