@@ -31,7 +31,7 @@ class Registration(models.Model):
     keystone_user = JSONField(default={})
 
     # what do we know about them:
-    notes = JSONField(default={})
+    action_notes = JSONField(default={})
     errors = JSONField(default={})
 
     approved = models.BooleanField(default=False)
@@ -61,10 +61,17 @@ class Registration(models.Model):
             })
 
         return {
-            "ip_address": self.reg_ip, "notes": self.notes,
+            "ip_address": self.reg_ip, "notes": self.action_notes,
             "approved": self.approved, "completed": self.completed,
             "actions": actions, "uuid": self.uuid
         }
+
+    def add_action_note(self, action, note):
+        if action in self.action_notes:
+            self.action_notes[action].append(note)
+        else:
+            self.action_notes[action] = [note]
+        self.save()
 
 
 class Token(models.Model):

@@ -92,42 +92,42 @@ class RegistrationDetail(APIView):
         if request.data.get('approved', False) is True:
             # TODO(adriant): Handle the NotFound case
             registration = Registration.objects.get(uuid=uuid)
+
+            if registration.completed:
+                Response(
+                    {'notes':
+                        ['This registration has already been completed.']},
+                    status=400)
             registration.approved = True
 
             need_token = False
             valid = True
-            notes = registration.notes
 
             actions = []
 
             for action in registration.actions:
                 act_model = action.get_action()
                 actions.append(act_model)
-                notes[unicode(act_model)] += act_model.post_approve()
+                act_model.post_approve()
 
                 if not action.valid:
                     valid = False
                 if action.need_token:
                     need_token = True
 
-            registration.notes = notes
-            registration.save()
-
             if valid:
                 if need_token:
                     create_token(registration)
                     return Response({'notes': ['created token']}, status=200)
                 else:
-                    submit_notes = {}
                     for action in actions:
-                        note = action.submit({})
-                        notes[unicode(action)] += note
-                        submit_notes[unicode(action)] = note
+                        action.submit({})
 
-                    registration.notes = notes
                     registration.completed = True
                     registration.save()
-                    return Response({'notes': submit_notes}, status=200)
+                    return Response(
+                        {'notes': "Registration completed successfully."},
+                        status=200)
             return Response({'notes': ['actions invalid']}, status=400)
         else:
             return Response({'approved': ["this field is required."]},
@@ -201,21 +201,16 @@ class TokenDetail(APIView):
         if errors:
             return Response(errors, status=400)
 
-        try:
-            notes = token.registration.notes
-            tk_notes = {}
-            for action in actions:
-                note = action.submit(data)
-                notes[unicode(action)] += note
-                tk_notes[unicode(action)] = note
-            token.registration.completed = True
-            token.registration.notes = notes
-            token.registration.save()
-            token.delete()
+        for action in actions:
+            action.submit(data)
 
-            return Response({'notes': tk_notes}, status=200)
-        except KeyError:
-            pass
+        token.registration.completed = True
+        token.registration.save()
+        token.delete()
+
+        return Response(
+            {'notes': "Token submitted successfully."},
+            status=200)
 
 
 class ActionView(APIView):
@@ -277,7 +272,6 @@ class ActionView(APIView):
                 reg_ip=ip_addr, keystone_user=keystone_user)
             registration.save()
 
-            notes = {}
             for i, act in enumerate(act_list):
                 if act['serializer'] is not None:
                     data = act['serializer'].validated_data
@@ -288,12 +282,9 @@ class ActionView(APIView):
                     order=i
                 )
 
-                notes[act['name']] = action.pre_approve()
+                action.pre_approve()
 
-            registration.notes = notes
-            registration.save()
-            return {'registration': registration,
-                    'notes': notes}
+            return {'registration': registration}
         else:
             errors = {}
             for act in act_list:
@@ -317,18 +308,13 @@ class ActionView(APIView):
                 valid = False
 
         if valid:
-            notes = registration.notes
-
             for action in actions:
-                notes[unicode(action)] += action.post_approve()
+                action.post_approve()
 
                 if not action.valid:
                     valid = False
                 if action.need_token:
                     need_token = True
-
-            registration.notes = notes
-            registration.save()
 
             if valid:
                 if need_token:
@@ -336,12 +322,13 @@ class ActionView(APIView):
                     return Response({'notes': ['created token']}, status=200)
                 else:
                     for action in actions:
-                        notes[unicode(action)] += [action.submit({}), ]
+                        action.submit({})
 
-                    registration.notes = notes
                     registration.completed = True
                     registration.save()
-                    return Response({'notes': notes}, status=200)
+                    return Response(
+                        {'notes': "Registration completed successfully."},
+                        status=200)
             return Response({'notes': ['actions invalid']}, status=400)
         return Response({'notes': ['actions invalid']}, status=400)
 

@@ -105,6 +105,10 @@ class BaseAction(object):
         self.action.cache[key] = value
         self.action.save()
 
+    def add_note(self, note):
+        self.action.registration.add_action_note(
+            unicode(self), note)
+
     def pre_approve(self):
         return self._pre_approve()
 
@@ -172,35 +176,36 @@ class NewUser(UserAction):
 
         if not ("admin" in keystone_user['roles'] or
                 keystone_user['project_id'] == self.project_id):
-            return ['Project id does not match keystone user project.']
+            self.add_note('Project id does not match keystone user project.')
+            return
 
         project = id_manager.get_project(self.project_id)
 
         if not project:
-            return ['Project does exist.']
-
-        if user:
-            if user.email == self.email:
-                self.action.valid = True
-                self.action.need_token = False
-                self.action.state = "existing"
-                self.action.save()
-                return ['Existing user with matching email.']
-            else:
-                return ['Existing user with non-matching email.']
+            self.add_note('Project does exist.')
         else:
-            self.action.valid = True
-            self.action.save()
-            return ['No user present with username']
+            if user:
+                if user.email == self.email:
+                    self.action.valid = True
+                    self.action.need_token = False
+                    self.action.state = "existing"
+                    self.action.save()
+                    self.add_note('Existing user with matching email.')
+                else:
+                    self.add_note('Existing user with non-matching email.')
+            else:
+                self.action.valid = True
+                self.action.save()
+                self.add_note('No user present with username')
 
     def _pre_approve(self):
-        return self._validate()
+        self._validate()
 
     def _post_approve(self):
-        return self._validate()
+        self._validate()
 
     def _submit(self, token_data):
-        notes = self._validate()
+        self._validate()
 
         if self.valid:
             id_manager = IdentityManager()
@@ -212,20 +217,17 @@ class NewUser(UserAction):
                 role = id_manager.find_role(self.role)
                 id_manager.add_user_role(user, role, self.project_id)
 
-                notes.append(
+                self.add_note(
                     'User %s has been created, with role %s in project %s.'
                     % (self.username, self.role, self.project_id))
-                return notes
             elif self.action.state == "existing":
                 user = id_manager.find_user(self.username)
                 role = id_manager.find_role(self.role)
                 id_manager.add_user_role(user, role, self.project_id)
 
-                notes.append(
+                self.add_note(
                     'Existing user %s has been given role %s in project %s.'
                     % (self.username, self.role, self.project_id))
-                return notes
-        return notes
 
 
 class NewProject(UserAction):
@@ -250,67 +252,59 @@ class NewProject(UserAction):
 
         project = id_manager.find_project(self.project_name)
 
-        notes = []
-
         if user:
             if user.email == self.email:
                 self.action.valid = True
                 self.action.state = "existing"
                 self.action.need_token = False
                 self.action.save()
-                notes.append("Existing user '%s' with matching email." %
-                             self.email)
+                self.add_note("Existing user '%s' with matching email." %
+                              self.email)
             else:
-                notes.append("Existing user '%s' with non-matching email." %
-                             self.username)
+                self.add_note("Existing user '%s' with non-matching email." %
+                              self.username)
         else:
             self.action.valid = True
             self.action.save()
-            notes.append("No user present with username '%s'." %
-                         self.username)
+            self.add_note("No user present with username '%s'." %
+                          self.username)
 
         if project:
             self.action.valid = False
             self.action.save()
-            notes.append("Existing project with name '%s'." %
-                         self.project_name)
+            self.add_note("Existing project with name '%s'." %
+                          self.project_name)
         else:
-            notes.append("No existing project with name '%s'." %
-                         self.project_name)
-
-        return notes
+            self.add_note("No existing project with name '%s'." %
+                          self.project_name)
 
     def _validate_user(self):
         id_manager = IdentityManager()
 
         user = id_manager.find_user(self.username)
 
-        notes = []
-
         if user:
             if user.email == self.email:
                 self.action.valid = True
                 self.action.state = "existing"
                 self.action.need_token = False
                 self.action.save()
-                notes.append("Existing user '%s' with matching email." %
-                             self.email)
+                self.add_note("Existing user '%s' with matching email." %
+                              self.email)
             else:
-                notes.append("Existing user '%s' with non-matching email." %
-                             self.username)
+                self.add_note("Existing user '%s' with non-matching email." %
+                              self.username)
         else:
             self.action.valid = True
             self.action.save()
-            notes.append("No user present with username '%s'." %
-                         self.username)
-
-        return notes
+            self.add_note("No user present with username '%s'." %
+                          self.username)
 
     def _pre_approve(self):
-        return self._validate_project()
+        self._validate_project()
 
     def _post_approve(self):
-        notes = self._validate_project()
+        self._validate_project()
 
         if self.valid:
             id_manager = IdentityManager()
@@ -319,12 +313,10 @@ class NewProject(UserAction):
             # put project_id into action cache:
             self.action.registration.cache['project_id'] = project.id
             self.set_cache('project_id', project.id)
-            notes.append("New project '%s' created." % self.project_name)
-            return notes
-        return notes
+            self.add_note("New project '%s' created." % self.project_name)
 
     def _submit(self, token_data):
-        notes = self._validate_user()
+        self._validate_user()
 
         if self.valid:
             id_manager = IdentityManager()
@@ -342,10 +334,9 @@ class NewProject(UserAction):
                     ks_role = id_manager.find_role(role)
                     id_manager.add_user_role(user, ks_role, project.id)
 
-                notes.append(
+                self.add_note(
                     "New user '%s' created for project %s with roles: %s" %
                     (self.username, self.project_name, self.default_roles))
-                return notes
             elif self.action.state == "existing":
                 user = id_manager.find_user(self.username)
 
@@ -353,12 +344,10 @@ class NewProject(UserAction):
                     ks_role = id_manager.find_role(role)
                     id_manager.add_user_role(user, ks_role, project.id)
 
-                notes.append(("Existing user '%s' attached to project %s" +
-                             " with roles: %s")
-                             % (self.username, self.project_name,
-                                self.default_roles))
-                return notes
-        return notes
+                self.add_note(("Existing user '%s' attached to project %s" +
+                              " with roles: %s")
+                              % (self.username, self.project_name,
+                                 self.default_roles))
 
 
 class ResetUser(UserAction):
@@ -383,29 +372,27 @@ class ResetUser(UserAction):
             if user.email == self.email:
                 self.action.valid = True
                 self.action.save()
-                return ['Existing user with matching email.']
+                self.add_note('Existing user with matching email.')
             else:
-                return ['Existing user with non-matching email.']
+                self.add_note('Existing user with non-matching email.')
         else:
-            return ['No user present with username']
+            self.add_note('No user present with username')
 
     def _pre_approve(self):
-        return self._validate()
+        self._validate()
 
     def _post_approve(self):
-        return self._validate()
+        self._validate()
 
     def _submit(self, token_data):
-        notes = self._validate()
+        self._validate()
 
         if self.valid:
             id_manager = IdentityManager()
 
             user = id_manager.find_user(self.username)
             id_manager.update_user_password(user, token_data['password'])
-            notes.append('User %s password has been changed.' % self.username)
-            return notes
-        return notes
+            self.add_note('User %s password has been changed.' % self.username)
 
 
 # A dict of tuples in the format: (<ActionClass>, <ActionSerializer>)

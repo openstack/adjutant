@@ -416,12 +416,63 @@ class WorkFlowTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             response.data,
-            {'notes':
-                {u'DefaultProjectResources': [],
-                 u'AddAdminToProject': [],
-                 u'NewProject':
-                    [u"Existing user 'test@example.com' with matching email.",
-                     (u"Existing user 'test@example.com' attached to " +
-                      "project test_project with roles: " +
-                      "['Member', 'project_owner']")]}}
+            {'notes': 'Registration completed successfully.'}
         )
+
+    @mock.patch('base.models.IdentityManager', FakeManager)
+    def test_reset_user(self):
+        """
+        Ensure the reset user workflow goes as expected.
+        Create registration + create token, submit token.
+        """
+        global temp_cache
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.password = "test_password"
+
+        temp_cache = {
+            'i': 0,
+            'users': {user.name: user},
+            'projects': {},
+            'roles': {
+                'Member': 'Member', 'admin': 'admin',
+                'project_owner': 'project_owner'
+            }
+        }
+        url = "/api_v1/reset"
+        data = {'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        new_token = Token.objects.all()[0]
+        url = "/api_v1/token/" + new_token.token
+        data = {'password': 'new_test_password'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(user.password, 'new_test_password')
+
+    @mock.patch('base.models.IdentityManager', FakeManager)
+    def test_reset_user_no_existing(self):
+        """
+        Actions should be invalid.
+        """
+        global temp_cache
+
+        temp_cache = {
+            'i': 0,
+            'users': {},
+            'projects': {},
+            'roles': {
+                'Member': 'Member', 'admin': 'admin',
+                'project_owner': 'project_owner'
+            }
+        }
+        url = "/api_v1/reset"
+        data = {'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {'notes': ['actions invalid']})

@@ -28,17 +28,9 @@ class DefaultProjectResources(BaseAction):
         'setup_resources'
     ]
 
-    # TODO(Adriant): Ideally move these to the settings file
-    defaults = {
-        'network_name': 'somenetwork',
-        'subnet_name': 'somesubnet',
-        'router_name': 'somerouter',
-        # this depends on region and needs to be pulled from somewhere:
-        'public_network': 'aed4df5a-1a1f-42e4-b105-aa7f2edc7a95',
-        'DNS_NAMESERVERS': ['193.168.1.2',
-                            '193.168.1.3'],
-        'SUBNET_CIDR': '192.168.1.0/24'
-    }
+    # TODO(Adriant): work our more sensible defaults and how to deal
+    # with multiple regions (defaults in settings file now).
+    defaults = settings.NETWORK_DEFAULTS[settings.DEFAULT_REGION]
 
     def _validate(self):
 
@@ -48,13 +40,11 @@ class DefaultProjectResources(BaseAction):
             self.action.valid = True
             self.action.need_token = False
             self.action.save()
-            return ['project_id given: %s' % project_id]
-        return ['No project_id given.']
+            self.add_note('project_id given: %s' % project_id)
+        self.add_note('No project_id given.')
 
     def _setup_resources(self):
         neutron = openstack_clients.get_neutronclient()
-
-        notes = []
 
         project_id = self.action.registration.cache['project_id']
 
@@ -69,9 +59,9 @@ class DefaultProjectResources(BaseAction):
             }
         }
         network = neutron.create_network(body=network_body)
-        notes.append("Network %s created for project %s" %
-                     (self.defaults['network_name'],
-                      self.action.registration.cache['project_id']))
+        self.add_note("Network %s created for project %s" %
+                      (self.defaults['network_name'],
+                       self.action.registration.cache['project_id']))
 
         subnet_body = {
             "subnet": {
@@ -83,8 +73,8 @@ class DefaultProjectResources(BaseAction):
             }
         }
         subnet = neutron.create_subnet(body=subnet_body)
-        notes.append("Subnet created for network %s" %
-                     self.defaults['network_name'])
+        self.add_note("Subnet created for network %s" %
+                      self.defaults['network_name'])
 
         router_body = {
             "router": {
@@ -97,31 +87,27 @@ class DefaultProjectResources(BaseAction):
             }
         }
         router = neutron.create_router(body=router_body)
-        notes.append("Router created for project %s" %
-                     self.action.registration.cache['project_id'])
+        self.add_note("Router created for project %s" %
+                      self.action.registration.cache['project_id'])
 
         interface_body = {
             "subnet_id": subnet['subnet']['id']
         }
         neutron.add_interface_router(router['router']['id'],
                                      body=interface_body)
-        notes.append("Interface added to router for subnet")
-
-        return notes
+        self.add_note("Interface added to router for subnet")
 
     def _pre_approve(self):
         if self.setup_resources:
-            return self._validate()
-        return []
+            self._validate()
 
     def _post_approve(self):
         self._validate()
         if self.setup_resources and self.valid:
-            return self._setup_resources()
-        return []
+            self._setup_resources()
 
     def _submit(self, token_data):
-        return []
+        pass
 
 
 class AddAdminToProject(BaseAction):
@@ -136,14 +122,14 @@ class AddAdminToProject(BaseAction):
             self.action.valid = True
             self.action.need_token = False
             self.action.save()
-            return ['project_id given: %s' % project_id]
-        return ['No project_id given.']
+            self.add_note('project_id given: %s' % project_id)
+        self.add_note('No project_id given.')
 
     def _pre_approve(self):
-        return []
+        pass
 
     def _post_approve(self):
-        notes = self._validate()
+        self._validate()
         if self.valid:
             id_manager = IdentityManager()
 
@@ -152,14 +138,12 @@ class AddAdminToProject(BaseAction):
             user = id_manager.find_user(name="admin")
             role = id_manager.find_role(name="admin")
             id_manager.add_user_role(user, role, project.id)
-            notes.append(
+            self.add_note(
                 'Admin has been added to %s.' %
                 self.action.registration.cache['project_id'])
-            return notes
-        return notes
 
     def _submit(self, token_data):
-        return []
+        pass
 
 
 action_classes = {

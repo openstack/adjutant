@@ -121,6 +121,21 @@ KEYSTONE = {
     'auth_url': "http://localhost:5000/v2.0"
 }
 
+DEFAULT_REGION = "REGION_ONE"
+
+NETWORK_DEFAULTS = {
+    "REGION_ONE": {
+        'network_name': 'somenetwork',
+        'subnet_name': 'somesubnet',
+        'router_name': 'somerouter',
+        # this depends on region and needs to be pulled from somewhere:
+        'public_network': 'aed4df5a-1a1f-42e4-b105-aa7f2edc7a95',
+        'DNS_NAMESERVERS': ['193.168.1.2',
+                            '193.168.1.3'],
+        'SUBNET_CIDR': '192.168.1.0/24'
+    }
+}
+
 # the order of the actions matters. These will run after the default action,
 # in the given order.
 API_ACTIONS = {'CreateProject': ['AddAdminToProject',
