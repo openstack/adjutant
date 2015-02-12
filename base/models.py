@@ -106,6 +106,7 @@ class BaseAction(object):
         self.action.save()
 
     def add_note(self, note):
+        note = "%s - (%s)" % (note, timezone.now())
         self.action.registration.add_action_note(
             unicode(self), note)
 

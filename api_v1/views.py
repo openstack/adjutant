@@ -19,6 +19,7 @@ from models import Registration, Token
 from django.utils import timezone
 from datetime import timedelta
 from uuid import uuid4
+from logging import getLogger
 
 from django.conf import settings
 
@@ -62,7 +63,14 @@ def create_token(registration):
     token.save()
 
 
-class RegistrationList(APIView):
+class APIViewWithLogger(APIView):
+    """docstring for ClassName"""
+    def __init__(self, *args, **kwargs):
+        super(APIViewWithLogger, self).__init__(*args, **kwargs)
+        self.logger = getLogger('django.request')
+
+
+class RegistrationList(APIViewWithLogger):
 
     @admin
     def get(self, request, format=None):
@@ -75,13 +83,18 @@ class RegistrationList(APIView):
         return Response(reg_list)
 
 
-class RegistrationDetail(APIView):
+class RegistrationDetail(APIViewWithLogger):
 
     @admin
     def get(self, request, uuid, format=None):
         """Dict representation of a Registration object
            and its related actions."""
-        registration = Registration.objects.get(uuid=uuid)
+        try:
+            registration = Registration.objects.get(uuid=uuid)
+        except Registration.DoesNotExist:
+            return Response(
+                {'notes': ['No registration with this id.']},
+                status=404)
         return Response(registration.to_dict())
 
     @admin
@@ -89,12 +102,17 @@ class RegistrationDetail(APIView):
         """Will approve the Registration specified,
            followed by running the post_approve actions
            and if valid will setup and create a related token. """
-        if request.data.get('approved', False) is True:
-            # TODO(adriant): Handle the NotFound case
+        try:
             registration = Registration.objects.get(uuid=uuid)
+        except Registration.DoesNotExist:
+            return Response(
+                {'notes': ['No registration with this id.']},
+                status=404)
+
+        if request.data.get('approved', False) is True:
 
             if registration.completed:
-                Response(
+                return Response(
                     {'notes':
                         ['This registration has already been completed.']},
                     status=400)
@@ -134,7 +152,7 @@ class RegistrationDetail(APIView):
                             status=400)
 
 
-class TokenList(APIView):
+class TokenList(APIViewWithLogger):
     """Admin functionality for managing/monitoring tokens."""
 
     @admin
@@ -147,14 +165,19 @@ class TokenList(APIView):
         return Response(token_list)
 
 
-class TokenDetail(APIView):
+class TokenDetail(APIViewWithLogger):
 
     def get(self, request, id, format=None):
         """Returns a response with the list of required fields
            and what actions those go towards."""
-        token = Token.objects.get(token=id)
+        try:
+            token = Token.objects.get(token=id)
+        except Token.DoesNotExist:
+            return Response(
+                {'notes': ['This token does not exist.']}, status=404)
 
         if token.expires < timezone.now():
+            token.delete()
             return Response({'notes': ['This token has expired.']}, status=400)
 
         required_fields = []
@@ -174,10 +197,14 @@ class TokenDetail(APIView):
         """Ensures the required fields are present,
            will then pass those to the actions via the submit
            function."""
-
-        token = Token.objects.get(token=id)
+        try:
+            token = Token.objects.get(token=id)
+        except Token.DoesNotExist:
+            return Response(
+                {'notes': ['This token does not exist.']}, status=404)
 
         if token.expires < timezone.now():
+            token.delete()
             return Response({'notes': ['This token has expired.']}, status=400)
 
         required_fields = set()
@@ -213,7 +240,7 @@ class TokenDetail(APIView):
             status=200)
 
 
-class ActionView(APIView):
+class ActionView(APIViewWithLogger):
     """Base class for api calls that start a Registration.
        Until it is moved to settings, 'default_action' is a
        required hardcoded field."""
@@ -339,6 +366,7 @@ class CreateProject(ActionView):
 
     def post(self, request, format=None):
         """Runs internal process_actions and sends back notes or errors."""
+        self.logger.info("Starting new project registration.")
         processed = self.process_actions(request)
 
         errors = processed.get('errors', None)

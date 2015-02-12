@@ -23,9 +23,9 @@ class IdentityManager(object):
     def __init__(self):
         self.ks_client = get_keystoneclient()
 
-    def find_user(self, username):
+    def find_user(self, name):
         try:
-            user = self.ks_client.users.find(name=username)
+            user = self.ks_client.users.find(name=name)
         except ks_exceptions.NotFound:
             user = None
         return user

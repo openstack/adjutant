@@ -11,6 +11,9 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+from time import time
+from logging import getLogger
+from django.utils import timezone
 
 
 class KeystoneHeaderUnwrapper(object):
@@ -45,3 +48,27 @@ class TestingHeaderUnwrapper(object):
         except KeyError:
             token_data = {}
         request.keystone_user = token_data
+
+
+class RequestLoggingMiddleware(object):
+    def __init__(self):
+        self.logger = getLogger('django.request')
+
+    def process_request(self, request):
+        self.logger.info(
+            '<%s> %s [%s] - (%s)',
+            request.method,
+            request.META['REMOTE_ADDR'],
+            request.get_full_path(),
+            timezone.now()
+        )
+        request.timer = time()
+
+    def process_response(self, request, response):
+        self.logger.info(
+            '<%s> [%s] - (%.1fs)',
+            response.status_code,
+            request.get_full_path(),
+            time() - request.timer
+        )
+        return response

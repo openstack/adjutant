@@ -16,6 +16,8 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from api_v1.models import Registration, Token
 import mock
+from django.utils import timezone
+from datetime import timedelta
 
 
 temp_cache = {}
@@ -79,7 +81,7 @@ class FakeManager(object):
         return project
 
 
-class WorkFlowTests(APITestCase):
+class APITests(APITestCase):
     """Tests to ensure the approval/token workflow does
        what is expected. These test don't check final
        results for actions, simply that the registrations,
@@ -476,3 +478,134 @@ class WorkFlowTests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {'notes': ['actions invalid']})
+
+    def test_no_token_get(self):
+        """
+        Should be a 404.
+        """
+        url = "/api_v1/token/e8b3f57f5da64bf3a6bf4f9bbd3a40b5"
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            response.data, {'notes': ['This token does not exist.']})
+
+    def test_no_token_post(self):
+        """
+        Should be a 404.
+        """
+        url = "/api_v1/token/e8b3f57f5da64bf3a6bf4f9bbd3a40b5"
+        response = self.client.post(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            response.data, {'notes': ['This token does not exist.']})
+
+    def test_no_registration_get(self):
+        """
+        Should be a 404.
+        """
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        url = "/api_v1/registration/e8b3f57f5da64bf3a6bf4f9bbd3a40b5"
+        response = self.client.get(url, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            response.data, {'notes': ['No registration with this id.']})
+
+    def test_no_registration_post(self):
+        """
+        Should be a 404.
+        """
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        url = "/api_v1/registration/e8b3f57f5da64bf3a6bf4f9bbd3a40b5"
+        response = self.client.post(url, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            response.data, {'notes': ['No registration with this id.']})
+
+    @mock.patch('base.models.IdentityManager', FakeManager)
+    def test_token_expired_post(self):
+        """
+        Expired token should do nothing, then delete itself.
+        """
+        global temp_cache
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.password = "test_password"
+
+        temp_cache = {
+            'i': 0,
+            'users': {user.name: user},
+            'projects': {},
+            'roles': {
+                'Member': 'Member', 'admin': 'admin',
+                'project_owner': 'project_owner'
+            }
+        }
+        url = "/api_v1/reset"
+        data = {'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        new_token = Token.objects.all()[0]
+        new_token.expires = timezone.now() - timedelta(hours=24)
+        new_token.save()
+        url = "/api_v1/token/" + new_token.token
+        data = {'password': 'new_test_password'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {'notes': ['This token has expired.']})
+        self.assertEqual(0, Token.objects.count())
+
+    @mock.patch('base.models.IdentityManager', FakeManager)
+    def test_token_expired_get(self):
+        """
+        Expired token should do nothing, then delete itself.
+        """
+        global temp_cache
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.password = "test_password"
+
+        temp_cache = {
+            'i': 0,
+            'users': {user.name: user},
+            'projects': {},
+            'roles': {
+                'Member': 'Member', 'admin': 'admin',
+                'project_owner': 'project_owner'
+            }
+        }
+        url = "/api_v1/reset"
+        data = {'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        new_token = Token.objects.all()[0]
+        new_token.expires = timezone.now() - timedelta(hours=24)
+        new_token.save()
+        url = "/api_v1/token/" + new_token.token
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {'notes': ['This token has expired.']})
+        self.assertEqual(0, Token.objects.count())
