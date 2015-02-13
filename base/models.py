@@ -212,19 +212,31 @@ class NewUser(UserAction):
             id_manager = IdentityManager()
 
             if self.action.state == "default":
-                user = id_manager.create_user(
-                    name=self.username, password=token_data['password'],
-                    email=self.email, project_id=self.project_id)
-                role = id_manager.find_role(self.role)
-                id_manager.add_user_role(user, role, self.project_id)
+                try:
+                    user = id_manager.create_user(
+                        name=self.username, password=token_data['password'],
+                        email=self.email, project_id=self.project_id)
+                    role = id_manager.find_role(self.role)
+                    id_manager.add_user_role(user, role, self.project_id)
+                except Exception as e:
+                    self.add_note(
+                        "Error: '%s' while creating user: %s with role: " %
+                        (e, self.username, self.role))
+                    raise e
 
                 self.add_note(
                     'User %s has been created, with role %s in project %s.'
                     % (self.username, self.role, self.project_id))
             elif self.action.state == "existing":
-                user = id_manager.find_user(self.username)
-                role = id_manager.find_role(self.role)
-                id_manager.add_user_role(user, role, self.project_id)
+                try:
+                    user = id_manager.find_user(self.username)
+                    role = id_manager.find_role(self.role)
+                    id_manager.add_user_role(user, role, self.project_id)
+                except Exception as e:
+                    self.add_note(
+                        "Error: '%s' while attaching user: %s with role: " %
+                        (e, self.username, self.role))
+                    raise e
 
                 self.add_note(
                     'Existing user %s has been given role %s in project %s.'
@@ -309,8 +321,13 @@ class NewProject(UserAction):
 
         if self.valid:
             id_manager = IdentityManager()
-
-            project = id_manager.create_project(self.project_name)
+            try:
+                project = id_manager.create_project(self.project_name)
+            except Exception as e:
+                self.add_note(
+                    "Error: '%s' while creating project: %s" %
+                    (e, self.project_name))
+                raise e
             # put project_id into action cache:
             self.action.registration.cache['project_id'] = project.id
             self.set_cache('project_id', project.id)
@@ -324,16 +341,23 @@ class NewProject(UserAction):
 
             project_id = self.get_cache('project_id')
             self.action.registration.cache['project_id'] = project_id
+
             project = id_manager.get_project(project_id)
 
             if self.action.state == "default":
-                user = id_manager.create_user(
-                    name=self.username, password=token_data['password'],
-                    email=self.email, project_id=project.id)
+                try:
+                    user = id_manager.create_user(
+                        name=self.username, password=token_data['password'],
+                        email=self.email, project_id=project.id)
 
-                for role in self.default_roles:
-                    ks_role = id_manager.find_role(role)
-                    id_manager.add_user_role(user, ks_role, project.id)
+                    for role in self.default_roles:
+                        ks_role = id_manager.find_role(role)
+                        id_manager.add_user_role(user, ks_role, project.id)
+                except Exception as e:
+                    self.add_note(
+                        "Error: '%s' while creating user: %s with roles: %s" %
+                        (e, self.username, self.default_roles))
+                    raise e
 
                 self.add_note(
                     "New user '%s' created for project %s with roles: %s" %
@@ -341,9 +365,15 @@ class NewProject(UserAction):
             elif self.action.state == "existing":
                 user = id_manager.find_user(self.username)
 
-                for role in self.default_roles:
-                    ks_role = id_manager.find_role(role)
-                    id_manager.add_user_role(user, ks_role, project.id)
+                try:
+                    for role in self.default_roles:
+                        ks_role = id_manager.find_role(role)
+                        id_manager.add_user_role(user, ks_role, project.id)
+                except Exception as e:
+                    self.add_note(
+                        "Error: '%s' while attaching user: %s with roles: %s" %
+                        (e, self.username, self.default_roles))
+                    raise e
 
                 self.add_note(("Existing user '%s' attached to project %s" +
                               " with roles: %s")
@@ -392,7 +422,13 @@ class ResetUser(UserAction):
             id_manager = IdentityManager()
 
             user = id_manager.find_user(self.username)
-            id_manager.update_user_password(user, token_data['password'])
+            try:
+                id_manager.update_user_password(user, token_data['password'])
+            except Exception as e:
+                self.add_note(
+                    "Error: '%s' while changing password for user: %s" %
+                    (e, self.username))
+                raise e
             self.add_note('User %s password has been changed.' % self.username)
 
 

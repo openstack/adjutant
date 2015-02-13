@@ -35,7 +35,6 @@ class DefaultProjectResources(BaseAction):
     def _validate(self):
 
         project_id = self.action.registration.cache.get('project_id', None)
-        # need to check, does tenant exist.
         if project_id:
             self.action.valid = True
             self.action.need_token = False
@@ -48,53 +47,72 @@ class DefaultProjectResources(BaseAction):
 
         project_id = self.action.registration.cache['project_id']
 
-        # TODO(Adriant): Setup proper exception handling
-        # and error logging so we know where it died.
-
-        network_body = {
-            "network": {
-                "name": self.defaults['network_name'],
-                'tenant_id': project_id,
-                "admin_state_up": True
+        try:
+            network_body = {
+                "network": {
+                    "name": self.defaults['network_name'],
+                    'tenant_id': project_id,
+                    "admin_state_up": True
+                }
             }
-        }
-        network = neutron.create_network(body=network_body)
+            network = neutron.create_network(body=network_body)
+        except Exception as e:
+            self.add_note(
+                "Error: '%s' while creating network: %s" %
+                (e, self.defaults['network_name']))
+            raise e
         self.add_note("Network %s created for project %s" %
                       (self.defaults['network_name'],
                        self.action.registration.cache['project_id']))
 
-        subnet_body = {
-            "subnet": {
-                "network_id": network['network']['id'],
-                "ip_version": 4,
-                'tenant_id': project_id,
-                'dns_nameservers': self.defaults['DNS_NAMESERVERS'],
-                "cidr": self.defaults['SUBNET_CIDR']
+        try:
+            subnet_body = {
+                "subnet": {
+                    "network_id": network['network']['id'],
+                    "ip_version": 4,
+                    'tenant_id': project_id,
+                    'dns_nameservers': self.defaults['DNS_NAMESERVERS'],
+                    "cidr": self.defaults['SUBNET_CIDR']
+                }
             }
-        }
-        subnet = neutron.create_subnet(body=subnet_body)
+            subnet = neutron.create_subnet(body=subnet_body)
+        except Exception as e:
+            self.add_note(
+                "Error: '%s' while creating subnet" % e)
+            raise e
         self.add_note("Subnet created for network %s" %
                       self.defaults['network_name'])
 
-        router_body = {
-            "router": {
-                "name": self.defaults['router_name'],
-                "external_gateway_info": {
-                    "network_id": self.defaults['public_network']
-                },
-                'tenant_id': project_id,
-                "admin_state_up": True
+        try:
+            router_body = {
+                "router": {
+                    "name": self.defaults['router_name'],
+                    "external_gateway_info": {
+                        "network_id": self.defaults['public_network']
+                    },
+                    'tenant_id': project_id,
+                    "admin_state_up": True
+                }
             }
-        }
-        router = neutron.create_router(body=router_body)
+            router = neutron.create_router(body=router_body)
+        except Exception as e:
+            self.add_note(
+                "Error: '%s' while creating router: %s" %
+                (e, self.defaults['router_name']))
+            raise e
         self.add_note("Router created for project %s" %
                       self.action.registration.cache['project_id'])
 
-        interface_body = {
-            "subnet_id": subnet['subnet']['id']
-        }
-        neutron.add_interface_router(router['router']['id'],
-                                     body=interface_body)
+        try:
+            interface_body = {
+                "subnet_id": subnet['subnet']['id']
+            }
+            neutron.add_interface_router(router['router']['id'],
+                                         body=interface_body)
+        except Exception as e:
+            self.add_note(
+                "Error: '%s' while attaching interface" % e)
+            raise e
         self.add_note("Interface added to router for subnet")
 
     def _pre_approve(self):
@@ -135,9 +153,15 @@ class AddAdminToProject(BaseAction):
 
             project = id_manager.get_project(
                 self.action.registration.cache['project_id'])
-            user = id_manager.find_user(name="admin")
-            role = id_manager.find_role(name="admin")
-            id_manager.add_user_role(user, role, project.id)
+            try:
+                user = id_manager.find_user(name="admin")
+                role = id_manager.find_role(name="admin")
+                id_manager.add_user_role(user, role, project.id)
+            except Exception as e:
+                self.add_note(
+                    "Error: '%s' while adding admin to project: %s" %
+                    (e, project.id))
+                raise e
             self.add_note(
                 'Admin has been added to %s.' %
                 self.action.registration.cache['project_id'])

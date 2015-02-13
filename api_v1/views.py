@@ -126,7 +126,12 @@ class RegistrationDetail(APIViewWithLogger):
             for action in registration.actions:
                 act_model = action.get_action()
                 actions.append(act_model)
-                act_model.post_approve()
+                try:
+                    act_model.post_approve()
+                except Exception as e:
+                    # TODO(Adriant): Do something about this error!!!
+                    # create a notification.
+                    raise e
 
                 if not action.valid:
                     valid = False
@@ -139,7 +144,12 @@ class RegistrationDetail(APIViewWithLogger):
                     return Response({'notes': ['created token']}, status=200)
                 else:
                     for action in actions:
-                        action.submit({})
+                        try:
+                            action.submit({})
+                        except Exception as e:
+                            # TODO(Adriant): Do something about this error!!!
+                            # create a notification.
+                            raise e
 
                     registration.completed = True
                     registration.save()
@@ -229,7 +239,12 @@ class TokenDetail(APIViewWithLogger):
             return Response(errors, status=400)
 
         for action in actions:
-            action.submit(data)
+            try:
+                action.submit(data)
+            except Exception as e:
+                # TODO(Adriant): Do something about this error!!!
+                # create a notification.
+                raise e
 
         token.registration.completed = True
         token.registration.save()
@@ -309,7 +324,12 @@ class ActionView(APIViewWithLogger):
                     order=i
                 )
 
-                action.pre_approve()
+                try:
+                    action.pre_approve()
+                except Exception as e:
+                    # TODO(Adriant): Do something about this error!!!
+                    # create a notification.
+                    raise e
 
             return {'registration': registration}
         else:
@@ -336,7 +356,12 @@ class ActionView(APIViewWithLogger):
 
         if valid:
             for action in actions:
-                action.post_approve()
+                try:
+                    action.post_approve()
+                except Exception as e:
+                    # TODO(Adriant): Do something about this error!!!
+                    # create a notification.
+                    raise e
 
                 if not action.valid:
                     valid = False
@@ -349,7 +374,12 @@ class ActionView(APIViewWithLogger):
                     return Response({'notes': ['created token']}, status=200)
                 else:
                     for action in actions:
-                        action.submit({})
+                        try:
+                            action.submit({})
+                        except Exception as e:
+                            # TODO(Adriant): Do something about this error!!!
+                            # create a notification.
+                            raise e
 
                     registration.completed = True
                     registration.save()

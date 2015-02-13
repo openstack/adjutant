@@ -32,7 +32,6 @@ class Registration(models.Model):
 
     # what do we know about them:
     action_notes = JSONField(default={})
-    errors = JSONField(default={})
 
     approved = models.BooleanField(default=False)
 

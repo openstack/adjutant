@@ -609,3 +609,43 @@ class APITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {'notes': ['This token has expired.']})
         self.assertEqual(0, Token.objects.count())
+
+    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('tenant_setup.models.IdentityManager', FakeManager)
+    def test_registration_complete(self):
+        """
+        Can't approve a completed registration.
+        """
+        global temp_cache
+        temp_cache = {
+            'i': 0,
+            'users': {},
+            'projects': {},
+            'roles': {
+                'Member': 'Member', 'admin': 'admin',
+                'project_owner': 'project_owner'
+            }
+        }
+        url = "/api_v1/project"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,Member",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        new_registration = Registration.objects.all()[0]
+        new_registration.completed = True
+        new_registration.save()
+        url = "/api_v1/registration/" + new_registration.uuid
+        response = self.client.post(url, {'approved': True}, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data,
+            {'notes': ['This registration has already been completed.']})
