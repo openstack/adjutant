@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
                 ('cache', jsonfield.fields.JSONField(default={})),
                 ('state', models.CharField(default=b'default', max_length=200)),
                 ('valid', models.BooleanField(default=False)),
-                ('need_token', models.BooleanField(default=True)),
+                ('need_token', models.BooleanField()),
                 ('order', models.IntegerField()),
                 ('created', models.DateTimeField(default=django.utils.timezone.now)),
                 ('registration', models.ForeignKey(to='api_v1.Registration')),

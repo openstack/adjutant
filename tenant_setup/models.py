@@ -28,19 +28,20 @@ class DefaultProjectResources(BaseAction):
         'setup_resources'
     ]
 
-    # TODO(Adriant): work our more sensible defaults and how to deal
+    # TODO(Adriant): work out more sensible defaults and how to deal
     # with multiple regions (defaults in settings file now).
     defaults = settings.NETWORK_DEFAULTS[settings.DEFAULT_REGION]
 
     def _validate(self):
 
         project_id = self.action.registration.cache.get('project_id', None)
+
+        valid = False
         if project_id:
-            self.action.valid = True
-            self.action.need_token = False
-            self.action.save()
+            valid = True
             self.add_note('project_id given: %s' % project_id)
         self.add_note('No project_id given.')
+        return valid
 
     def _setup_resources(self):
         neutron = openstack_clients.get_neutronclient()
@@ -60,7 +61,7 @@ class DefaultProjectResources(BaseAction):
             self.add_note(
                 "Error: '%s' while creating network: %s" %
                 (e, self.defaults['network_name']))
-            raise e
+            raise
         self.add_note("Network %s created for project %s" %
                       (self.defaults['network_name'],
                        self.action.registration.cache['project_id']))
@@ -79,7 +80,7 @@ class DefaultProjectResources(BaseAction):
         except Exception as e:
             self.add_note(
                 "Error: '%s' while creating subnet" % e)
-            raise e
+            raise
         self.add_note("Subnet created for network %s" %
                       self.defaults['network_name'])
 
@@ -99,7 +100,7 @@ class DefaultProjectResources(BaseAction):
             self.add_note(
                 "Error: '%s' while creating router: %s" %
                 (e, self.defaults['router_name']))
-            raise e
+            raise
         self.add_note("Router created for project %s" %
                       self.action.registration.cache['project_id'])
 
@@ -112,15 +113,18 @@ class DefaultProjectResources(BaseAction):
         except Exception as e:
             self.add_note(
                 "Error: '%s' while attaching interface" % e)
-            raise e
+            raise
         self.add_note("Interface added to router for subnet")
 
     def _pre_approve(self):
-        if self.setup_resources:
-            self._validate()
+        # Not exactly valid, but not exactly invalid.
+        self.action.valid = True
+        self.action.save()
 
     def _post_approve(self):
-        self._validate()
+        self.action.valid = self._validate()
+        self.action.save()
+
         if self.setup_resources and self.valid:
             self._setup_resources()
 
@@ -135,19 +139,23 @@ class AddAdminToProject(BaseAction):
     def _validate(self):
 
         project_id = self.action.registration.cache.get('project_id', None)
-        # need to check, does tenant exist.
+
+        valid = False
         if project_id:
-            self.action.valid = True
-            self.action.need_token = False
-            self.action.save()
+            valid = True
             self.add_note('project_id given: %s' % project_id)
         self.add_note('No project_id given.')
+        return valid
 
     def _pre_approve(self):
-        pass
+        # Not yet exactly valid, but not exactly invalid.
+        self.action.valid = True
+        self.action.save()
 
     def _post_approve(self):
-        self._validate()
+        self.action.valid = self._validate()
+        self.action.save()
+
         if self.valid:
             id_manager = IdentityManager()
 
@@ -161,7 +169,7 @@ class AddAdminToProject(BaseAction):
                 self.add_note(
                     "Error: '%s' while adding admin to project: %s" %
                     (e, project.id))
-                raise e
+                raise
             self.add_note(
                 'Admin has been added to %s.' %
                 self.action.registration.cache['project_id'])

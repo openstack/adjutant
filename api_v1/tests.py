@@ -121,8 +121,8 @@ class APITests(APITestCase):
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'username': 'testuser', 'email': "test@example.com",
-                'role': "Member", 'project_id': 'test_project_id'}
+        data = {'email': "test@example.com", 'role': "Member",
+                'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {'notes': ['created token']})
@@ -158,8 +158,8 @@ class APITests(APITestCase):
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'username': 'testuser', 'email': "test@example.com",
-                'role': "Member", 'project_id': 'test_project_id'}
+        data = {'email': "test@example.com", 'role': "Member",
+                'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {'notes': ['actions invalid']})
@@ -189,8 +189,8 @@ class APITests(APITestCase):
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'username': 'testuser', 'email': "test@example.com",
-                'role': "Member", 'project_id': 'test_project_id'}
+        data = {'email': "test@example.com", 'role': "Member",
+                'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(
@@ -230,8 +230,8 @@ class APITests(APITestCase):
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'username': 'testuser', 'email': "test@example.com",
-                'role': "Member", 'project_id': 'test_project_id'}
+        data = {'email': "test@example.com", 'role': "Member",
+                'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {'notes': ['created token']})
@@ -260,8 +260,8 @@ class APITests(APITestCase):
         }
         url = "/api_v1/user"
         headers = {}
-        data = {'username': 'testuser', 'email': "test@example.com",
-                'role': "Member", 'project_id': 'test_project_id'}
+        data = {'email': "test@example.com", 'role': "Member",
+                'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(
@@ -288,8 +288,7 @@ class APITests(APITestCase):
             }
         }
         url = "/api_v1/project"
-        data = {'project_name': "test_project", 'username': 'testuser',
-                'email': "test@example.com"}
+        data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -346,8 +345,7 @@ class APITests(APITestCase):
             'authenticated': True
         }
         url = "/api_v1/project"
-        data = {'project_name': "test_project", 'username': 'testuser',
-                'email': "test@example.com"}
+        data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
