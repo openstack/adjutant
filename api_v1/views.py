@@ -160,6 +160,13 @@ class RegistrationDetail(APIViewWithLogger):
                         'registration': registration.uuid
                     }
                     create_notification(registration, notes)
+
+                    import traceback
+                    trace = traceback.format_exc()
+                    self.logger.critical(("(%s) - Exception escaped! %s\n" +
+                                          "Trace: \n%s") %
+                                         (timezone.now(), e, trace))
+
                     return Response(notes, status=500)
 
                 if not action.valid:
@@ -184,6 +191,13 @@ class RegistrationDetail(APIViewWithLogger):
                                 'registration': registration.uuid
                             }
                             create_notification(registration, notes)
+
+                            import traceback
+                            trace = traceback.format_exc()
+                            self.logger.critical(("(%s) - Exception escaped!" +
+                                                  " %s\n Trace: \n%s") %
+                                                 (timezone.now(), e, trace))
+
                             return Response(notes, status=500)
 
                     registration.completed = True
@@ -285,7 +299,19 @@ class TokenDetail(APIViewWithLogger):
                     'registration': token.registration.uuid
                 }
                 create_notification(token.registration, notes)
-                return Response(notes, status=500)
+
+                import traceback
+                trace = traceback.format_exc()
+                self.logger.critical(("(%s) - Exception escaped! %s\n" +
+                                      "Trace: \n%s") %
+                                     (timezone.now(), e, trace))
+
+                response_dict = {
+                    'errors':
+                        ["Error: Something went wrong on the server. " +
+                         "It will be looked into shortly."]
+                }
+                return Response(response_dict, status=500)
 
         token.registration.completed = True
         token.registration.completed_on = timezone.now()
@@ -319,11 +345,13 @@ class ActionView(APIViewWithLogger):
                          'required_fields': required_fields})
 
     def process_actions(self, request):
-        """Will ensure the request data contains the required data
-           based on the action serializer, and if present will create
-           a Registration and the linked actions, attaching notes
-           based on running of the the pre_approve validation
-           function on all the actions."""
+        """
+        Will ensure the request data contains the required data
+        based on the action serializer, and if present will create
+        a Registration and the linked actions, attaching notes
+        based on running of the the pre_approve validation
+        function on all the actions.
+        """
 
         actions = [self.default_action, ]
 
@@ -376,6 +404,13 @@ class ActionView(APIViewWithLogger):
                         'registration': registration.uuid
                     }
                     create_notification(registration, notes)
+
+                    import traceback
+                    trace = traceback.format_exc()
+                    self.logger.critical(("(%s) - Exception escaped! %s\n" +
+                                          "Trace: \n%s") %
+                                         (timezone.now(), e, trace))
+
                     response_dict = {
                         'errors':
                             ["Error: Something went wrong on the server. " +
@@ -392,6 +427,11 @@ class ActionView(APIViewWithLogger):
             return {'errors': errors}
 
     def approve(self, registration):
+        """
+        Approves the registration and runs the post_approve steps.
+        Will create a token if required, otherwise will run the
+        submit steps.
+        """
         registration.approved = True
         registration.approved_on = timezone.now()
         registration.save()
@@ -420,7 +460,19 @@ class ActionView(APIViewWithLogger):
                         'registration': registration.uuid
                     }
                     create_notification(registration, notes)
-                    return Response(notes, status=500)
+
+                    import traceback
+                    trace = traceback.format_exc()
+                    self.logger.critical(("(%s) - Exception escaped! %s\n" +
+                                          "Trace: \n%s") %
+                                         (timezone.now(), e, trace))
+
+                    response_dict = {
+                        'errors':
+                            ["Error: Something went wrong on the server. " +
+                             "It will be looked into shortly."]
+                    }
+                    return Response(response_dict, status=500)
 
                 if not action.valid:
                     valid = False
@@ -444,7 +496,19 @@ class ActionView(APIViewWithLogger):
                                 'registration': registration.uuid
                             }
                             create_notification(registration, notes)
-                            return Response(notes, status=500)
+
+                            import traceback
+                            trace = traceback.format_exc()
+                            self.logger.critical(("(%s) - Exception escaped!" +
+                                                  " %s\n Trace: \n%s") %
+                                                 (timezone.now(), e, trace))
+
+                            response_dict = {
+                                'errors':
+                                    ["Error: Something went wrong on the " +
+                                     "server. It will be looked into shortly."]
+                            }
+                            return Response(response_dict, status=500)
 
                     registration.completed = True
                     registration.completed_on = timezone.now()
@@ -461,12 +525,17 @@ class CreateProject(ActionView):
     default_action = "NewProject"
 
     def post(self, request, format=None):
-        """Runs internal process_actions and sends back notes or errors."""
-        self.logger.info("Starting new project registration.")
+        """
+        Runs internal process_actions and sends back notes or errors.
+        """
+        self.logger.info("(%s) - Starting new project registration." %
+                         timezone.now())
         processed = self.process_actions(request)
 
         errors = processed.get('errors', None)
         if errors:
+            self.logger.info("(%s) - Validation errors with registration." %
+                             timezone.now())
             return Response(errors, status=400)
 
         notes = {
@@ -474,7 +543,7 @@ class CreateProject(ActionView):
                 ['New registration for CreateProject.']
         }
         create_notification(processed['registration'], notes)
-
+        self.logger.info("(%s) - Registration created." % timezone.now())
         return Response({'notes': ['registration created']}, status=200)
 
 
@@ -488,19 +557,25 @@ class AttachUser(ActionView):
 
     @admin_or_owner
     def post(self, request, format=None):
-        """This endpoint requires either Admin access or the
-           request to come from a project_owner.
-           As such this Registration is considered pre-approved.
-           Runs process_actions, then does the approve and
-           post_approve validation, and creates a Token if valid."""
+        """
+        This endpoint requires either Admin access or the
+        request to come from a project_owner.
+        As such this Registration is considered pre-approved.
+        Runs process_actions, then does the approve and
+        post_approve validation, and creates a Token if valid.
+        """
+        self.logger.info("(%s) - New AttachUser request." % timezone.now())
         processed = self.process_actions(request)
 
         errors = processed.get('errors', None)
         if errors:
+            self.logger.info("(%s) - Validation errors with registration." %
+                             timezone.now())
             return Response(errors, status=400)
 
         registration = processed['registration']
-
+        self.logger.info("(%s) - AutoApproving AttachUser request."
+                         % timezone.now())
         return self.approve(registration)
 
 
@@ -509,12 +584,19 @@ class ResetPassword(ActionView):
     default_action = 'ResetUser'
 
     def post(self, request, format=None):
+        """
+        Unauthenticated endpoint bound to the password reset action.
+        """
+        self.logger.info("(%s) - New ResetUser request." % timezone.now())
         processed = self.process_actions(request)
 
         errors = processed.get('errors', None)
         if errors:
+            self.logger.info("(%s) - Validation errors with registration." %
+                             timezone.now())
             return Response(errors, status=400)
 
         registration = processed['registration']
-
+        self.logger.info("(%s) - AutoApproving Resetuser request."
+                         % timezone.now())
         return self.approve(registration)

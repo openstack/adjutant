@@ -19,6 +19,7 @@ from serializers import (NewUserSerializer, NewProjectSerializer,
                          ResetUserSerializer)
 from django.conf import settings
 from jsonfield import JSONField
+from logging import getLogger
 
 
 class Action(models.Model):
@@ -79,6 +80,8 @@ class BaseAction(object):
         Sets up required data as fields.
         """
 
+        self.logger = getLogger('django.request')
+
         for field in self.required:
             field_data = data[field]
             setattr(self, field, field_data)
@@ -117,6 +120,7 @@ class BaseAction(object):
         self.action.save()
 
     def add_note(self, note):
+        self.logger.info("(%s) - %s" % (timezone.now(), note))
         note = "%s - (%s)" % (note, timezone.now())
         self.action.registration.add_action_note(
             unicode(self), note)
@@ -195,7 +199,7 @@ class NewUser(UserAction):
         project = id_manager.get_project(self.project_id)
 
         if not project:
-            self.add_note('Project does exist.')
+            self.add_note('Project does not exist.')
             valid = False
         else:
             if user:

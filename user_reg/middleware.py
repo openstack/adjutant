@@ -65,17 +65,18 @@ class RequestLoggingMiddleware(object):
 
     def process_request(self, request):
         self.logger.info(
-            '<%s> %s [%s] - (%s)',
+            '(%s) - <%s> %s [%s]',
+            timezone.now(),
             request.method,
             request.META['REMOTE_ADDR'],
-            request.get_full_path(),
-            timezone.now()
+            request.get_full_path()
         )
         request.timer = time()
 
     def process_response(self, request, response):
         self.logger.info(
-            '<%s> [%s] - (%.1fs)',
+            '(%s) - <%s> [%s] - (%.1fs)',
+            timezone.now(),
             response.status_code,
             request.get_full_path(),
             time() - request.timer

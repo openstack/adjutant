@@ -30,8 +30,6 @@ class DefaultProjectResources(BaseAction):
         'setup_resources'
     ]
 
-    # TODO(Adriant): work out more sensible defaults and how to deal
-    # with multiple regions (defaults in settings file now).
     defaults = settings.NETWORK_DEFAULTS[settings.DEFAULT_REGION]
 
     def _validate(self):
