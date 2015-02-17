@@ -20,9 +20,11 @@ from base import openstack_clients
 
 
 class DefaultProjectResources(BaseAction):
-    """This action will setup all required basic networking
-       resources so that a new user can launch instances
-       right away."""
+    """
+    This action will setup all required basic networking
+    resources so that a new user can launch instances
+    right away.
+    """
 
     required = [
         'setup_resources'
@@ -40,7 +42,8 @@ class DefaultProjectResources(BaseAction):
         if project_id:
             valid = True
             self.add_note('project_id given: %s' % project_id)
-        self.add_note('No project_id given.')
+        else:
+            self.add_note('No project_id given.')
         return valid
 
     def _setup_resources(self):
@@ -48,67 +51,83 @@ class DefaultProjectResources(BaseAction):
 
         project_id = self.action.registration.cache['project_id']
 
-        try:
-            network_body = {
-                "network": {
-                    "name": self.defaults['network_name'],
-                    'tenant_id': project_id,
-                    "admin_state_up": True
+        if not self.get_cache('network_id'):
+            try:
+                network_body = {
+                    "network": {
+                        "name": self.defaults['network_name'],
+                        'tenant_id': project_id,
+                        "admin_state_up": True
+                    }
                 }
-            }
-            network = neutron.create_network(body=network_body)
-        except Exception as e:
-            self.add_note(
-                "Error: '%s' while creating network: %s" %
-                (e, self.defaults['network_name']))
-            raise
-        self.add_note("Network %s created for project %s" %
-                      (self.defaults['network_name'],
-                       self.action.registration.cache['project_id']))
+                network = neutron.create_network(body=network_body)
+            except Exception as e:
+                self.add_note(
+                    "Error: '%s' while creating network: %s" %
+                    (e, self.defaults['network_name']))
+                raise
+            self.set_cache('network_id', network['network']['id'])
+            self.add_note("Network %s created for project %s" %
+                          (self.defaults['network_name'],
+                           self.action.registration.cache['project_id']))
+        else:
+            self.add_note("Network %s already created for project %s" %
+                          (self.defaults['network_name'],
+                           self.action.registration.cache['project_id']))
 
-        try:
-            subnet_body = {
-                "subnet": {
-                    "network_id": network['network']['id'],
-                    "ip_version": 4,
-                    'tenant_id': project_id,
-                    'dns_nameservers': self.defaults['DNS_NAMESERVERS'],
-                    "cidr": self.defaults['SUBNET_CIDR']
+        if not self.get_cache('subnet_id'):
+            try:
+                subnet_body = {
+                    "subnet": {
+                        "network_id": self.get_cache('network_id'),
+                        "ip_version": 4,
+                        'tenant_id': project_id,
+                        'dns_nameservers': self.defaults['DNS_NAMESERVERS'],
+                        "cidr": self.defaults['SUBNET_CIDR']
+                    }
                 }
-            }
-            subnet = neutron.create_subnet(body=subnet_body)
-        except Exception as e:
-            self.add_note(
-                "Error: '%s' while creating subnet" % e)
-            raise
-        self.add_note("Subnet created for network %s" %
-                      self.defaults['network_name'])
+                subnet = neutron.create_subnet(body=subnet_body)
+            except Exception as e:
+                self.add_note(
+                    "Error: '%s' while creating subnet" % e)
+                raise
+            self.set_cache('subnet_id', subnet['subnet']['id'])
+            self.add_note("Subnet created for network %s" %
+                          self.defaults['network_name'])
+        else:
+            self.add_note("Subnet already created for network %s" %
+                          self.defaults['network_name'])
 
-        try:
-            router_body = {
-                "router": {
-                    "name": self.defaults['router_name'],
-                    "external_gateway_info": {
-                        "network_id": self.defaults['public_network']
-                    },
-                    'tenant_id': project_id,
-                    "admin_state_up": True
+        if not self.get_cache('router_id'):
+            try:
+                router_body = {
+                    "router": {
+                        "name": self.defaults['router_name'],
+                        "external_gateway_info": {
+                            "network_id": self.defaults['public_network']
+                        },
+                        'tenant_id': project_id,
+                        "admin_state_up": True
+                    }
                 }
-            }
-            router = neutron.create_router(body=router_body)
-        except Exception as e:
-            self.add_note(
-                "Error: '%s' while creating router: %s" %
-                (e, self.defaults['router_name']))
-            raise
-        self.add_note("Router created for project %s" %
-                      self.action.registration.cache['project_id'])
+                router = neutron.create_router(body=router_body)
+            except Exception as e:
+                self.add_note(
+                    "Error: '%s' while creating router: %s" %
+                    (e, self.defaults['router_name']))
+                raise
+            self.set_cache('router_id', router['router']['id'])
+            self.add_note("Router created for project %s" %
+                          self.action.registration.cache['project_id'])
+        else:
+            self.add_note("Router already created for project %s" %
+                          self.action.registration.cache['project_id'])
 
         try:
             interface_body = {
-                "subnet_id": subnet['subnet']['id']
+                "subnet_id": self.get_cache('subnet_id')
             }
-            neutron.add_interface_router(router['router']['id'],
+            neutron.add_interface_router(self.get_cache('router_id'),
                                          body=interface_body)
         except Exception as e:
             self.add_note(
@@ -133,8 +152,10 @@ class DefaultProjectResources(BaseAction):
 
 
 class AddAdminToProject(BaseAction):
-    """Action to add 'admin' user to project for
-       monitoring purposes."""
+    """
+    Action to add 'admin' user to project for
+    monitoring purposes.
+    """
 
     def _validate(self):
 
@@ -144,7 +165,8 @@ class AddAdminToProject(BaseAction):
         if project_id:
             valid = True
             self.add_note('project_id given: %s' % project_id)
-        self.add_note('No project_id given.')
+        else:
+            self.add_note('No project_id given.')
         return valid
 
     def _pre_approve(self):
@@ -156,7 +178,7 @@ class AddAdminToProject(BaseAction):
         self.action.valid = self._validate()
         self.action.save()
 
-        if self.valid:
+        if self.valid and not self.action.state == "completed":
             id_manager = IdentityManager()
 
             project = id_manager.get_project(
@@ -170,6 +192,8 @@ class AddAdminToProject(BaseAction):
                     "Error: '%s' while adding admin to project: %s" %
                     (e, project.id))
                 raise
+            self.action.state = "completed"
+            self.action.save()
             self.add_note(
                 'Admin has been added to %s.' %
                 self.action.registration.cache['project_id'])

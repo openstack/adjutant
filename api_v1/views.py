@@ -15,7 +15,7 @@
 from decorator import decorator
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from models import Registration, Token
+from models import Registration, Token, Notification
 from django.utils import timezone
 from datetime import timedelta
 from uuid import uuid4
@@ -63,11 +63,33 @@ def create_token(registration):
     token.save()
 
 
+def create_notification(registration, notes):
+    notification = Notification.objects.create(
+        registration=registration,
+        notes=notes
+    )
+    notification.save()
+
+
 class APIViewWithLogger(APIView):
-    """docstring for ClassName"""
+    """
+    APIView with a logger.
+    """
     def __init__(self, *args, **kwargs):
         super(APIViewWithLogger, self).__init__(*args, **kwargs)
         self.logger = getLogger('django.request')
+
+
+class NotificationList(APIViewWithLogger):
+
+    @admin
+    def get(self, request, format=None):
+        """A list of dict representations of Notification objects."""
+        notifications = Notification.objects.all()
+        note_list = []
+        for notification in notifications:
+            note_list.append(notification.to_dict())
+        return Response(note_list)
 
 
 class RegistrationList(APIViewWithLogger):
@@ -117,6 +139,8 @@ class RegistrationDetail(APIViewWithLogger):
                         ['This registration has already been completed.']},
                     status=400)
             registration.approved = True
+            registration.approved_on = timezone.now()
+            registration.save()
 
             need_token = False
             valid = True
@@ -129,9 +153,14 @@ class RegistrationDetail(APIViewWithLogger):
                 try:
                     act_model.post_approve()
                 except Exception as e:
-                    # TODO(Adriant): Do something about this error!!!
-                    # create a notification.
-                    raise e
+                    notes = {
+                        'errors':
+                            [("Error: '%s' while approving registration. " +
+                              "See registration itself for details.") % e],
+                        'registration': registration.uuid
+                    }
+                    create_notification(registration, notes)
+                    return Response(notes, status=500)
 
                 if not action.valid:
                     valid = False
@@ -147,11 +176,18 @@ class RegistrationDetail(APIViewWithLogger):
                         try:
                             action.submit({})
                         except Exception as e:
-                            # TODO(Adriant): Do something about this error!!!
-                            # create a notification.
-                            raise e
+                            notes = {
+                                'errors':
+                                    [("Error: '%s' while submitting " +
+                                      "registration. See registration " +
+                                      "itself for details.") % e],
+                                'registration': registration.uuid
+                            }
+                            create_notification(registration, notes)
+                            return Response(notes, status=500)
 
                     registration.completed = True
+                    registration.completed_on = timezone.now()
                     registration.save()
                     return Response(
                         {'notes': "Registration completed successfully."},
@@ -242,11 +278,17 @@ class TokenDetail(APIViewWithLogger):
             try:
                 action.submit(data)
             except Exception as e:
-                # TODO(Adriant): Do something about this error!!!
-                # create a notification.
-                raise e
+                notes = {
+                    'errors':
+                        [("Error: '%s' while submitting registration. " +
+                          "See registration itself for details.") % e],
+                    'registration': token.registration.uuid
+                }
+                create_notification(token.registration, notes)
+                return Response(notes, status=500)
 
         token.registration.completed = True
+        token.registration.completed_on = timezone.now()
         token.registration.save()
         token.delete()
 
@@ -327,9 +369,19 @@ class ActionView(APIViewWithLogger):
                 try:
                     action.pre_approve()
                 except Exception as e:
-                    # TODO(Adriant): Do something about this error!!!
-                    # create a notification.
-                    raise e
+                    notes = {
+                        'errors':
+                            [("Error: '%s' while setting up registration. " +
+                              "See registration itself for details.") % e],
+                        'registration': registration.uuid
+                    }
+                    create_notification(registration, notes)
+                    response_dict = {
+                        'errors':
+                            ["Error: Something went wrong on the server. " +
+                             "It will be looked into shortly."]
+                    }
+                    return response_dict
 
             return {'registration': registration}
         else:
@@ -341,6 +393,8 @@ class ActionView(APIViewWithLogger):
 
     def approve(self, registration):
         registration.approved = True
+        registration.approved_on = timezone.now()
+        registration.save()
 
         action_models = registration.actions
         actions = []
@@ -359,9 +413,14 @@ class ActionView(APIViewWithLogger):
                 try:
                     action.post_approve()
                 except Exception as e:
-                    # TODO(Adriant): Do something about this error!!!
-                    # create a notification.
-                    raise e
+                    notes = {
+                        'errors':
+                            [("Error: '%s' while approving registration. " +
+                              "See registration itself for details.") % e],
+                        'registration': registration.uuid
+                    }
+                    create_notification(registration, notes)
+                    return Response(notes, status=500)
 
                 if not action.valid:
                     valid = False
@@ -377,11 +436,18 @@ class ActionView(APIViewWithLogger):
                         try:
                             action.submit({})
                         except Exception as e:
-                            # TODO(Adriant): Do something about this error!!!
-                            # create a notification.
-                            raise e
+                            notes = {
+                                'errors':
+                                    [("Error: '%s' while submitting " +
+                                      "registration. See registration " +
+                                      "itself for details.") % e],
+                                'registration': registration.uuid
+                            }
+                            create_notification(registration, notes)
+                            return Response(notes, status=500)
 
                     registration.completed = True
+                    registration.completed_on = timezone.now()
                     registration.save()
                     return Response(
                         {'notes': "Registration completed successfully."},
@@ -402,6 +468,12 @@ class CreateProject(ActionView):
         errors = processed.get('errors', None)
         if errors:
             return Response(errors, status=400)
+
+        notes = {
+            'notes':
+                ['New registration for CreateProject.']
+        }
+        create_notification(processed['registration'], notes)
 
         return Response({'notes': ['registration created']}, status=200)
 

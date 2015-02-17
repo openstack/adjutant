@@ -23,14 +23,18 @@ def hex_uuid():
 
 
 class Registration(models.Model):
-    """"""
+    """
+    Wrapper object for the request and related actions.
+    Stores the state registration and a log for the
+    action.
+    """
     uuid = models.CharField(max_length=200, default=hex_uuid,
                             primary_key=True)
     # who is this:
     reg_ip = models.GenericIPAddressField()
     keystone_user = JSONField(default={})
 
-    # what do we know about them:
+    # Effectively a log of what the actions are doing.
     action_notes = JSONField(default={})
 
     approved = models.BooleanField(default=False)

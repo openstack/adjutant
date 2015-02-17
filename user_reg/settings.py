@@ -154,7 +154,7 @@ NETWORK_DEFAULTS = {
         'subnet_name': 'somesubnet',
         'router_name': 'somerouter',
         # this depends on region and needs to be pulled from somewhere:
-        'public_network': 'aed4df5a-1a1f-42e4-b105-aa7f2edc7a95',
+        'public_network': '1eb739bb-607d-4a34-a590-9c15d03ccbe7',
         'DNS_NAMESERVERS': ['193.168.1.2',
                             '193.168.1.3'],
         'SUBNET_CIDR': '192.168.1.0/24'

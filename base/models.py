@@ -22,7 +22,9 @@ from jsonfield import JSONField
 
 
 class Action(models.Model):
-    """Database model representation of the related action."""
+    """
+    Database model representation of an action.
+    """
     action_name = models.CharField(max_length=200)
     action_data = JSONField(default={})
     cache = JSONField(default={})
@@ -43,25 +45,27 @@ class Action(models.Model):
 
 
 class BaseAction(object):
-    """Base class for the object wrapping around the database model.
-       Setup to allow multiple action types and different internal logic
-       per type but built from a single database type.
-       - 'required' defines what fields to setup from the data.
-       - 'token_fields' defined which fields are needed by this action
-         at the token stage.
+    """
+    Base class for the object wrapping around the database model.
+    Setup to allow multiple action types and different internal logic
+    per type but built from a single database type.
+    - 'required' defines what fields to setup from the data.
+    - 'token_fields' defined which fields are needed by this action
+      at the token stage.
 
-       The Action can do anything it needs at one of the three functions
-       called by the views:
-       - 'pre_approve'
-       - 'post_approve'
-       - 'submit'
+    The Action can do anything it needs at one of the three functions
+    called by the views:
+    - 'pre_approve'
+    - 'post_approve'
+    - 'submit'
 
-       By using 'get_cache' and 'set_cache' they can pass data along which
-       may be needed by the action later. This cache is backed to the database.
+    By using 'get_cache' and 'set_cache' they can pass data along which
+    may be needed by the action later. This cache is backed to the database.
 
-       Passing data along to other actions is done via the registration and
-       it's cache, but this is in memory only, so it is only useful during the
-       same action stage ('post_approve', etc.)."""
+    Passing data along to other actions is done via the registration and
+    it's cache, but this is in memory only, so it is only useful during the
+    same action stage ('post_approve', etc.).
+    """
 
     required = []
 
@@ -69,9 +73,11 @@ class BaseAction(object):
 
     def __init__(self, data, action_model=None, registration=None,
                  order=None):
-        """Build itself around an existing database model,
-           or build itself and creates a new database model.
-           Sets up required data as fields."""
+        """
+        Build itself around an existing database model,
+        or build itself and creates a new database model.
+        Sets up required data as fields.
+        """
 
         for field in self.required:
             field_data = data[field]
@@ -104,7 +110,7 @@ class BaseAction(object):
         return self.action.need_token
 
     def get_cache(self, key):
-        return self.action.cache[key]
+        return self.action.cache.get(key, None)
 
     def set_cache(self, key, value):
         self.action.cache[key] = value
@@ -138,8 +144,10 @@ class BaseAction(object):
 
 
 class UserAction(BaseAction):
-    """Base action for dealing with users. Removes username if
-       USERNAME_IS_EMAIL and sets email to be username."""
+    """
+    Base action for dealing with users. Removes username if
+    USERNAME_IS_EMAIL and sets email to be username.
+    """
 
     def __init__(self, *args, **kwargs):
 
@@ -156,10 +164,12 @@ class UserAction(BaseAction):
 
 
 class NewUser(UserAction):
-    """Setup a new user with a role on the given project.
-       Creates the user if they don't exist, otherwise
-       if the username and email for the request match the
-       existing one, will simply add the project role."""
+    """
+    Setup a new user with a role on the given project.
+    Creates the user if they don't exist, otherwise
+    if the username and email for the request match the
+    existing one, will simply add the project role.
+    """
 
     required = [
         'username',
@@ -171,9 +181,6 @@ class NewUser(UserAction):
     token_fields = ['password']
 
     def _validate(self):
-        # TODO(Adriant): Figure out how to set this up as a generic
-        # user store object/module that can handle most of this and
-        # be made pluggable down the line.
         id_manager = IdentityManager()
 
         user = id_manager.find_user(self.username)
@@ -254,9 +261,11 @@ class NewUser(UserAction):
 
 
 class NewProject(UserAction):
-    """Similar functionality as the NewUser action,
-       but will create the project if valid. Will setup
-       the user (existing or new) with the 'default_role'."""
+    """
+    Similar functionality as the NewUser action,
+    but will create the project if valid. Will setup
+    the user (existing or new) with the 'default_role'.
+    """
 
     required = [
         'project_name',
@@ -311,6 +320,12 @@ class NewProject(UserAction):
         self.action.save()
 
     def _post_approve(self):
+        project_id = self.get_cache('project_id')
+        if project_id:
+            self.action.registration.cache['project_id'] = project_id
+            self.add_note("Project already created.")
+            return
+
         self.action.valid = self._validate_project()
         self.action.save()
 
@@ -379,7 +394,9 @@ class NewProject(UserAction):
 
 
 class ResetUser(UserAction):
-    """Simple action to reset a password for a given user."""
+    """
+    Simple action to reset a password for a given user.
+    """
 
     username = models.CharField(max_length=200)
     email = models.EmailField()

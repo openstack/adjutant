@@ -19,6 +19,11 @@ from keystoneclient.openstack.common.apiclient import (
 
 
 class IdentityManager(object):
+    """
+    A wrapper object for the Keystone Client. Mainly setup as
+    such for easier testing, but also so it can be replaced
+    later with an LDAP + Keystone Client variant.
+    """
 
     def __init__(self):
         self.ks_client = get_keystoneclient()

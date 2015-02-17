@@ -17,7 +17,10 @@ from django.utils import timezone
 
 
 class KeystoneHeaderUnwrapper(object):
-    """"""
+    """
+    Middleware to build an easy to use dict of important data from
+    what the keystone wsgi middleware gives us.
+    """
     def process_request(self, request):
         try:
             token_data = {
@@ -34,7 +37,9 @@ class KeystoneHeaderUnwrapper(object):
 
 
 class TestingHeaderUnwrapper(object):
-    """"""
+    """
+    Replacement for the KeystoneHeaderUnwrapper for testing purposes.
+    """
     def process_request(self, request):
         try:
             token_data = {
@@ -51,6 +56,10 @@ class TestingHeaderUnwrapper(object):
 
 
 class RequestLoggingMiddleware(object):
+    """
+    Middleware to log the requests and responses.
+    """
+
     def __init__(self):
         self.logger = getLogger('django.request')
 
