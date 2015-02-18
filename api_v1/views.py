@@ -26,6 +26,9 @@ from django.conf import settings
 
 @decorator
 def admin_or_owner(func, *args, **kwargs):
+    """
+    endpoints setup with this decorator require the defined roles.
+    """
     req_roles = {'admin', 'project_owner'}
     request = args[1]
     roles = set(request.keystone_user.get('roles', []))
@@ -40,6 +43,9 @@ def admin_or_owner(func, *args, **kwargs):
 
 @decorator
 def admin(func, *args, **kwargs):
+    """
+    endpoints setup with this decorator require the admin role.
+    """
     request = args[1]
     roles = request.keystone_user.get('roles', [])
     if "admin" in roles:
@@ -84,7 +90,9 @@ class NotificationList(APIViewWithLogger):
 
     @admin
     def get(self, request, format=None):
-        """A list of dict representations of Notification objects."""
+        """
+        A list of dict representations of Notification objects.
+        """
         notifications = Notification.objects.all()
         note_list = []
         for notification in notifications:
@@ -96,8 +104,10 @@ class RegistrationList(APIViewWithLogger):
 
     @admin
     def get(self, request, format=None):
-        """A list of dict representations of Registration objects
-           and their related actions."""
+        """
+        A list of dict representations of Registration objects
+        and their related actions.
+        """
         registrations = Registration.objects.all()
         reg_list = []
         for registration in registrations:
@@ -109,8 +119,10 @@ class RegistrationDetail(APIViewWithLogger):
 
     @admin
     def get(self, request, uuid, format=None):
-        """Dict representation of a Registration object
-           and its related actions."""
+        """
+        Dict representation of a Registration object
+        and its related actions.
+        """
         try:
             registration = Registration.objects.get(uuid=uuid)
         except Registration.DoesNotExist:
@@ -121,9 +133,11 @@ class RegistrationDetail(APIViewWithLogger):
 
     @admin
     def post(self, request, uuid, format=None):
-        """Will approve the Registration specified,
-           followed by running the post_approve actions
-           and if valid will setup and create a related token. """
+        """
+        Will approve the Registration specified,
+        followed by running the post_approve actions
+        and if valid will setup and create a related token.
+        """
         try:
             registration = Registration.objects.get(uuid=uuid)
         except Registration.DoesNotExist:
@@ -213,11 +227,15 @@ class RegistrationDetail(APIViewWithLogger):
 
 
 class TokenList(APIViewWithLogger):
-    """Admin functionality for managing/monitoring tokens."""
+    """
+    Admin functionality for managing/monitoring tokens.
+    """
 
     @admin
     def get(self, request, format=None):
-        """A list of dict representations of Token objects."""
+        """
+        A list of dict representations of Token objects.
+        """
         tokens = Token.objects.all()
         token_list = []
         for token in tokens:
@@ -228,8 +246,10 @@ class TokenList(APIViewWithLogger):
 class TokenDetail(APIViewWithLogger):
 
     def get(self, request, id, format=None):
-        """Returns a response with the list of required fields
-           and what actions those go towards."""
+        """
+        Returns a response with the list of required fields
+        and what actions those go towards.
+        """
         try:
             token = Token.objects.get(token=id)
         except Token.DoesNotExist:
@@ -254,9 +274,11 @@ class TokenDetail(APIViewWithLogger):
                          'required_fields': required_fields})
 
     def post(self, request, id, format=None):
-        """Ensures the required fields are present,
-           will then pass those to the actions via the submit
-           function."""
+        """
+        Ensures the required fields are present,
+        will then pass those to the actions via the submit
+        function.
+        """
         try:
             token = Token.objects.get(token=id)
         except Token.DoesNotExist:
@@ -324,11 +346,22 @@ class TokenDetail(APIViewWithLogger):
 
 
 class ActionView(APIViewWithLogger):
-    """Base class for api calls that start a Registration.
-       Until it is moved to settings, 'default_action' is a
-       required hardcoded field."""
+    """
+    Base class for api calls that start a Registration.
+    Until it is moved to settings, 'default_action' is a
+    required hardcoded field.
+
+    The default_action is considered the primary action and
+    will always run first. Addtional actions are defined in
+    the settings file and will run in the order supplied, but
+    after the default_action.
+    """
 
     def get(self, request):
+        """
+        The get method will return a json listing the actions this
+        view will run, and the data fields that those actons require.
+        """
         actions = [self.default_action, ]
 
         actions += settings.API_ACTIONS.get(self.__class__.__name__, [])
@@ -526,7 +559,11 @@ class CreateProject(ActionView):
 
     def post(self, request, format=None):
         """
-        Runs internal process_actions and sends back notes or errors.
+        Unauthenticated endpoint bound primarily to NewProject.
+
+        This process requires approval, so this will validate
+        incoming data and create a registration to be approved
+        later.
         """
         self.logger.info("(%s) - Starting new project registration." %
                          timezone.now())

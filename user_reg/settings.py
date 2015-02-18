@@ -136,6 +136,8 @@ LOGGING = {
 
 # App apecific settings:
 
+# setting to control if user name and email are allowed
+# to have different values.
 USERNAME_IS_EMAIL = True
 
 # Keystone admin credentials:
@@ -161,10 +163,12 @@ NETWORK_DEFAULTS = {
     }
 }
 
-# the order of the actions matters. These will run after the default action,
-# in the given order.
+# Additonal actions for views:
+# - The order of the actions matters. These will run after the default action,
+#   in the given order.
 API_ACTIONS = {'CreateProject': ['AddAdminToProject',
                                  'DefaultProjectResources']}
 
-# This is populated from the various model modules at startup:
+# Dict of actions and their serializers.
+# - This is populated from the various model modules at startup:
 ACTION_CLASSES = {}

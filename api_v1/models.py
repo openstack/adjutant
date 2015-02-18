@@ -78,7 +78,9 @@ class Registration(models.Model):
 
 
 class Token(models.Model):
-    """"""
+    """
+    UUID token object bound to a registration.
+    """
 
     registration = models.ForeignKey(Registration)
     token = models.CharField(max_length=200, primary_key=True)
@@ -93,7 +95,9 @@ class Token(models.Model):
 
 
 class Notification(models.Model):
-    """"""
+    """
+    Notification linked to a registration with some notes.
+    """
 
     notes = JSONField(default={})
     registration = models.ForeignKey(Registration)

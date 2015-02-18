@@ -19,18 +19,7 @@ from django.conf import settings
 
 
 def get_keystoneclient():
-    # try:
-    #     return clients['keystone']
-    # except KeyError:
-    #     auth = v3.Password(
-    #             auth_url='http://10.0.2.15:5000/v3',
-    #             user_id='admin',
-    #             password='openstack',
-    #             project_name='admin'
-    #     )
-    #     sess = session.Session(auth=auth)
-    #     keystone = KeystoneClient.Client(session=sess)
-    #     clients['keystone'] = keystone
+    # TODO(Adriant): Add region support.
     auth = client.Client(
         username=settings.KEYSTONE['username'],
         password=settings.KEYSTONE['password'],
@@ -41,6 +30,7 @@ def get_keystoneclient():
 
 
 def get_neutronclient():
+    # TODO(Adriant): Add region support.
     neutron = neutron_client.Client(
         username=settings.KEYSTONE['username'],
         password=settings.KEYSTONE['password'],
