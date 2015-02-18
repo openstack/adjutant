@@ -647,3 +647,62 @@ class APITests(APITestCase):
         self.assertEqual(
             response.data,
             {'notes': ['This registration has already been completed.']})
+
+    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('tenant_setup.models.IdentityManager', FakeManager)
+    def test_registration_update(self):
+        """
+        Creates a invalid registration.
+
+        Updates it and attempts to reapprove.
+        """
+        global temp_cache
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = []
+
+        temp_cache = {
+            'i': 0,
+            'users': {},
+            'projects': {'test_project': project},
+            'roles': {
+                'Member': 'Member', 'admin': 'admin',
+                'project_owner': 'project_owner'
+            }
+        }
+        url = "/api_v1/project"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,Member",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        new_registration = Registration.objects.all()[0]
+        url = "/api_v1/registration/" + new_registration.uuid
+        response = self.client.post(url, {'approved': True}, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        data = {'project_name': "test_project2", 'email': "test@example.com"}
+        response = self.client.put(url, data, format='json',
+                                   headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data,
+            {'notes': ['Registration successfully updated.']})
+
+        response = self.client.post(url, {'approved': True}, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data,
+            {'notes': ['created token']})
