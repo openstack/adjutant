@@ -20,6 +20,8 @@ from django.utils import timezone
 from datetime import timedelta
 from uuid import uuid4
 from logging import getLogger
+from django.core.mail import send_mail
+from smtplib import SMTPException
 
 from django.conf import settings
 
@@ -31,6 +33,10 @@ def admin_or_owner(func, *args, **kwargs):
     """
     req_roles = {'admin', 'project_owner'}
     request = args[1]
+    if not request.keystone_user.get('authenticated', False):
+        return Response({'notes': ["Credentials incorrect or none given."]},
+                        401)
+
     roles = set(request.keystone_user.get('roles', []))
 
     if roles & req_roles:
@@ -47,12 +53,15 @@ def admin(func, *args, **kwargs):
     endpoints setup with this decorator require the admin role.
     """
     request = args[1]
+    if not request.keystone_user.get('authenticated', False):
+        return Response({'notes': ["Credentials incorrect or none given."]},
+                        401)
+
     roles = request.keystone_user.get('roles', [])
     if "admin" in roles:
         return func(*args, **kwargs)
 
-    return Response({'notes': ["Must be admin."]},
-                    403)
+    return Response({'notes': ["Must be admin."]}, 403)
 
 
 def create_token(registration):
@@ -67,6 +76,38 @@ def create_token(registration):
         expires=expire
     )
     token.save()
+    return token
+
+
+def email_token(registration, token):
+
+    emails = set()
+    for action in registration.actions:
+        act = action.get_action()
+        if act.need_token:
+            emails.add(act.token_email())
+
+    if len(emails) > 1:
+        notes = {
+            'notes':
+                (("Error: Unable to send token, More than one email for" +
+                 " registration: %s") % registration.uuid)
+        }
+        create_notification(registration, notes)
+        # TODO(adriant): raise some error?
+
+    try:
+        message = "your token is: %s" % token.token
+        send_mail(
+            'Your token', message, 'no-reply@example.com',
+            [emails.pop()], fail_silently=False)
+    except SMTPException as e:
+        notes = {
+            'notes':
+                ("Error: '%s' while emailing token for registration: %s" %
+                 (e, registration.uuid))
+        }
+        create_notification(registration, notes)
 
 
 def create_notification(registration, notes):
@@ -200,6 +241,12 @@ class RegistrationDetail(APIViewWithLogger):
                 {'notes': ['No registration with this id.']},
                 status=404)
 
+        if registration.completed:
+            return Response(
+                {'notes':
+                    ['This registration has already been completed.']},
+                status=400)
+
         act_list = []
 
         valid = True
@@ -321,7 +368,8 @@ class RegistrationDetail(APIViewWithLogger):
                 registration.approved_on = timezone.now()
                 registration.save()
                 if need_token:
-                    create_token(registration)
+                    token = create_token(registration)
+                    email_token(registration, token)
                     return Response({'notes': ['created token']}, status=200)
                 else:
                     for action in actions:
@@ -387,6 +435,12 @@ class TokenDetail(APIViewWithLogger):
             return Response(
                 {'notes': ['This token does not exist.']}, status=404)
 
+        if token.registration.completed:
+            return Response(
+                {'notes':
+                    ['This registration has already been completed.']},
+                status=400)
+
         if token.expires < timezone.now():
             token.delete()
             return Response({'notes': ['This token has expired.']}, status=400)
@@ -415,6 +469,12 @@ class TokenDetail(APIViewWithLogger):
         except Token.DoesNotExist:
             return Response(
                 {'notes': ['This token does not exist.']}, status=404)
+
+        if token.registration.completed:
+            return Response(
+                {'notes':
+                    ['This registration has already been completed.']},
+                status=400)
 
         if token.expires < timezone.now():
             token.delete()
@@ -645,7 +705,8 @@ class ActionView(APIViewWithLogger):
 
             if valid:
                 if need_token:
-                    create_token(registration)
+                    token = create_token(registration)
+                    email_token(registration, token)
                     return Response({'notes': ['created token']}, status=200)
                 else:
                     for action in actions:

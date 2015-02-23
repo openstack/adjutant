@@ -263,12 +263,10 @@ class APITests(APITestCase):
         data = {'email': "test@example.com", 'role': "Member",
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(
             response.data,
-            {'notes':
-                [("Must have one of the following roles: " +
-                  "['admin', 'project_owner']")]}
+            {'notes': ["Credentials incorrect or none given."]}
         )
 
     @mock.patch('base.models.IdentityManager', FakeManager)
