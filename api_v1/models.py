@@ -54,6 +54,10 @@ class Registration(models.Model):
     def actions(self):
         return self.action_set.order_by('order')
 
+    @property
+    def tokens(self):
+        return self.token_set.all()
+
     def to_dict(self):
         actions = []
         for action in self.actions:

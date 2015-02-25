@@ -95,6 +95,7 @@ def email_token(registration, token):
         }
         create_notification(registration, notes)
         # TODO(adriant): raise some error?
+        # and surround calls to this function with try/except
 
     try:
         message = "your token is: %s" % token.token
@@ -108,6 +109,8 @@ def email_token(registration, token):
                  (e, registration.uuid))
         }
         create_notification(registration, notes)
+        # TODO(adriant): raise some error?
+        # and surround calls to this function with try/except
 
 
 def create_notification(registration, notes):
@@ -420,6 +423,47 @@ class TokenList(APIViewWithLogger):
         for token in tokens:
             token_list.append(token.to_dict())
         return Response(token_list)
+
+    @admin
+    def post(self, request, format=None):
+        """
+        Reissue a token for an approved registration.
+
+        Clears other tokens for it.
+        """
+        uuid = request.data.get('registration', None)
+        if uuid is None:
+            return Response(
+                {'registration': ["This field is required.", ]},
+                status=400)
+        try:
+            registration = Registration.objects.get(uuid=uuid)
+        except Registration.DoesNotExist:
+            return Response(
+                {'notes': ['No registration with this id.']},
+                status=404)
+        if not registration.approved:
+            return Response(
+                {'notes': ['This registration has not been approved.']},
+                status=400)
+
+        for token in registration.tokens:
+            token.delete()
+
+        token = create_token(registration)
+        email_token(registration, token)
+        return Response(
+            {'notes': ['Token reissued.']}, status=200)
+
+    @admin
+    def delete(self, request, format=None):
+        """
+        Delete all expired tokens.
+        """
+        now = timezone.now()
+        Token.objects.filter(expires__lt=now).delete()
+        return Response(
+            {'notes': ['Deleted all expired tokens.']}, status=200)
 
 
 class TokenDetail(APIViewWithLogger):
