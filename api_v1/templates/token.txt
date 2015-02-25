@@ -1,0 +1,15 @@
+Hello,
+
+Your registrations with our service is almost done.
+
+The action you have requested is:
+{% for action in actions %}
+- {{ action }}
+{% endfor %}
+
+You token to complete this action is:
+{{ token }}
+
+
+Thank you for using our service.
+

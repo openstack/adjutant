@@ -24,6 +24,7 @@ from django.core.mail import send_mail
 from smtplib import SMTPException
 
 from django.conf import settings
+from django.template import loader, Context
 
 
 @decorator
@@ -82,10 +83,12 @@ def create_token(registration):
 def email_token(registration, token):
 
     emails = set()
+    actions = []
     for action in registration.actions:
         act = action.get_action()
         if act.need_token:
             emails.add(act.token_email())
+            actions.append(unicode(act))
 
     if len(emails) > 1:
         notes = {
@@ -97,8 +100,12 @@ def email_token(registration, token):
         # TODO(adriant): raise some error?
         # and surround calls to this function with try/except
 
+    context = {'actions': actions, 'token': token.token}
+
+    email_template = loader.get_template("token.txt")
+
     try:
-        message = "your token is: %s" % token.token
+        message = email_template.render(Context(context))
         send_mail(
             'Your token', message, 'no-reply@example.com',
             [emails.pop()], fail_silently=False)
