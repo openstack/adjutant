@@ -58,6 +58,9 @@ class IdentityManager(object):
             role = None
         return role
 
+    def get_roles(self, user, project):
+        return self.ks.roles.roles_for_user(user, tenant=project)
+
     def add_user_role(self, user, role, project_id):
         self.ks_client.roles.add_user_role(user, role, project_id)
 
