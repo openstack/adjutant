@@ -226,6 +226,56 @@ class BaseActionTests(TestCase):
             ['Member', 'project_owner'])
 
     @mock.patch('base.models.IdentityManager', FakeManager)
+    def test_new_project_reapprove(self):
+        """
+        Project created at post_approve step,
+        ensure reapprove does nothing.
+        """
+
+        setup_temp_cache({}, {})
+
+        registration = Registration.objects.create(
+            reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
+
+        data = {
+            'email': 'test@example.com',
+            'project_name': 'test_project',
+        }
+
+        action = NewProject(data, registration=registration, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+        self.assertEquals(
+            tests.temp_cache['projects']['test_project'].name,
+            'test_project')
+        self.assertEquals('admin' in tests.temp_cache['users'], True)
+        self.assertEquals(registration.cache, {'project_id': 2})
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+        self.assertEquals(
+            tests.temp_cache['projects']['test_project'].name,
+            'test_project')
+        self.assertEquals('admin' in tests.temp_cache['users'], True)
+        self.assertEquals(registration.cache, {'project_id': 2})
+
+        token_data = {'password': '123456'}
+        action.submit(token_data)
+        self.assertEquals(action.valid, True)
+
+        self.assertEquals(
+            tests.temp_cache['users']['test@example.com'].email,
+            'test@example.com')
+        project = tests.temp_cache['projects']['test_project']
+        self.assertEquals(
+            project.roles['test@example.com'],
+            ['Member', 'project_owner'])
+
+    @mock.patch('base.models.IdentityManager', FakeManager)
     def test_new_project_existing_user(self):
         """
         no project, existing user.
