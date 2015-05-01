@@ -1,0 +1,67 @@
+# General settings
+SECRET_KEY: '+er!!4olta#17a=n%uotcazg2ncpl==yjog%1*o-(cr%zys-)!'
+
+ADDITIONAL_APPS:
+    - stacktask.tenant_setup
+
+DATABASES:
+    default:
+        ENGINE: django.db.backends.sqlite3
+        NAME: db.sqlite3
+
+LOGGING:
+    version: 1
+    disable_existing_loggers: False
+    handlers: 
+        file: 
+            level: INFO
+            class: logging.FileHandler
+            filename: reg_log.log
+    loggers: 
+        django: 
+            handlers: 
+                - file
+            level: INFO
+            propagate: True
+        keystonemiddleware: 
+            handlers: 
+                - file
+            level: INFO
+            propagate: True
+
+EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
+
+# Application settings:
+
+# setting to control if user name and email are allowed
+# to have different values.
+USERNAME_IS_EMAIL: True
+
+# Keystone admin credentials:
+KEYSTONE:
+    username: admin
+    password: openstack
+    project_name: admin
+    auth_url: http://localhost:5000/v2.0
+DEFAULT_REGION: RegionOne
+
+# Additonal actions for views:
+# - The order of the actions matters. These will run after the default action,
+#   in the given order.
+API_ACTIONS:
+    CreateProject:
+        - AddAdminToProject
+        - DefaultProjectResources
+
+# Action settings:
+ACTION_SETTINGS:
+    DefaultProjectResources:
+        "RegionOne":
+            network_name: somenetwork
+            subnet_name: somesubnet
+            router_name: somerouter
+            public_network: 83559fa7-0a67-4716-94b9-10596e3ed1e6
+            DNS_NAMESERVERS: 
+                - 193.168.1.2
+                - 193.168.1.3
+            SUBNET_CIDR: 192.168.1.0/24

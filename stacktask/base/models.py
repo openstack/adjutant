@@ -14,9 +14,10 @@
 
 from django.db import models
 from django.utils import timezone
-from user_store import IdentityManager
-from serializers import (NewUserSerializer, NewProjectSerializer,
-                         ResetUserSerializer)
+from stacktask.base.user_store import IdentityManager
+from stacktask.base.serializers import (NewUserSerializer,
+                                        NewProjectSerializer,
+                                        ResetUserSerializer)
 from django.conf import settings
 from jsonfield import JSONField
 from logging import getLogger

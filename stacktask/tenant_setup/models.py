@@ -12,11 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from base.models import BaseAction
-from serializers import DefaultProjectResourcesSerializer
+from stacktask.base.models import BaseAction
+from stacktask.tenant_setup.serializers import DefaultProjectResourcesSerializer
 from django.conf import settings
-from base.user_store import IdentityManager
-from base import openstack_clients
+from stacktask.base.user_store import IdentityManager
+from stacktask.base import openstack_clients
 
 
 class DefaultProjectResources(BaseAction):
@@ -30,7 +30,9 @@ class DefaultProjectResources(BaseAction):
         'setup_resources'
     ]
 
-    defaults = settings.NETWORK_DEFAULTS[settings.DEFAULT_REGION]
+    region = settings.DEFAULT_REGION
+
+    defaults = settings.ACTION_SETTINGS['DefaultProjectResources'][region]
 
     def _validate(self):
 
