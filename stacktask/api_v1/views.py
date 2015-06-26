@@ -32,7 +32,7 @@ def admin_or_owner(func, *args, **kwargs):
     """
     endpoints setup with this decorator require the defined roles.
     """
-    req_roles = {'admin', 'project_owner'}
+    req_roles = {'admin', 'project_owner', 'project_mod'}
     request = args[1]
     if not request.keystone_user.get('authenticated', False):
         return Response({'notes': ["Credentials incorrect or none given."]},
