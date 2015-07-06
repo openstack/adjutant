@@ -13,16 +13,16 @@
 #    under the License.
 
 from django.test import TestCase
-from api_v1.models import Registration
-from api_v1.tests import FakeManager, setup_temp_cache
-from api_v1 import tests
-from base.models import NewUser, NewProject, ResetUser
+from stacktask.api_v1.models import Registration
+from stacktask.api_v1.tests import FakeManager, setup_temp_cache
+from stacktask.api_v1 import tests
+from stacktask.base.models import NewUser, NewProject, ResetUser
 import mock
 
 
 class BaseActionTests(TestCase):
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_new_user(self):
         """
         Test the base case, all valid.
@@ -65,7 +65,7 @@ class BaseActionTests(TestCase):
 
         self.assertEquals(project.roles['test@example.com'], ['Member'])
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_new_user_existing(self):
         """
         Existing user, valid tenant, no role.
@@ -105,7 +105,7 @@ class BaseActionTests(TestCase):
 
         self.assertEquals(project.roles[user.name], ['Member'])
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_new_user_existing_role(self):
         """
         Existing user, valid tenant, has role.
@@ -150,7 +150,7 @@ class BaseActionTests(TestCase):
 
         self.assertEquals(project.roles[user.name], ['Member'])
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_new_user_no_tenant(self):
         """
         No user, no tenant.
@@ -181,7 +181,7 @@ class BaseActionTests(TestCase):
 
         self.assertEquals('admin' in tests.temp_cache['users'], True)
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_new_project(self):
         """
         Base case, no project, no user.
@@ -222,10 +222,10 @@ class BaseActionTests(TestCase):
             'test@example.com')
         project = tests.temp_cache['projects']['test_project']
         self.assertEquals(
-            project.roles['test@example.com'],
-            ['Member', 'project_owner'])
+            sorted(project.roles['test@example.com']),
+            sorted(['Member', 'project_owner', 'project_mod']))
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_new_project_reapprove(self):
         """
         Project created at post_approve step,
@@ -272,10 +272,10 @@ class BaseActionTests(TestCase):
             'test@example.com')
         project = tests.temp_cache['projects']['test_project']
         self.assertEquals(
-            project.roles['test@example.com'],
-            ['Member', 'project_owner'])
+            sorted(project.roles['test@example.com']),
+            sorted(['Member', 'project_owner', 'project_mod']))
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_new_project_existing_user(self):
         """
         no project, existing user.
@@ -317,10 +317,10 @@ class BaseActionTests(TestCase):
             'test@example.com')
         project = tests.temp_cache['projects']['test_project']
         self.assertEquals(
-            project.roles['test@example.com'],
-            ['Member', 'project_owner'])
+            sorted(project.roles['test@example.com']),
+            sorted(['Member', 'project_owner', 'project_mod']))
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_new_project_existing(self):
         """
         Existing project.
@@ -349,7 +349,7 @@ class BaseActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, False)
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_reset_user(self):
         """
         Base case, existing user.
@@ -387,7 +387,7 @@ class BaseActionTests(TestCase):
             tests.temp_cache['users']['test@example.com'].password,
             '123456')
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_reset_user_no_user(self):
         """
         No user.

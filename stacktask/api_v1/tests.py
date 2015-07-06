@@ -40,7 +40,8 @@ def setup_temp_cache(projects, users):
         'projects': projects,
         'roles': {
             'Member': 'Member', 'admin': 'admin',
-            'project_owner': 'project_owner'
+            'project_owner': 'project_owner',
+            'project_mod': 'project_mod'
         }
     }
 
@@ -122,7 +123,7 @@ class APITests(APITestCase):
        These tests also focus on authentication status
        and role prermissions."""
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_new_user(self):
         """
         Ensure the new user workflow goes as expected.
@@ -156,7 +157,7 @@ class APITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_new_user_no_project(self):
         """
         Can't create a user for a non-existent project.
@@ -178,7 +179,7 @@ class APITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {'notes': ['actions invalid']})
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_new_user_not_my_project(self):
         """
         Can't create a user for project that isn't mine.
@@ -202,10 +203,10 @@ class APITests(APITestCase):
             response.data,
             {'notes':
                 [("Must have one of the following roles: " +
-                  "['admin', 'project_owner']")]}
+                  "['admin', 'project_mod', 'project_owner']")]}
         )
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_new_user_not_my_project_admin(self):
         """
         Can create a user for project that isn't mine if admin.
@@ -238,7 +239,7 @@ class APITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_new_user_not_authenticated(self):
         """
         Can't create a user if unauthenticated.
@@ -257,7 +258,7 @@ class APITests(APITestCase):
             {'notes': ["Credentials incorrect or none given."]}
         )
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_add_user_existing(self):
         """
         Adding existing user to project.
@@ -291,7 +292,7 @@ class APITests(APITestCase):
             response.data,
             {'notes': 'Registration completed successfully.'})
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_add_user_existing_with_role(self):
         """
         Adding existing user to project.
@@ -327,8 +328,8 @@ class APITests(APITestCase):
             response.data,
             {'notes': 'Registration completed successfully.'})
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
-    @mock.patch('tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
     def test_new_project(self):
         """
         Ensure the new project workflow goes as expected.
@@ -361,8 +362,8 @@ class APITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
-    @mock.patch('tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
     def test_new_project_existing(self):
         """
         Test to ensure validation marks actions as invalid
@@ -405,8 +406,8 @@ class APITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {'notes': ['actions invalid']})
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
-    @mock.patch('tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
     def test_new_project_existing_user(self):
         """
         Project created if not present, existing user attached.
@@ -452,7 +453,7 @@ class APITests(APITestCase):
             {'notes': 'Registration completed successfully.'}
         )
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_reset_user(self):
         """
         Ensure the reset user workflow goes as expected.
@@ -480,7 +481,7 @@ class APITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(user.password, 'new_test_password')
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_reset_user_no_existing(self):
         """
         Actions should be invalid.
@@ -550,7 +551,7 @@ class APITests(APITestCase):
         self.assertEqual(
             response.data, {'notes': ['No registration with this id.']})
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_token_expired_post(self):
         """
         Expired token should do nothing, then delete itself.
@@ -580,7 +581,7 @@ class APITests(APITestCase):
         self.assertEqual(response.data, {'notes': ['This token has expired.']})
         self.assertEqual(0, Token.objects.count())
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_token_expired_get(self):
         """
         Expired token should do nothing, then delete itself.
@@ -609,8 +610,8 @@ class APITests(APITestCase):
         self.assertEqual(response.data, {'notes': ['This token has expired.']})
         self.assertEqual(0, Token.objects.count())
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
-    @mock.patch('tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
     def test_registration_complete(self):
         """
         Can't approve a completed registration.
@@ -641,8 +642,8 @@ class APITests(APITestCase):
             response.data,
             {'notes': ['This registration has already been completed.']})
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
-    @mock.patch('tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
     def test_registration_update(self):
         """
         Creates a invalid registration.
@@ -692,8 +693,8 @@ class APITests(APITestCase):
             response.data,
             {'notes': ['created token']})
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
-    @mock.patch('tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
     def test_notification_createproject(self):
         """
         CreateProject should create a notification.
@@ -724,8 +725,8 @@ class APITests(APITestCase):
             response.data[0]['registration'],
             new_registration.uuid)
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
-    @mock.patch('tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
     def test_notification_acknowledge(self):
         """
         Test that you can acknowledge a notification.
@@ -765,8 +766,8 @@ class APITests(APITestCase):
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.data, [])
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
-    @mock.patch('tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
     def test_notification_acknowledge_list(self):
         """
         Test that you can acknowledge a list of notifications.
@@ -804,7 +805,7 @@ class APITests(APITestCase):
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.data, [])
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_token_expired_delete(self):
         """
         test deleting of expired tokens.
@@ -859,7 +860,7 @@ class APITests(APITestCase):
                          {'notes': ['Deleted all expired tokens.']})
         self.assertEqual(Token.objects.count(), 1)
 
-    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_token_reissue(self):
         """
         test for reissue of tokens
