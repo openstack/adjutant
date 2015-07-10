@@ -35,7 +35,7 @@ def admin_or_owner(func, *args, **kwargs):
     req_roles = {'admin', 'project_owner', 'project_mod'}
     request = args[1]
     if not request.keystone_user.get('authenticated', False):
-        return Response({'notes': ["Credentials incorrect or none given."]},
+        return Response({'errors': ["Credentials incorrect or none given."]},
                         401)
 
     roles = set(request.keystone_user.get('roles', []))
@@ -43,8 +43,8 @@ def admin_or_owner(func, *args, **kwargs):
     if roles & req_roles:
         return func(*args, **kwargs)
 
-    return Response({'notes': ["Must have one of the following roles: %s" %
-                               list(req_roles)]},
+    return Response({'errors': ["Must have one of the following roles: %s" %
+                                list(req_roles)]},
                     403)
 
 
@@ -55,14 +55,14 @@ def admin(func, *args, **kwargs):
     """
     request = args[1]
     if not request.keystone_user.get('authenticated', False):
-        return Response({'notes': ["Credentials incorrect or none given."]},
+        return Response({'errors': ["Credentials incorrect or none given."]},
                         401)
 
     roles = request.keystone_user.get('roles', [])
     if "admin" in roles:
         return func(*args, **kwargs)
 
-    return Response({'notes': ["Must be admin."]}, 403)
+    return Response({'errors': ["Must be admin."]}, 403)
 
 
 def create_token(registration):
@@ -181,7 +181,7 @@ class NotificationDetail(APIViewWithLogger):
             notification = Notification.objects.get(pk=pk)
         except Notification.DoesNotExist:
             return Response(
-                {'notes': ['No notification with this id.']},
+                {'errors': ['No notification with this id.']},
                 status=404)
         return Response(notification.to_dict())
 
@@ -194,7 +194,7 @@ class NotificationDetail(APIViewWithLogger):
             notification = Notification.objects.get(pk=pk)
         except Notification.DoesNotExist:
             return Response(
-                {'notes': ['No notification with this id.']},
+                {'errors': ['No notification with this id.']},
                 status=404)
 
         if request.data.get('acknowledged', False) is True:
@@ -234,7 +234,7 @@ class RegistrationDetail(APIViewWithLogger):
             registration = Registration.objects.get(uuid=uuid)
         except Registration.DoesNotExist:
             return Response(
-                {'notes': ['No registration with this id.']},
+                {'errors': ['No registration with this id.']},
                 status=404)
         return Response(registration.to_dict())
 
@@ -248,12 +248,12 @@ class RegistrationDetail(APIViewWithLogger):
             registration = Registration.objects.get(uuid=uuid)
         except Registration.DoesNotExist:
             return Response(
-                {'notes': ['No registration with this id.']},
+                {'errors': ['No registration with this id.']},
                 status=404)
 
         if registration.completed:
             return Response(
-                {'notes':
+                {'errors':
                     ['This registration has already been completed.']},
                 status=400)
 
@@ -330,14 +330,14 @@ class RegistrationDetail(APIViewWithLogger):
             registration = Registration.objects.get(uuid=uuid)
         except Registration.DoesNotExist:
             return Response(
-                {'notes': ['No registration with this id.']},
+                {'errors': ['No registration with this id.']},
                 status=404)
 
         if request.data.get('approved', False) is True:
 
             if registration.completed:
                 return Response(
-                    {'notes':
+                    {'errors':
                         ['This registration has already been completed.']},
                     status=400)
 
@@ -447,11 +447,11 @@ class TokenList(APIViewWithLogger):
             registration = Registration.objects.get(uuid=uuid)
         except Registration.DoesNotExist:
             return Response(
-                {'notes': ['No registration with this id.']},
+                {'errors': ['No registration with this id.']},
                 status=404)
         if not registration.approved:
             return Response(
-                {'notes': ['This registration has not been approved.']},
+                {'errors': ['This registration has not been approved.']},
                 status=400)
 
         for token in registration.tokens:
@@ -484,17 +484,18 @@ class TokenDetail(APIViewWithLogger):
             token = Token.objects.get(token=id)
         except Token.DoesNotExist:
             return Response(
-                {'notes': ['This token does not exist.']}, status=404)
+                {'errors': ['This token does not exist.']}, status=404)
 
         if token.registration.completed:
             return Response(
-                {'notes':
+                {'errors':
                     ['This registration has already been completed.']},
                 status=400)
 
         if token.expires < timezone.now():
             token.delete()
-            return Response({'notes': ['This token has expired.']}, status=400)
+            return Response({'errors': ['This token has expired.']},
+                            status=400)
 
         required_fields = []
         actions = []
@@ -519,17 +520,18 @@ class TokenDetail(APIViewWithLogger):
             token = Token.objects.get(token=id)
         except Token.DoesNotExist:
             return Response(
-                {'notes': ['This token does not exist.']}, status=404)
+                {'errors': ['This token does not exist.']}, status=404)
 
         if token.registration.completed:
             return Response(
-                {'notes':
+                {'errors':
                     ['This registration has already been completed.']},
                 status=400)
 
         if token.expires < timezone.now():
             token.delete()
-            return Response({'notes': ['This token has expired.']}, status=400)
+            return Response({'errors': ['This token has expired.']},
+                            status=400)
 
         required_fields = set()
         actions = []
@@ -792,8 +794,8 @@ class ActionView(APIViewWithLogger):
                     return Response(
                         {'notes': "Registration completed successfully."},
                         status=200)
-            return Response({'notes': ['actions invalid']}, status=400)
-        return Response({'notes': ['actions invalid']}, status=400)
+            return Response({'errors': ['actions invalid']}, status=400)
+        return Response({'errors': ['actions invalid']}, status=400)
 
 
 class CreateProject(ActionView):
