@@ -18,5 +18,5 @@ from django.contrib import admin
 urlpatterns = patterns(
     '',
     url(r'^admin/', include(admin.site.urls)),
-    url(r'^api_v1/', include('stacktask.api_v1.urls')),
+    url(r'^v1/', include('stacktask.api_v1.urls')),
 )
