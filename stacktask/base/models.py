@@ -283,7 +283,11 @@ class NewUser(UserAction):
 
                     roles = []
                     for role in self.default_roles:
-                        roles.append(id_manager.find_role(role))
+                        ks_role = id_manager.find_role(role)
+                        if ks_role:
+                            roles.append(ks_role)
+                        else:
+                            raise TypeError("Keystone missing role: %s" % role)
 
                     user = id_manager.create_user(
                         name=self.username, password=token_data['password'],
@@ -425,7 +429,11 @@ class NewProject(UserAction):
                 try:
                     roles = []
                     for role in self.default_roles:
-                        roles.append(id_manager.find_role(role))
+                        ks_role = id_manager.find_role(role)
+                        if ks_role:
+                            roles.append(ks_role)
+                        else:
+                            raise TypeError("Keystone missing role: %s" % role)
 
                     user = id_manager.create_user(
                         name=self.username, password=token_data['password'],
