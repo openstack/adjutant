@@ -13,9 +13,9 @@
 #    under the License.
 
 from django.test import TestCase
-from stacktask.api_v1.models import Registration
-from stacktask.api_v1.tests import FakeManager, setup_temp_cache
-from stacktask.api_v1 import tests
+from stacktask.api.models import Registration
+from stacktask.api.v1.tests import FakeManager, setup_temp_cache
+from stacktask.api.v1 import tests
 from stacktask.base.models import NewUser, NewProject, ResetUser
 import mock
 

@@ -51,7 +51,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'rest_framework',
     'stacktask.base',
-    'stacktask.api_v1',
+    'stacktask.api',
 )
 
 MIDDLEWARE_CLASSES = (

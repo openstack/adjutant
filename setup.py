@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 setup(
     name='stacktask',
 
-    version='0.1.0a4',
+    version='0.1.0a5',
     description='A user registration service for openstack.',
     long_description=(
         'A registration service to sit alongside keystone and ' +
@@ -23,6 +23,7 @@ setup(
     keywords='openstack registration keystone users tasks workflow',
 
     packages=find_packages(),
+    package_data={'stacktask': ['api/v*/templates/*.txt']},
 
     install_requires=[
         'Django>=1.7.3',

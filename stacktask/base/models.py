@@ -33,7 +33,7 @@ class Action(models.Model):
     state = models.CharField(max_length=200, default="default")
     valid = models.BooleanField(default=False)
     need_token = models.BooleanField()
-    registration = models.ForeignKey('api_v1.Registration')
+    registration = models.ForeignKey('api.Registration')
 
     order = models.IntegerField()
 
