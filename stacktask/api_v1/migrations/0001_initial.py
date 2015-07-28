@@ -28,6 +28,7 @@ class Migration(migrations.Migration):
                 ('uuid', models.CharField(default=stacktask.api_v1.models.hex_uuid, max_length=200, serialize=False, primary_key=True)),
                 ('reg_ip', models.GenericIPAddressField()),
                 ('keystone_user', jsonfield.fields.JSONField(default={})),
+                ('action_view', models.CharField(max_length=200)),
                 ('action_notes', jsonfield.fields.JSONField(default={})),
                 ('approved', models.BooleanField(default=False)),
                 ('completed', models.BooleanField(default=False)),

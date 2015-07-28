@@ -128,11 +128,11 @@ class BaseAction(object):
     def need_token(self):
         return self.action.need_token
 
-    def token_email(self):
-        return self._token_email()
+    def get_email(self):
+        return self._get_email()
 
-    def _token_email(self):
-        raise NotImplementedError
+    def _get_email(self):
+        return None
 
     def get_cache(self, key):
         return self.action.cache.get(key, None)
@@ -191,7 +191,7 @@ class UserAction(BaseAction):
         else:
             super(UserAction, self).__init__(*args, **kwargs)
 
-    def _token_email(self):
+    def _get_email(self):
         return self.email
 
 
