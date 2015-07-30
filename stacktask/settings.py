@@ -90,9 +90,12 @@ STATIC_URL = '/static/'
 
 
 # Setup of local settings data
-
-with open("/etc/stacktask/conf.yaml") as f:
-    CONFIG = yaml.load(f)
+if 'test' in sys.argv:
+    from stacktask import test_settings
+    CONFIG = test_settings.conf_dict
+else:
+    with open("/etc/stacktask/conf.yaml") as f:
+        CONFIG = yaml.load(f)
 
 SECRET_KEY = CONFIG['SECRET_KEY']
 
