@@ -4,3 +4,4 @@
 *.log
 stacktask.egg-info/*
 dist/*
+.tox/*
