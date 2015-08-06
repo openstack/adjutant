@@ -15,6 +15,7 @@
 from django.conf.urls import patterns, url
 from stacktask.api.v1 import views
 
+
 urlpatterns = patterns(
     '',
     url(r'^registration/(?P<uuid>\w+)', views.RegistrationDetail.as_view()),

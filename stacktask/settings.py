@@ -32,13 +32,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.7/howto/deployment/checklist/
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
 TEMPLATE_DEBUG = True
-
-ALLOWED_HOSTS = []
-
 
 # Application definition
 
@@ -89,7 +84,6 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-
 # Setup of local settings data
 if 'test' in sys.argv:
     from stacktask import test_settings
@@ -99,6 +93,18 @@ else:
         CONFIG = yaml.load(f)
 
 SECRET_KEY = CONFIG['SECRET_KEY']
+
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = CONFIG.get('DEBUG', False)
+
+if not DEBUG:
+    REST_FRAMEWORK = {
+        'DEFAULT_RENDERER_CLASSES': (
+            'rest_framework.renderers.JSONRenderer',
+        )
+    }
+
+ALLOWED_HOSTS = CONFIG.get('ALLOWED_HOSTS', [])
 
 for app in CONFIG['ADDITIONAL_APPS']:
     INSTALLED_APPS = list(INSTALLED_APPS)

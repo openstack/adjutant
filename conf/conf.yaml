@@ -1,6 +1,11 @@
 # General settings
 SECRET_KEY: '+er!!4olta#17a=n%uotcazg2ncpl==yjog%1*o-(cr%zys-)!'
 
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG: True
+ALLOWED_HOSTS:
+    - "*"
+
 ADDITIONAL_APPS:
     - stacktask.api.v1
     - stacktask.tenant_setup

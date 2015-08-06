@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 setup(
     name='stacktask',
 
-    version='0.1.0a6',
+    version='0.1.0a7',
     description='A user registration service for openstack.',
     long_description=(
         'A registration service to sit alongside keystone and ' +
