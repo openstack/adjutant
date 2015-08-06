@@ -17,7 +17,8 @@ from django.utils import timezone
 from stacktask.base.user_store import IdentityManager
 from stacktask.base.serializers import (NewUserSerializer,
                                         NewProjectSerializer,
-                                        ResetUserSerializer)
+                                        ResetUserSerializer,
+                                        EditUserSerializer)
 from django.conf import settings
 from jsonfield import JSONField
 from logging import getLogger
@@ -207,12 +208,10 @@ class NewUser(UserAction):
         'username',
         'email',
         'project_id',
-        'role'
+        'roles'
     ]
 
     token_fields = ['password']
-
-    default_roles = {"Member"}
 
     def _validate(self):
         id_manager = IdentityManager()
@@ -221,13 +220,14 @@ class NewUser(UserAction):
 
         keystone_user = self.action.registration.keystone_user
 
-        if not ("admin" in keystone_user['roles'] or
-                keystone_user['project_id'] == self.project_id):
+        if not keystone_user['project_id'] == self.project_id:
             self.add_note('Project id does not match keystone user project.')
             return False
 
-        if ('project_owner' not in keystone_user['roles'] and
-                self.role == "project_mod"):
+        if ("admin" in self.roles or
+                'project_mod' not in keystone_user['roles'] or
+                ('project_owner' not in keystone_user['roles'] and
+                 "project_owner" in self.roles)):
             self.add_note('User does not have permission to add role.')
             return False
 
@@ -240,19 +240,22 @@ class NewUser(UserAction):
             if user:
                 if user.email == self.email:
                     roles = id_manager.get_roles(user, project)
-                    if self.role in roles:
+                    roles = {role.name for role in roles}
+                    missing = set(self.roles) - roles
+                    if not missing:
                         valid = True
                         self.action.need_token = False
                         self.action.state = "complete"
                         self.add_note(
-                            'Existing user already has role, no action needed.'
+                            'Existing user already has roles.'
                         )
                     else:
+                        self.roles = list(missing)
                         valid = True
                         self.action.need_token = False
                         self.action.state = "existing"
                         self.add_note(
-                            'Existing user with matching email and no role.')
+                            'Existing user with matching email missing roles.')
                 else:
                     valid = False
                     self.add_note('Existing user with non-matching email.')
@@ -279,10 +282,8 @@ class NewUser(UserAction):
 
             if self.action.state == "default":
                 try:
-                    self.default_roles.add(self.role)
-
                     roles = []
-                    for role in self.default_roles:
+                    for role in self.roles:
                         ks_role = id_manager.find_role(role)
                         if ks_role:
                             roles.append(ks_role)
@@ -297,36 +298,36 @@ class NewUser(UserAction):
                         id_manager.add_user_role(user, role, self.project_id)
                 except Exception as e:
                     self.add_note(
-                        "Error: '%s' while creating user: %s with role: %s" %
-                        (e, self.username, self.role))
+                        "Error: '%s' while creating user: %s with roles: %s" %
+                        (e, self.username, self.roles))
                     raise
 
                 self.add_note(
-                    'User %s has been created, with role %s in project %s.'
-                    % (self.username, self.role, self.project_id))
+                    'User %s has been created, with roles %s in project %s.'
+                    % (self.username, self.roles, self.project_id))
             elif self.action.state == "existing":
                 try:
                     user = id_manager.find_user(self.username)
 
                     roles = []
-                    for role in self.default_roles:
+                    for role in self.roles:
                         roles.append(id_manager.find_role(role))
 
                     for role in roles:
                         id_manager.add_user_role(user, role, self.project_id)
                 except Exception as e:
                     self.add_note(
-                        "Error: '%s' while attaching user: %s with role: %s" %
-                        (e, self.username, self.role))
+                        "Error: '%s' while attaching user: %s with roles: %s" %
+                        (e, self.username, self.roles))
                     raise
 
                 self.add_note(
-                    'Existing user %s has been given role %s in project %s.'
-                    % (self.username, self.role, self.project_id))
+                    'Existing user %s has been given roles %s in project %s.'
+                    % (self.username, self.roles, self.project_id))
             elif self.action.state == "complete":
                 self.add_note(
-                    'Existing user %s already had role %s in project %s.'
-                    % (self.username, self.role, self.project_id))
+                    'Existing user %s already had roles %s in project %s.'
+                    % (self.username, self.roles, self.project_id))
 
 
 class NewProject(UserAction):
@@ -531,11 +532,149 @@ class ResetUser(UserAction):
             self.add_note('User %s password has been changed.' % self.username)
 
 
+class EditUser(UserAction):
+    """
+    Adds or removes roles from a user on the given project.
+    """
+
+    required = [
+        'username',
+        'email',
+        'project_id',
+        'roles',
+        'remove'
+    ]
+
+    def _validate(self):
+        id_manager = IdentityManager()
+
+        user = id_manager.find_user(self.username)
+
+        keystone_user = self.action.registration.keystone_user
+
+        if not keystone_user['project_id'] == self.project_id:
+            self.add_note('Project id does not match keystone user project.')
+            return False
+
+        if ("admin" in self.roles or
+                'project_mod' not in keystone_user['roles'] or
+                ('project_owner' not in keystone_user['roles'] and
+                 "project_owner" in self.roles)):
+            self.add_note('User does not have permission to edit role.')
+            return False
+
+        project = id_manager.get_project(self.project_id)
+
+        if not project:
+            self.add_note('Project does not exist.')
+            valid = False
+        else:
+            if user:
+                if user.email == self.email:
+                    roles = id_manager.get_roles(user, project)
+                    roles = {role.name for role in roles}
+                    if self.remove:
+                        remaining = set(roles) & set(self.roles)
+                        if not remaining:
+                            valid = True
+                            self.action.state = "complete"
+                            self.add_note(
+                                "User does't have roles."
+                            )
+                        else:
+                            self.roles = list(remaining)
+                            valid = True
+                            self.add_note(
+                                'User has roles to remove.')
+                    else:
+                        missing = set(self.roles) - set(roles)
+                        if not missing:
+                            valid = True
+                            self.action.state = "complete"
+                            self.add_note(
+                                'User already has roles.'
+                            )
+                        else:
+                            self.roles = list(missing)
+                            valid = True
+                            self.add_note(
+                                'User user missing roles.')
+                else:
+                    valid = False
+                    self.add_note('User with non-matching email.')
+            else:
+                valid = False
+                self.add_note('No user present with username')
+
+        return valid
+
+    def _pre_approve(self):
+        self.action.valid = self._validate()
+        self.action.save()
+
+    def _post_approve(self):
+        self.action.valid = self._validate()
+        self.action.save()
+
+    def _submit(self, token_data):
+        self.action.valid = self._validate()
+        self.action.save()
+
+        if self.valid:
+            id_manager = IdentityManager()
+
+            if self.action.state == "default":
+                try:
+                    user = id_manager.find_user(self.username)
+
+                    roles = []
+                    for role in self.roles:
+                        roles.append(id_manager.find_role(role))
+
+                    if self.remove:
+                        for role in roles:
+                            id_manager.remove_user_role(
+                                user, role, self.project_id)
+                    else:
+                        for role in roles:
+                            id_manager.add_user_role(
+                                user, role, self.project_id)
+                except Exception as e:
+                    if self.remove:
+                        self.add_note(
+                            "Error: '%s' removing roles: %s from user: %s" %
+                            (e, self.roles, self.username))
+                    else:
+                        self.add_note(
+                            "Error: '%s' adding roles: %s to user: %s" %
+                            (e, self.roles, self.username))
+                    raise
+
+                if self.remove:
+                    self.add_note(
+                        'User %s has had roles %s removed from project %s.'
+                        % (self.username, self.roles, self.project_id))
+                else:
+                    self.add_note(
+                        'User %s has been given roles %s in project %s.'
+                        % (self.username, self.roles, self.project_id))
+            elif self.action.state == "complete":
+                if self.remove:
+                    self.add_note(
+                        'User %s already had roles %s in project %s.'
+                        % (self.username, self.roles, self.project_id))
+                else:
+                    self.add_note(
+                        "User %s didn't have roles %s in project %s."
+                        % (self.username, self.roles, self.project_id))
+
+
 # A dict of tuples in the format: (<ActionClass>, <ActionSerializer>)
 action_classes = {
     'NewUser': (NewUser, NewUserSerializer),
     'NewProject': (NewProject, NewProjectSerializer),
-    'ResetUser': (ResetUser, ResetUserSerializer)
+    'ResetUser': (ResetUser, ResetUserSerializer),
+    'EditUser': (EditUser, EditUserSerializer)
 }
 
 # setup action classes and serializers for global access

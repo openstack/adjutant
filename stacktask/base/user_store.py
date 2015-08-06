@@ -64,6 +64,9 @@ class IdentityManager(object):
     def add_user_role(self, user, role, project_id):
         self.ks_client.roles.add_user_role(user, role, project_id)
 
+    def remove_user_role(self, user, role, project_id):
+        self.ks_client.roles.remove_user_role(user, role, project_id)
+
     def find_project(self, project_name):
         try:
             project = self.ks_client.tenants.find(name=project_name)

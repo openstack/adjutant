@@ -26,4 +26,5 @@ urlpatterns = patterns(
     url(r'^project', views.CreateProject.as_view()),
     url(r'^user', views.AttachUser.as_view()),
     url(r'^reset', views.ResetPassword.as_view()),
+    url(r'^edit', views.EditUser.as_view()),
 )
