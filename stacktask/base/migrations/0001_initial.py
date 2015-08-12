@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
                 ('need_token', models.BooleanField()),
                 ('order', models.IntegerField()),
                 ('created', models.DateTimeField(default=django.utils.timezone.now)),
-                ('registration', models.ForeignKey(to='api.Registration')),
+                ('task', models.ForeignKey(to='api.Task')),
             ],
         ),
     ]

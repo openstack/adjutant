@@ -13,7 +13,7 @@
 #    under the License.
 
 from django.test import TestCase
-from stacktask.api.models import Registration
+from stacktask.api.models import Task
 from stacktask.api.v1.tests import FakeManager, setup_temp_cache
 from stacktask.api.v1 import tests
 from stacktask.base.models import NewUser, NewProject, ResetUser, EditUser
@@ -35,7 +35,7 @@ class BaseActionTests(TestCase):
 
         setup_temp_cache({'test_project': project}, {})
 
-        registration = Registration.objects.create(
+        task = Task.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
@@ -46,7 +46,7 @@ class BaseActionTests(TestCase):
             'roles': ['Member']
         }
 
-        action = NewUser(data, registration=registration, order=1)
+        action = NewUser(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -84,7 +84,7 @@ class BaseActionTests(TestCase):
 
         setup_temp_cache({'test_project': project}, {user.name: user})
 
-        registration = Registration.objects.create(
+        task = Task.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
@@ -95,7 +95,7 @@ class BaseActionTests(TestCase):
             'roles': ['Member']
         }
 
-        action = NewUser(data, registration=registration, order=1)
+        action = NewUser(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -130,7 +130,7 @@ class BaseActionTests(TestCase):
 
         setup_temp_cache({'test_project': project}, {user.name: user})
 
-        registration = Registration.objects.create(
+        task = Task.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
@@ -141,7 +141,7 @@ class BaseActionTests(TestCase):
             'roles': ['Member']
         }
 
-        action = NewUser(data, registration=registration, order=1)
+        action = NewUser(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -164,7 +164,7 @@ class BaseActionTests(TestCase):
 
         setup_temp_cache({}, {})
 
-        registration = Registration.objects.create(
+        task = Task.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
@@ -175,7 +175,7 @@ class BaseActionTests(TestCase):
             'roles': ['Member']
         }
 
-        action = NewUser(data, registration=registration, order=1)
+        action = NewUser(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, False)
@@ -200,7 +200,7 @@ class BaseActionTests(TestCase):
 
         setup_temp_cache({}, {})
 
-        registration = Registration.objects.create(
+        task = Task.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
@@ -210,7 +210,7 @@ class BaseActionTests(TestCase):
             'project_name': 'test_project',
         }
 
-        action = NewProject(data, registration=registration, order=1)
+        action = NewProject(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -221,7 +221,7 @@ class BaseActionTests(TestCase):
             tests.temp_cache['projects']['test_project'].name,
             'test_project')
         self.assertEquals('admin' in tests.temp_cache['users'], True)
-        self.assertEquals(registration.cache, {'project_id': 2})
+        self.assertEquals(task.cache, {'project_id': 2})
 
         token_data = {'password': '123456'}
         action.submit(token_data)
@@ -244,7 +244,7 @@ class BaseActionTests(TestCase):
 
         setup_temp_cache({}, {})
 
-        registration = Registration.objects.create(
+        task = Task.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
@@ -254,7 +254,7 @@ class BaseActionTests(TestCase):
             'project_name': 'test_project',
         }
 
-        action = NewProject(data, registration=registration, order=1)
+        action = NewProject(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -265,7 +265,7 @@ class BaseActionTests(TestCase):
             tests.temp_cache['projects']['test_project'].name,
             'test_project')
         self.assertEquals('admin' in tests.temp_cache['users'], True)
-        self.assertEquals(registration.cache, {'project_id': 2})
+        self.assertEquals(task.cache, {'project_id': 2})
 
         action.post_approve()
         self.assertEquals(action.valid, True)
@@ -273,7 +273,7 @@ class BaseActionTests(TestCase):
             tests.temp_cache['projects']['test_project'].name,
             'test_project')
         self.assertEquals('admin' in tests.temp_cache['users'], True)
-        self.assertEquals(registration.cache, {'project_id': 2})
+        self.assertEquals(task.cache, {'project_id': 2})
 
         token_data = {'password': '123456'}
         action.submit(token_data)
@@ -300,7 +300,7 @@ class BaseActionTests(TestCase):
 
         setup_temp_cache({}, {user.name: user})
 
-        registration = Registration.objects.create(
+        task = Task.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
@@ -310,7 +310,7 @@ class BaseActionTests(TestCase):
             'project_name': 'test_project',
         }
 
-        action = NewProject(data, registration=registration, order=1)
+        action = NewProject(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -320,7 +320,7 @@ class BaseActionTests(TestCase):
         self.assertEquals(
             tests.temp_cache['projects']['test_project'].name,
             'test_project')
-        self.assertEquals(registration.cache, {'project_id': 2})
+        self.assertEquals(task.cache, {'project_id': 2})
 
         token_data = {'password': '123456'}
         action.submit(token_data)
@@ -347,7 +347,7 @@ class BaseActionTests(TestCase):
 
         setup_temp_cache({project.name: project}, {})
 
-        registration = Registration.objects.create(
+        task = Task.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
@@ -357,7 +357,7 @@ class BaseActionTests(TestCase):
             'project_name': 'test_project',
         }
 
-        action = NewProject(data, registration=registration, order=1)
+        action = NewProject(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, False)
@@ -379,7 +379,7 @@ class BaseActionTests(TestCase):
 
         setup_temp_cache({}, {user.name: user})
 
-        registration = Registration.objects.create(
+        task = Task.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
@@ -389,7 +389,7 @@ class BaseActionTests(TestCase):
             'project_name': 'test_project',
         }
 
-        action = ResetUser(data, registration=registration, order=1)
+        action = ResetUser(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -413,7 +413,7 @@ class BaseActionTests(TestCase):
 
         setup_temp_cache({}, {})
 
-        registration = Registration.objects.create(
+        task = Task.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
@@ -423,7 +423,7 @@ class BaseActionTests(TestCase):
             'project_name': 'test_project',
         }
 
-        action = ResetUser(data, registration=registration, order=1)
+        action = ResetUser(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, False)
@@ -452,7 +452,7 @@ class BaseActionTests(TestCase):
 
         setup_temp_cache({'test_project': project}, {user.name: user})
 
-        registration = Registration.objects.create(
+        task = Task.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
@@ -464,7 +464,7 @@ class BaseActionTests(TestCase):
             'remove': False
         }
 
-        action = EditUser(data, registration=registration, order=1)
+        action = EditUser(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -497,7 +497,7 @@ class BaseActionTests(TestCase):
 
         setup_temp_cache({'test_project': project}, {user.name: user})
 
-        registration = Registration.objects.create(
+        task = Task.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
@@ -509,7 +509,7 @@ class BaseActionTests(TestCase):
             'remove': False
         }
 
-        action = EditUser(data, registration=registration, order=1)
+        action = EditUser(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -544,7 +544,7 @@ class BaseActionTests(TestCase):
 
         setup_temp_cache({'test_project': project}, {user.name: user})
 
-        registration = Registration.objects.create(
+        task = Task.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
@@ -556,7 +556,7 @@ class BaseActionTests(TestCase):
             'remove': True
         }
 
-        action = EditUser(data, registration=registration, order=1)
+        action = EditUser(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -588,7 +588,7 @@ class BaseActionTests(TestCase):
 
         setup_temp_cache({'test_project': project}, {user.name: user})
 
-        registration = Registration.objects.create(
+        task = Task.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
@@ -600,7 +600,7 @@ class BaseActionTests(TestCase):
             'remove': True
         }
 
-        action = EditUser(data, registration=registration, order=1)
+        action = EditUser(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)

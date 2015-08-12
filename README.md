@@ -14,20 +14,20 @@ The base use case is three stages:
 
 * Recieve Request
   * Validate request data against action serializers.
-  * If valid, setup Registration to represent the request, and the Actions specified for that ActionView.
-  * The service runs the pre_approve function on all actions which should do any self validation to mark the actions themselves as valid or invalid, and populating the nodes in the Registration based on that.
+  * If valid, setup Task to represent the request, and the Actions specified for that ActionView.
+  * The service runs the pre_approve function on all actions which should do any self validation to mark the actions themselves as valid or invalid, and populating the nodes in the Task based on that.
 * Admin Approval
-  * An admin looks at the Registration and its notes.
+  * An admin looks at the Task and its notes.
   * If they decide it is safe to approve, they do so.
     * If there are any invalid actions approval will do nothing until the action data is updated and initial validation is rerun.
   * The service runs the post_approve function on all actions.
   * If any of the actions require a Token to be issued and emailed for additional data such as a user password, then that will occur.
-    * If no Token is required, the Registration will run submit actions, and be marked as complete.
+    * If no Token is required, the Task will run submit actions, and be marked as complete.
 * Token Submit
   * User submits the Token data.
   * The service runs the submit function on all actions, passing along the Token data, normally a password.
     * The action will then complete with the given final data.
-  * Registration is marked as complete.
+  * Task is marked as complete.
 
 There are cases and ActionViews that auto-approve, and thus automatically do the middle step right after the first. There are also others which do not need a Token and thus run the submit step as part of the second, or even all three at once. The exact number of 'steps' and the time between them depends on the definition of the ActionView.
 
@@ -35,7 +35,7 @@ Actions themselves can also effectively do anything within the scope of those th
 
 The points that are modular, or will be made more modular in future, are the ActionViews and the actions tied to them. Adding new actions is easy, and attaching them to existing ActionViews is as well. Adding new ActionViews is also fairly easy, but will be made more modular in future (see Future Plans).
 
-Creation and management of Registrations, Tokens, and Notifications is not modular and is the framework around the defined Actions and ActionViews that handles how they are executed. This helps keep the way Actions are executed consistent and simpler to maintain, but does also allow Actions to run almost any logic within those consistent steps.
+Creation and management of Tasks, Tokens, and Notifications is not modular and is the framework around the defined Actions and ActionViews that handles how they are executed. This helps keep the way Actions are executed consistent and simpler to maintain, but does also allow Actions to run almost any logic within those consistent steps.
 
 #### Default Action Endpoints:
 
@@ -44,7 +44,7 @@ Creation and management of Registrations, Tokens, and Notifications is not modul
 * ../project - POST
   * unauthenticated endpoint
   * for signup of new users/projects.
-  * registration requires manual approval, sends a uri+token for password setup after the project is created and setup.
+  * task requires manual approval, sends a uri+token for password setup after the project is created and setup.
     * create project
     * add admin user to project
     * setup basic networking if needed
@@ -66,20 +66,20 @@ Creation and management of Registrations, Tokens, and Notifications is not modul
 
 #### Admin Endpoints:
 
-* ../registration - GET
-  * A json containing all registrations.
+* ../task - GET
+  * A json containing all tasks.
     * This will be updated to take parameters to refine the list.
-* ../registration/<uuid> - GET
-  * Get details for a specific registration.
-* ../registration/<uuid> - PUT
-  * Update a registration and retrigger pre_approve.
-* ../registration/<uuid> - POST
-  * approve a registration
+* ../task/<uuid> - GET
+  * Get details for a specific task.
+* ../task/<uuid> - PUT
+  * Update a task and retrigger pre_approve.
+* ../task/<uuid> - POST
+  * approve a task
 * ../token - GET
   * A json containing all tokens.
     * This will be updated to take parameters to refine the list.
 * ../token - POST
-  * Reissue tokens for a given registration.
+  * Reissue tokens for a given task.
 * ../token - DELETE
   * Delete all expired tokens.
 * ../token/<uuid> - GET
@@ -109,25 +109,25 @@ If that was the case, the system should ideally also have been modular enough to
 
 #### What is an Action?
 
-Actions are a generic database model which knows what 'type' of action it is. On pulling the actions related to a Registration from the database we wrap it into the appropriate class type which handlings all the logic associated with that action type.
+Actions are a generic database model which knows what 'type' of action it is. On pulling the actions related to a Task from the database we wrap it into the appropriate class type which handlings all the logic associated with that action type.
 
 An Action is both a simple database representation of itself, and a more complex in memory class that handles all the logic around it.
 
 Each action class has the functions "pre_approve", "post_approve", and "submit". These relate to stages of the approval process, and any python code can be executed in those functions, some of which should ideally be validation that the data passed makes sense.
 
-Multiple actions can be chained together under one Registration and will execute in the defined order. Actions can pass information along via an in memory cache/field on the registration object, but that is only safe for the same stage of execution. Actions can also store data back to the database if their logic requires some info passed along to a later step of execution.
+Multiple actions can be chained together under one Task and will execute in the defined order. Actions can pass information along via an in memory cache/field on the task object, but that is only safe for the same stage of execution. Actions can also store data back to the database if their logic requires some info passed along to a later step of execution.
 
 See 'base.models' for a good idea of Actions.
 
-#### What is a Registration?
+#### What is a Task?
 
-A registration is a top level model representation of the request. It wraps the request metadata, and based on the ActionView, will have actions associated with it.
+A task is a top level model representation of the request. It wraps the request metadata, and based on the ActionView, will have actions associated with it.
 
 See 'api_v1.models'.
 
 #### What is a Token?
 
-A token is a unique identifier linking to a registration, so that anyone submitting the token will submit to the actions related to the registration.
+A token is a unique identifier linking to a task, so that anyone submitting the token will submit to the actions related to the task.
 
 See 'api_v1.models'.
 
@@ -135,9 +135,9 @@ See 'api_v1.models'.
 
 ActionViews are classes which extend the base ActionView class and use it's imbuilt functions to process actions. They also have actions associated with them and the inbuilt functions from the base class are there to process and validate those against data coming in.
 
-The ActionView will process incoming data and build it into a Registration, and the related Action classes.
+The ActionView will process incoming data and build it into a Task, and the related Action classes.
 
-They are very simple to define as the inbuilt functions handle all the real logic, but defining which functions of those are called changes the view to create a registration that either requires approval or auto-approves.
+They are very simple to define as the inbuilt functions handle all the real logic, but defining which functions of those are called changes the view to create a task that either requires approval or auto-approves.
 
 The base ActionView class has three functions:
 
@@ -146,10 +146,10 @@ The base ActionView class has three functions:
 * process_actions
   * needs to be called in the ActionView definition
   * A function to run the processing and validation of request data for actions.
-  * Builds and returns the registration object, or the validation errors.
+  * Builds and returns the task object, or the validation errors.
 * approve
-  * Takes a registration and approves it, running post_approve actions and issuing a token if needed.
-  * Used only if no admin approval is needed for Registrations create by this ActionView.
+  * Takes a task and approves it, running post_approve actions and issuing a token if needed.
+  * Used only if no admin approval is needed for Tasks create by this ActionView.
 
 See 'api_v1.views' and look at the ActionView class to get a better idea.
 
@@ -188,7 +188,7 @@ This section is a work in progress, although eventually there should be a puppet
 * Finish and clean up the client/shell tools
 * Nicer handling of token emails and email templates
 * Tests for username isn't email vs username is email
-* Basic admin panel in horizon, and example public forms for registration and token submission.
+* Basic admin panel in horizon, and example public forms for task and token submission.
 
 ## Future Plans:
 

@@ -1,6 +1,6 @@
 Hello,
 
-Your registrations with our service is almost done.
+Your task with our service is almost done.
 
 The action you have requested is:
 {% for action in actions %}

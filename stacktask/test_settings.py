@@ -83,7 +83,7 @@ ACTIONVIEW_SETTINGS = {
                 'reply': 'no-reply@example.com',
                 'html_template': 'completed.txt',
                 'template': 'completed.txt',
-                'subject': 'Registration completed'
+                'subject': 'Task completed'
             }
         }
     },
@@ -105,7 +105,7 @@ ACTIONVIEW_SETTINGS = {
                 'reply': 'no-reply@example.com',
                 'html_template': 'completed.txt',
                 'template': 'completed.txt',
-                'subject': 'Registration completed'
+                'subject': 'Task completed'
             }
         },
         'actions': [
@@ -125,7 +125,7 @@ ACTIONVIEW_SETTINGS = {
                 'reply': 'no-reply@example.com',
                 'html_template': 'completed.txt',
                 'template': 'completed.txt',
-                'subject': 'Registration completed'
+                'subject': 'Task completed'
             }
         }
     }

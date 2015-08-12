@@ -1,13 +1,13 @@
 Hello,
 
-Your registration is in our system and now waiting approval.
+Your task is in our system and now waiting approval.
 
 The actions you had requested are:
 {% for action in actions %}
 - {{ action }}
 {% endfor %}
 
-Once someone has approved your registration you will be emailed an update.
+Once someone has approved your task you will be emailed an update.
 
 Thank you for using our service.
 

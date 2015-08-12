@@ -4,12 +4,12 @@ from setuptools import setup, find_packages
 setup(
     name='stacktask',
 
-    version='0.1.0a7',
-    description='A user registration service for openstack.',
+    version='0.1.0a8',
+    description='A user task service for openstack.',
     long_description=(
-        'A registration service to sit alongside keystone and ' +
+        'A task service to sit alongside keystone and ' +
         'add some missing functionality.'),
-    url='https://github.com/catalyst/openstack-registration',
+    url='https://github.com/catalyst/stack-task',
     author='Adrian Turjak',
     author_email='adriant@catalyst.net.nz',
     license='Apache 2.0',
@@ -20,7 +20,7 @@ setup(
         'Programming Language :: Python :: 2.7',
     ],
 
-    keywords='openstack registration keystone users tasks workflow',
+    keywords='openstack keystone users tasks registration workflow',
 
     packages=find_packages(),
     package_data={'stacktask': ['api/v*/templates/*.txt']},

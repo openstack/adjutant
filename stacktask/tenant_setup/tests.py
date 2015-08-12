@@ -13,7 +13,7 @@
 #    under the License.
 
 from django.test import TestCase
-from stacktask.api.models import Registration
+from stacktask.api.models import Task
 from stacktask.api.v1.tests import FakeManager, setup_temp_cache
 from stacktask.api.v1 import tests
 from stacktask.tenant_setup.models import DefaultProjectResources, AddAdminToProject
@@ -80,16 +80,16 @@ class TenantSetupActionTests(TestCase):
         Base case, setup resources, no issues.
         """
         setup_neutron_cache()
-        registration = Registration.objects.create(
+        task = Task.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
 
-        registration.cache = {'project_id': "1"}
+        task.cache = {'project_id': "1"}
 
         data = {
             'setup_resources': True,
         }
 
-        action = DefaultProjectResources(data, registration=registration,
+        action = DefaultProjectResources(data, task=task,
                                          order=1)
 
         action.pre_approve()
@@ -118,14 +118,14 @@ class TenantSetupActionTests(TestCase):
         No project id given, should do nothing.
         """
         setup_neutron_cache()
-        registration = Registration.objects.create(
+        task = Task.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
 
         data = {
             'setup_resources': True,
         }
 
-        action = DefaultProjectResources(data, registration=registration,
+        action = DefaultProjectResources(data, task=task,
                                          order=1)
 
         action.pre_approve()
@@ -149,16 +149,16 @@ class TenantSetupActionTests(TestCase):
         Told not to setup, should do nothing.
         """
         setup_neutron_cache()
-        registration = Registration.objects.create(
+        task = Task.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
 
         data = {
             'setup_resources': False,
         }
 
-        registration.cache = {'project_id': "1"}
+        task.cache = {'project_id': "1"}
 
-        action = DefaultProjectResources(data, registration=registration,
+        action = DefaultProjectResources(data, task=task,
                                          order=1)
 
         action.pre_approve()
@@ -183,16 +183,16 @@ class TenantSetupActionTests(TestCase):
         """
         setup_neutron_cache()
         global neutron_cache
-        registration = Registration.objects.create(
+        task = Task.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
 
         data = {
             'setup_resources': True,
         }
 
-        registration.cache = {'project_id': "1"}
+        task.cache = {'project_id': "1"}
 
-        action = DefaultProjectResources(data, registration=registration,
+        action = DefaultProjectResources(data, task=task,
                                          order=1)
 
         action.pre_approve()
@@ -243,12 +243,12 @@ class TenantSetupActionTests(TestCase):
 
         setup_temp_cache({'test_project': project}, {})
 
-        registration = Registration.objects.create(
+        task = Task.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
 
-        registration.cache = {'project_id': "test_project_id"}
+        task.cache = {'project_id': "test_project_id"}
 
-        action = AddAdminToProject({}, registration=registration, order=1)
+        action = AddAdminToProject({}, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -271,12 +271,12 @@ class TenantSetupActionTests(TestCase):
 
         setup_temp_cache({'test_project': project}, {})
 
-        registration = Registration.objects.create(
+        task = Task.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
 
-        registration.cache = {'project_id': "test_project_id"}
+        task.cache = {'project_id': "test_project_id"}
 
-        action = AddAdminToProject({}, registration=registration, order=1)
+        action = AddAdminToProject({}, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)

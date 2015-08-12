@@ -18,8 +18,8 @@ from stacktask.api.v1 import views
 
 urlpatterns = patterns(
     '',
-    url(r'^registration/(?P<uuid>\w+)', views.RegistrationDetail.as_view()),
-    url(r'^registration', views.RegistrationList.as_view()),
+    url(r'^task/(?P<uuid>\w+)', views.TaskDetail.as_view()),
+    url(r'^task', views.TaskList.as_view()),
     url(r'^token/(?P<id>\w+)', views.TokenDetail.as_view()),
     url(r'^token', views.TokenList.as_view()),
     url(r'^notification/(?P<pk>\w+)', views.NotificationDetail.as_view()),

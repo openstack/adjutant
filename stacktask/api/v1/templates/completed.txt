@@ -1,6 +1,6 @@
 Hello,
 
-Your registration has been completed.
+Your task has been completed.
 
 The actions you had requested are:
 {% for action in actions %}

@@ -16,7 +16,7 @@ from decorator import decorator
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from stacktask.base.user_store import IdentityManager
-from stacktask.api.models import Registration, Token, Notification
+from stacktask.api.models import Task, Token, Notification
 from django.utils import timezone
 from datetime import timedelta
 from uuid import uuid4
@@ -67,14 +67,14 @@ def admin(func, *args, **kwargs):
     return Response({'errors': ["Must be admin."]}, 403)
 
 
-def create_token(registration):
+def create_token(task):
     # expire needs to be made configurable.
     expire = timezone.now() + timedelta(hours=24)
 
     # is this a good way to create tokens?
     uuid = uuid4().hex
     token = Token.objects.create(
-        registration=registration,
+        task=task,
         token=uuid,
         expires=expire
     )
@@ -82,14 +82,14 @@ def create_token(registration):
     return token
 
 
-def send_email(registration, email_conf, token=None):
+def send_email(task, email_conf, token=None):
     if email_conf:
         template = loader.get_template(email_conf['template'])
         html_template = loader.get_template(email_conf['html_template'])
 
         emails = set()
         actions = []
-        for action in registration.actions:
+        for action in task.actions:
             act = action.get_action()
             email = act.get_email()
             if email:
@@ -100,18 +100,18 @@ def send_email(registration, email_conf, token=None):
             notes = {
                 'notes':
                     (("Error: Unable to send token, More than one email for" +
-                     " registration: %s") % registration.uuid)
+                     " task: %s") % task.uuid)
             }
-            create_notification(registration, notes)
+            create_notification(task, notes)
             return
             # TODO(adriant): raise some error?
             # and surround calls to this function with try/except
 
         if token:
-            context = {'registration': registration, 'actions': actions,
+            context = {'task': task, 'actions': actions,
                        'token': token.token}
         else:
-            context = {'registration': registration, 'actions': actions}
+            context = {'task': task, 'actions': actions}
 
         try:
             message = template.render(Context(context))
@@ -122,17 +122,17 @@ def send_email(registration, email_conf, token=None):
         except SMTPException as e:
             notes = {
                 'notes':
-                    ("Error: '%s' while emailing token for registration: %s" %
-                     (e, registration.uuid))
+                    ("Error: '%s' while emailing token for task: %s" %
+                     (e, task.uuid))
             }
-            create_notification(registration, notes)
+            create_notification(task, notes)
             # TODO(adriant): raise some error?
             # and surround calls to this function with try/except
 
 
-def create_notification(registration, notes):
+def create_notification(task, notes):
     notification = Notification.objects.create(
-        registration=registration,
+        task=task,
         notes=notes
     )
     notification.save()
@@ -217,36 +217,36 @@ class NotificationDetail(APIViewWithLogger):
                             status=400)
 
 
-class RegistrationList(APIViewWithLogger):
+class TaskList(APIViewWithLogger):
 
     @admin
     def get(self, request, format=None):
         """
-        A list of dict representations of Registration objects
+        A list of dict representations of Task objects
         and their related actions.
         """
-        registrations = Registration.objects.all()
+        tasks = Task.objects.all()
         reg_list = []
-        for registration in registrations:
-            reg_list.append(registration.to_dict())
+        for task in tasks:
+            reg_list.append(task.to_dict())
         return Response(reg_list, status=200)
 
 
-class RegistrationDetail(APIViewWithLogger):
+class TaskDetail(APIViewWithLogger):
 
     @admin
     def get(self, request, uuid, format=None):
         """
-        Dict representation of a Registration object
+        Dict representation of a Task object
         and its related actions.
         """
         try:
-            registration = Registration.objects.get(uuid=uuid)
-        except Registration.DoesNotExist:
+            task = Task.objects.get(uuid=uuid)
+        except Task.DoesNotExist:
             return Response(
-                {'errors': ['No registration with this id.']},
+                {'errors': ['No task with this id.']},
                 status=404)
-        return Response(registration.to_dict())
+        return Response(task.to_dict())
 
     @admin
     def put(self, request, uuid, format=None):
@@ -255,22 +255,22 @@ class RegistrationDetail(APIViewWithLogger):
         of the pre_approve step.
         """
         try:
-            registration = Registration.objects.get(uuid=uuid)
-        except Registration.DoesNotExist:
+            task = Task.objects.get(uuid=uuid)
+        except Task.DoesNotExist:
             return Response(
-                {'errors': ['No registration with this id.']},
+                {'errors': ['No task with this id.']},
                 status=404)
 
-        if registration.completed:
+        if task.completed:
             return Response(
                 {'errors':
-                    ['This registration has already been completed.']},
+                    ['This task has already been completed.']},
                 status=400)
 
         act_list = []
 
         valid = True
-        for action in registration.actions:
+        for action in task.actions:
             action_serializer = settings.ACTION_CLASSES[action.action_name][1]
 
             if action_serializer is not None:
@@ -300,11 +300,11 @@ class RegistrationDetail(APIViewWithLogger):
                 except Exception as e:
                     notes = {
                         'errors':
-                            [("Error: '%s' while updating registration. " +
-                              "See registration itself for details.") % e],
-                        'registration': registration.uuid
+                            [("Error: '%s' while updating task. " +
+                              "See task itself for details.") % e],
+                        'task': task.uuid
                     }
-                    create_notification(registration, notes)
+                    create_notification(task, notes)
 
                     import traceback
                     trace = traceback.format_exc()
@@ -320,7 +320,7 @@ class RegistrationDetail(APIViewWithLogger):
                     return Response(response_dict, status=500)
 
             return Response(
-                {'notes': ["Registration successfully updated."]},
+                {'notes': ["Task successfully updated."]},
                 status=200)
         else:
             errors = {}
@@ -332,23 +332,23 @@ class RegistrationDetail(APIViewWithLogger):
     @admin
     def post(self, request, uuid, format=None):
         """
-        Will approve the Registration specified,
+        Will approve the Task specified,
         followed by running the post_approve actions
         and if valid will setup and create a related token.
         """
         try:
-            registration = Registration.objects.get(uuid=uuid)
-        except Registration.DoesNotExist:
+            task = Task.objects.get(uuid=uuid)
+        except Task.DoesNotExist:
             return Response(
-                {'errors': ['No registration with this id.']},
+                {'errors': ['No task with this id.']},
                 status=404)
 
         if request.data.get('approved', False) is True:
 
-            if registration.completed:
+            if task.completed:
                 return Response(
                     {'errors':
-                        ['This registration has already been completed.']},
+                        ['This task has already been completed.']},
                     status=400)
 
             need_token = False
@@ -356,7 +356,7 @@ class RegistrationDetail(APIViewWithLogger):
 
             actions = []
 
-            for action in registration.actions:
+            for action in task.actions:
                 act_model = action.get_action()
                 actions.append(act_model)
                 try:
@@ -364,11 +364,11 @@ class RegistrationDetail(APIViewWithLogger):
                 except Exception as e:
                     notes = {
                         'errors':
-                            [("Error: '%s' while approving registration. " +
-                              "See registration itself for details.") % e],
-                        'registration': registration.uuid
+                            [("Error: '%s' while approving task. " +
+                              "See task itself for details.") % e],
+                        'task': task.uuid
                     }
-                    create_notification(registration, notes)
+                    create_notification(task, notes)
 
                     import traceback
                     trace = traceback.format_exc()
@@ -384,30 +384,30 @@ class RegistrationDetail(APIViewWithLogger):
                     need_token = True
 
             if valid:
-                registration.approved = True
-                registration.approved_on = timezone.now()
-                registration.save()
+                task.approved = True
+                task.approved_on = timezone.now()
+                task.save()
                 if need_token:
-                    token = create_token(registration)
+                    token = create_token(task)
                     try:
                         class_conf = settings.ACTIONVIEW_SETTINGS[
-                            registration.action_view]
+                            task.action_view]
 
                         # will throw a key error if the token template has not
                         # been specified
                         email_conf = class_conf['emails']['token']
-                        send_email(registration, email_conf, token)
+                        send_email(task, email_conf, token)
                         return Response({'notes': ['created token']},
                                         status=200)
                     except KeyError as e:
                         notes = {
                             'errors':
                                 [("Error: '%s' while sending " +
-                                  "token. See registration " +
+                                  "token. See task " +
                                   "itself for details.") % e],
-                            'registration': registration.uuid
+                            'task': task.uuid
                         }
-                        create_notification(registration, notes)
+                        create_notification(task, notes)
 
                         import traceback
                         trace = traceback.format_exc()
@@ -429,11 +429,11 @@ class RegistrationDetail(APIViewWithLogger):
                             notes = {
                                 'errors':
                                     [("Error: '%s' while submitting " +
-                                      "registration. See registration " +
+                                      "task. See task " +
                                       "itself for details.") % e],
-                                'registration': registration.uuid
+                                'task': task.uuid
                             }
-                            create_notification(registration, notes)
+                            create_notification(task, notes)
 
                             import traceback
                             trace = traceback.format_exc()
@@ -443,19 +443,19 @@ class RegistrationDetail(APIViewWithLogger):
 
                             return Response(notes, status=500)
 
-                    registration.completed = True
-                    registration.completed_on = timezone.now()
-                    registration.save()
+                    task.completed = True
+                    task.completed_on = timezone.now()
+                    task.save()
 
                     # Sending confirmation email:
                     class_conf = settings.ACTIONVIEW_SETTINGS.get(
-                        registration.action_view, {})
+                        task.action_view, {})
                     email_conf = class_conf.get(
                         'emails', {}).get('completed', None)
-                    send_email(registration, email_conf)
+                    send_email(task, email_conf)
 
                     return Response(
-                        {'notes': "Registration completed successfully."},
+                        {'notes': "Task completed successfully."},
                         status=200)
             return Response({'errors': ['actions invalid']}, status=400)
         else:
@@ -482,47 +482,47 @@ class TokenList(APIViewWithLogger):
     @admin
     def post(self, request, format=None):
         """
-        Reissue a token for an approved registration.
+        Reissue a token for an approved task.
 
         Clears other tokens for it.
         """
-        uuid = request.data.get('registration', None)
+        uuid = request.data.get('task', None)
         if uuid is None:
             return Response(
-                {'registration': ["This field is required.", ]},
+                {'task': ["This field is required.", ]},
                 status=400)
         try:
-            registration = Registration.objects.get(uuid=uuid)
-        except Registration.DoesNotExist:
+            task = Task.objects.get(uuid=uuid)
+        except Task.DoesNotExist:
             return Response(
-                {'errors': ['No registration with this id.']},
+                {'errors': ['No task with this id.']},
                 status=404)
-        if not registration.approved:
+        if not task.approved:
             return Response(
-                {'errors': ['This registration has not been approved.']},
+                {'errors': ['This task has not been approved.']},
                 status=400)
 
-        for token in registration.tokens:
+        for token in task.tokens:
             token.delete()
 
-        token = create_token(registration)
+        token = create_token(task)
         try:
             class_conf = settings.ACTIONVIEW_SETTINGS[
-                registration.action_view]
+                task.action_view]
 
             # will throw a key error if the token template has not
             # been specified
             email_conf = class_conf['emails']['token']
-            send_email(registration, email_conf, token)
+            send_email(task, email_conf, token)
         except KeyError as e:
             notes = {
                 'errors':
                     [("Error: '%s' while sending " +
-                      "token. See registration " +
+                      "token. See task " +
                       "itself for details.") % e],
-                'registration': registration.uuid
+                'task': task.uuid
             }
-            create_notification(registration, notes)
+            create_notification(task, notes)
 
             import traceback
             trace = traceback.format_exc()
@@ -563,10 +563,10 @@ class TokenDetail(APIViewWithLogger):
             return Response(
                 {'errors': ['This token does not exist.']}, status=404)
 
-        if token.registration.completed:
+        if token.task.completed:
             return Response(
                 {'errors':
-                    ['This registration has already been completed.']},
+                    ['This task has already been completed.']},
                 status=400)
 
         if token.expires < timezone.now():
@@ -577,7 +577,7 @@ class TokenDetail(APIViewWithLogger):
         required_fields = []
         actions = []
 
-        for action in token.registration.actions:
+        for action in token.task.actions:
             action = action.get_action()
             actions.append(action)
             for field in action.token_fields:
@@ -599,10 +599,10 @@ class TokenDetail(APIViewWithLogger):
             return Response(
                 {'errors': ['This token does not exist.']}, status=404)
 
-        if token.registration.completed:
+        if token.task.completed:
             return Response(
                 {'errors':
-                    ['This registration has already been completed.']},
+                    ['This task has already been completed.']},
                 status=400)
 
         if token.expires < timezone.now():
@@ -613,7 +613,7 @@ class TokenDetail(APIViewWithLogger):
         required_fields = set()
         actions = []
 
-        for action in token.registration.actions:
+        for action in token.task.actions:
             action = action.get_action()
             actions.append(action)
             for field in action.token_fields:
@@ -637,11 +637,11 @@ class TokenDetail(APIViewWithLogger):
             except Exception as e:
                 notes = {
                     'errors':
-                        [("Error: '%s' while submitting registration. " +
-                          "See registration itself for details.") % e],
-                    'registration': token.registration.uuid
+                        [("Error: '%s' while submitting task. " +
+                          "See task itself for details.") % e],
+                    'task': token.task.uuid
                 }
-                create_notification(token.registration, notes)
+                create_notification(token.task, notes)
 
                 import traceback
                 trace = traceback.format_exc()
@@ -656,17 +656,17 @@ class TokenDetail(APIViewWithLogger):
                 }
                 return Response(response_dict, status=500)
 
-        token.registration.completed = True
-        token.registration.completed_on = timezone.now()
-        token.registration.save()
+        token.task.completed = True
+        token.task.completed_on = timezone.now()
+        token.task.save()
         token.delete()
 
         # Sending confirmation email:
         class_conf = settings.ACTIONVIEW_SETTINGS.get(
-            token.registration.action_view, {})
+            token.task.action_view, {})
         email_conf = class_conf.get(
             'emails', {}).get('completed', None)
-        send_email(token.registration, email_conf)
+        send_email(token.task, email_conf)
 
         return Response(
             {'notes': "Token submitted successfully."},
@@ -675,7 +675,7 @@ class TokenDetail(APIViewWithLogger):
 
 class ActionView(APIViewWithLogger):
     """
-    Base class for api calls that start a Registration.
+    Base class for api calls that start a Task.
     Until it is moved to settings, 'default_action' is a
     required hardcoded field.
 
@@ -712,7 +712,7 @@ class ActionView(APIViewWithLogger):
         """
         Will ensure the request data contains the required data
         based on the action serializer, and if present will create
-        a Registration and the linked actions, attaching notes
+        a Task and the linked actions, attaching notes
         based on running of the the pre_approve validation
         function on all the actions.
         """
@@ -747,10 +747,10 @@ class ActionView(APIViewWithLogger):
             ip_addr = request.META['REMOTE_ADDR']
             keystone_user = request.keystone_user
 
-            registration = Registration.objects.create(
+            task = Task.objects.create(
                 reg_ip=ip_addr, keystone_user=keystone_user,
                 action_view=self.__class__.__name__)
-            registration.save()
+            task.save()
 
             for i, act in enumerate(act_list):
                 if act['serializer'] is not None:
@@ -758,7 +758,7 @@ class ActionView(APIViewWithLogger):
                 else:
                     data = {}
                 action = act['action'](
-                    data=data, registration=registration,
+                    data=data, task=task,
                     order=i
                 )
 
@@ -767,11 +767,11 @@ class ActionView(APIViewWithLogger):
                 except Exception as e:
                     notes = {
                         'errors':
-                            [("Error: '%s' while setting up registration. " +
-                              "See registration itself for details.") % e],
-                        'registration': registration.uuid
+                            [("Error: '%s' while setting up task. " +
+                              "See task itself for details.") % e],
+                        'task': task.uuid
                     }
-                    create_notification(registration, notes)
+                    create_notification(task, notes)
 
                     import traceback
                     trace = traceback.format_exc()
@@ -788,9 +788,9 @@ class ActionView(APIViewWithLogger):
 
             # send initial conformation email:
             email_conf = class_conf.get('emails', {}).get('initial', None)
-            send_email(registration, email_conf)
+            send_email(task, email_conf)
 
-            return {'registration': registration}
+            return {'task': task}
         else:
             errors = {}
             for act in act_list:
@@ -798,17 +798,17 @@ class ActionView(APIViewWithLogger):
                     errors.update(act['serializer'].errors)
             return {'errors': errors}
 
-    def approve(self, registration):
+    def approve(self, task):
         """
-        Approves the registration and runs the post_approve steps.
+        Approves the task and runs the post_approve steps.
         Will create a token if required, otherwise will run the
         submit steps.
         """
-        registration.approved = True
-        registration.approved_on = timezone.now()
-        registration.save()
+        task.approved = True
+        task.approved_on = timezone.now()
+        task.save()
 
-        action_models = registration.actions
+        action_models = task.actions
         actions = []
 
         valid = True
@@ -827,11 +827,11 @@ class ActionView(APIViewWithLogger):
                 except Exception as e:
                     notes = {
                         'errors':
-                            [("Error: '%s' while approving registration. " +
-                              "See registration itself for details.") % e],
-                        'registration': registration.uuid
+                            [("Error: '%s' while approving task. " +
+                              "See task itself for details.") % e],
+                        'task': task.uuid
                     }
-                    create_notification(registration, notes)
+                    create_notification(task, notes)
 
                     import traceback
                     trace = traceback.format_exc()
@@ -853,7 +853,7 @@ class ActionView(APIViewWithLogger):
 
             if valid:
                 if need_token:
-                    token = create_token(registration)
+                    token = create_token(task)
                     try:
                         class_conf = settings.ACTIONVIEW_SETTINGS[
                             self.__class__.__name__]
@@ -861,18 +861,18 @@ class ActionView(APIViewWithLogger):
                         # will throw a key error if the token template has not
                         # been specified
                         email_conf = class_conf['emails']['token']
-                        send_email(registration, email_conf, token)
+                        send_email(task, email_conf, token)
                         return Response({'notes': ['created token']},
                                         status=200)
                     except KeyError as e:
                         notes = {
                             'errors':
                                 [("Error: '%s' while sending " +
-                                  "token. See registration " +
+                                  "token. See task " +
                                   "itself for details.") % e],
-                            'registration': registration.uuid
+                            'task': task.uuid
                         }
-                        create_notification(registration, notes)
+                        create_notification(task, notes)
 
                         import traceback
                         trace = traceback.format_exc()
@@ -894,11 +894,11 @@ class ActionView(APIViewWithLogger):
                             notes = {
                                 'errors':
                                     [("Error: '%s' while submitting " +
-                                      "registration. See registration " +
+                                      "task. See task " +
                                       "itself for details.") % e],
-                                'registration': registration.uuid
+                                'task': task.uuid
                             }
-                            create_notification(registration, notes)
+                            create_notification(task, notes)
 
                             import traceback
                             trace = traceback.format_exc()
@@ -913,18 +913,18 @@ class ActionView(APIViewWithLogger):
                             }
                             return Response(response_dict, status=500)
 
-                    registration.completed = True
-                    registration.completed_on = timezone.now()
-                    registration.save()
+                    task.completed = True
+                    task.completed_on = timezone.now()
+                    task.save()
 
                     # Sending confirmation email:
                     class_conf = settings.ACTIONVIEW_SETTINGS.get(
                         self.__class__.__name__, {})
                     email_conf = class_conf.get(
                         'emails', {}).get('completed', None)
-                    send_email(registration, email_conf)
+                    send_email(task, email_conf)
                     return Response(
-                        {'notes': "Registration completed successfully."},
+                        {'notes': "Task completed successfully."},
                         status=200)
             return Response({'errors': ['actions invalid']}, status=400)
         return Response({'errors': ['actions invalid']}, status=400)
@@ -939,26 +939,26 @@ class CreateProject(ActionView):
         Unauthenticated endpoint bound primarily to NewProject.
 
         This process requires approval, so this will validate
-        incoming data and create a registration to be approved
+        incoming data and create a task to be approved
         later.
         """
-        self.logger.info("(%s) - Starting new project registration." %
+        self.logger.info("(%s) - Starting new project task." %
                          timezone.now())
         processed = self.process_actions(request)
 
         errors = processed.get('errors', None)
         if errors:
-            self.logger.info("(%s) - Validation errors with registration." %
+            self.logger.info("(%s) - Validation errors with task." %
                              timezone.now())
             return Response(errors, status=400)
 
         notes = {
             'notes':
-                ['New registration for CreateProject.']
+                ['New task for CreateProject.']
         }
-        create_notification(processed['registration'], notes)
-        self.logger.info("(%s) - Registration created." % timezone.now())
-        return Response({'notes': ['registration created']}, status=200)
+        create_notification(processed['task'], notes)
+        self.logger.info("(%s) - Task created." % timezone.now())
+        return Response({'notes': ['task created']}, status=200)
 
 
 class AttachUser(ActionView):
@@ -974,7 +974,7 @@ class AttachUser(ActionView):
         """
         This endpoint requires either Admin access or the
         request to come from a project_owner.
-        As such this Registration is considered pre-approved.
+        As such this Task is considered pre-approved.
         Runs process_actions, then does the approve step and
         post_approve validation, and creates a Token if valid.
         """
@@ -983,14 +983,14 @@ class AttachUser(ActionView):
 
         errors = processed.get('errors', None)
         if errors:
-            self.logger.info("(%s) - Validation errors with registration." %
+            self.logger.info("(%s) - Validation errors with task." %
                              timezone.now())
             return Response(errors, status=400)
 
-        registration = processed['registration']
+        task = processed['task']
         self.logger.info("(%s) - AutoApproving AttachUser request."
                          % timezone.now())
-        return self.approve(registration)
+        return self.approve(task)
 
 
 class ResetPassword(ActionView):
@@ -1006,14 +1006,14 @@ class ResetPassword(ActionView):
 
         errors = processed.get('errors', None)
         if errors:
-            self.logger.info("(%s) - Validation errors with registration." %
+            self.logger.info("(%s) - Validation errors with task." %
                              timezone.now())
             return Response(errors, status=400)
 
-        registration = processed['registration']
+        task = processed['task']
         self.logger.info("(%s) - AutoApproving Resetuser request."
                          % timezone.now())
-        return self.approve(registration)
+        return self.approve(task)
 
 
 class EditUser(ActionView):
@@ -1067,7 +1067,7 @@ class EditUser(ActionView):
         """
         This endpoint requires either mod access or the
         request to come from a project_owner.
-        As such this Registration is considered pre-approved.
+        As such this Task is considered pre-approved.
         Runs process_actions, then does the approve step and
         post_approve validation, and creates a Token if valid.
         """
@@ -1076,11 +1076,11 @@ class EditUser(ActionView):
 
         errors = processed.get('errors', None)
         if errors:
-            self.logger.info("(%s) - Validation errors with registration." %
+            self.logger.info("(%s) - Validation errors with task." %
                              timezone.now())
             return Response(errors, status=400)
 
-        registration = processed['registration']
+        task = processed['task']
         self.logger.info("(%s) - AutoApproving EditUser request."
                          % timezone.now())
-        return self.approve(registration)
+        return self.approve(task)

@@ -14,7 +14,7 @@
 
 from rest_framework import status
 from rest_framework.test import APITestCase
-from stacktask.api.models import Registration, Token
+from stacktask.api.models import Task, Token
 import mock
 from django.utils import timezone
 from datetime import timedelta
@@ -129,7 +129,7 @@ class FakeManager(object):
 class APITests(APITestCase):
     """Tests to ensure the approval/token workflow does
        what is expected. These test don't check final
-       results for actions, simply that the registrations,
+       results for actions, simply that the tasks,
        action, and tokens are created/updated.
 
        These tests also focus on authentication status
@@ -139,7 +139,7 @@ class APITests(APITestCase):
     def test_new_user(self):
         """
         Ensure the new user workflow goes as expected.
-        Create registration, create token, submit token.
+        Create task, create token, submit token.
         """
         project = mock.Mock()
         project.id = 'test_project_id'
@@ -263,7 +263,7 @@ class APITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             response.data,
-            {'notes': 'Registration completed successfully.'})
+            {'notes': 'Task completed successfully.'})
 
     @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_add_user_existing_with_role(self):
@@ -299,7 +299,7 @@ class APITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             response.data,
-            {'notes': 'Registration completed successfully.'})
+            {'notes': 'Task completed successfully.'})
 
     @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
@@ -323,8 +323,8 @@ class APITests(APITestCase):
             'user_id': "test_user_id",
             'authenticated': True
         }
-        new_registration = Registration.objects.all()[0]
-        url = "/v1/registration/" + new_registration.uuid
+        new_task = Task.objects.all()[0]
+        url = "/v1/task/" + new_task.uuid
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -372,8 +372,8 @@ class APITests(APITestCase):
             'user_id': "test_user_id",
             'authenticated': True
         }
-        new_registration = Registration.objects.all()[0]
-        url = "/v1/registration/" + new_registration.uuid
+        new_task = Task.objects.all()[0]
+        url = "/v1/task/" + new_task.uuid
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -416,21 +416,21 @@ class APITests(APITestCase):
             'user_id': "test_user_id",
             'authenticated': True
         }
-        new_registration = Registration.objects.all()[0]
-        url = "/v1/registration/" + new_registration.uuid
+        new_task = Task.objects.all()[0]
+        url = "/v1/task/" + new_task.uuid
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             response.data,
-            {'notes': 'Registration completed successfully.'}
+            {'notes': 'Task completed successfully.'}
         )
 
     @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_reset_user(self):
         """
         Ensure the reset user workflow goes as expected.
-        Create registration + create token, submit token.
+        Create task + create token, submit token.
         """
 
         user = mock.Mock()
@@ -488,7 +488,7 @@ class APITests(APITestCase):
         self.assertEqual(
             response.data, {'errors': ['This token does not exist.']})
 
-    def test_no_registration_get(self):
+    def test_no_task_get(self):
         """
         Should be a 404.
         """
@@ -500,13 +500,13 @@ class APITests(APITestCase):
             'user_id': "test_user_id",
             'authenticated': True
         }
-        url = "/v1/registration/e8b3f57f5da64bf3a6bf4f9bbd3a40b5"
+        url = "/v1/task/e8b3f57f5da64bf3a6bf4f9bbd3a40b5"
         response = self.client.get(url, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(
-            response.data, {'errors': ['No registration with this id.']})
+            response.data, {'errors': ['No task with this id.']})
 
-    def test_no_registration_post(self):
+    def test_no_task_post(self):
         """
         Should be a 404.
         """
@@ -518,11 +518,11 @@ class APITests(APITestCase):
             'user_id': "test_user_id",
             'authenticated': True
         }
-        url = "/v1/registration/e8b3f57f5da64bf3a6bf4f9bbd3a40b5"
+        url = "/v1/task/e8b3f57f5da64bf3a6bf4f9bbd3a40b5"
         response = self.client.post(url, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(
-            response.data, {'errors': ['No registration with this id.']})
+            response.data, {'errors': ['No task with this id.']})
 
     @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_token_expired_post(self):
@@ -585,9 +585,9 @@ class APITests(APITestCase):
 
     @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
-    def test_registration_complete(self):
+    def test_task_complete(self):
         """
-        Can't approve a completed registration.
+        Can't approve a completed task.
         """
         setup_temp_cache({}, {})
 
@@ -604,22 +604,22 @@ class APITests(APITestCase):
             'user_id': "test_user_id",
             'authenticated': True
         }
-        new_registration = Registration.objects.all()[0]
-        new_registration.completed = True
-        new_registration.save()
-        url = "/v1/registration/" + new_registration.uuid
+        new_task = Task.objects.all()[0]
+        new_task.completed = True
+        new_task.save()
+        url = "/v1/task/" + new_task.uuid
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.data,
-            {'errors': ['This registration has already been completed.']})
+            {'errors': ['This task has already been completed.']})
 
     @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
-    def test_registration_update(self):
+    def test_task_update(self):
         """
-        Creates a invalid registration.
+        Creates a invalid task.
 
         Updates it and attempts to reapprove.
         """
@@ -645,8 +645,8 @@ class APITests(APITestCase):
             'authenticated': True
         }
 
-        new_registration = Registration.objects.all()[0]
-        url = "/v1/registration/" + new_registration.uuid
+        new_task = Task.objects.all()[0]
+        url = "/v1/task/" + new_task.uuid
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -657,7 +657,7 @@ class APITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             response.data,
-            {'notes': ['Registration successfully updated.']})
+            {'notes': ['Task successfully updated.']})
 
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
@@ -680,7 +680,7 @@ class APITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        new_registration = Registration.objects.all()[0]
+        new_task = Task.objects.all()[0]
 
         headers = {
             'project_name': "test_project",
@@ -695,8 +695,8 @@ class APITests(APITestCase):
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            response.data[0]['registration'],
-            new_registration.uuid)
+            response.data[0]['task'],
+            new_task.uuid)
 
     @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
@@ -711,7 +711,7 @@ class APITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        new_registration = Registration.objects.all()[0]
+        new_task = Task.objects.all()[0]
 
         headers = {
             'project_name': "test_project",
@@ -726,8 +726,8 @@ class APITests(APITestCase):
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            response.data[0]['registration'],
-            new_registration.uuid)
+            response.data[0]['task'],
+            new_task.uuid)
 
         url = "/v1/notification/%s/" % response.data[0]['pk']
         data = {'acknowledged': True}
@@ -853,7 +853,7 @@ class APITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {'notes': ['created token']})
 
-        registration = Registration.objects.all()[0]
+        task = Task.objects.all()[0]
         new_token = Token.objects.all()[0]
 
         uuid = new_token.token
@@ -867,7 +867,7 @@ class APITests(APITestCase):
             'authenticated': True
         }
         url = "/v1/token/"
-        data = {"registration": registration.uuid}
+        data = {"task": task.uuid}
         response = self.client.post(url, data, format='json',
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

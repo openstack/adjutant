@@ -73,7 +73,7 @@ ACTIONVIEW_SETTINGS:
                 template: token.txt
                 html_template: token.txt
             completed:
-                subject: Registration completed
+                subject: Task completed
                 reply: no-reply@example.com
                 template: completed.txt
                 html_template: completed.txt
@@ -88,7 +88,7 @@ ACTIONVIEW_SETTINGS:
                 template: token.txt
                 html_template: token.txt
             completed:
-                subject: Registration completed
+                subject: Task completed
                 reply: no-reply@example.com
                 template: completed.txt
                 html_template: completed.txt
@@ -100,14 +100,14 @@ ACTIONVIEW_SETTINGS:
                 template: token.txt
                 html_template: token.txt
             completed:
-                subject: Registration completed
+                subject: Task completed
                 reply: no-reply@example.com
                 template: completed.txt
                 html_template: completed.txt
     EditUser:
         emails:
             completed:
-                subject: Registration completed
+                subject: Task completed
                 reply: no-reply@example.com
                 template: completed.txt
                 html_template: completed.txt

@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
             ],
         ),
         migrations.CreateModel(
-            name='Registration',
+            name='Task',
             fields=[
                 ('uuid', models.CharField(default=stacktask.api.models.hex_uuid, max_length=200, serialize=False, primary_key=True)),
                 ('reg_ip', models.GenericIPAddressField()),
@@ -43,12 +43,12 @@ class Migration(migrations.Migration):
                 ('token', models.CharField(max_length=200, serialize=False, primary_key=True)),
                 ('created', models.DateTimeField(default=django.utils.timezone.now)),
                 ('expires', models.DateTimeField()),
-                ('registration', models.ForeignKey(to='api.Registration')),
+                ('task', models.ForeignKey(to='api.Task')),
             ],
         ),
         migrations.AddField(
             model_name='notification',
-            name='registration',
-            field=models.ForeignKey(to='api.Registration'),
+            name='task',
+            field=models.ForeignKey(to='api.Task'),
         ),
     ]

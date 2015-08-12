@@ -34,7 +34,7 @@ class Action(models.Model):
     state = models.CharField(max_length=200, default="default")
     valid = models.BooleanField(default=False)
     need_token = models.BooleanField()
-    registration = models.ForeignKey('api.Registration')
+    task = models.ForeignKey('api.Task')
 
     order = models.IntegerField()
 
@@ -77,11 +77,11 @@ class BaseAction(object):
     By using 'get_cache' and 'set_cache' they can pass data along which
     may be needed by the action later. This cache is backed to the database.
 
-    Passing data along to other actions is done via the registration and
+    Passing data along to other actions is done via the task and
     it's cache, but this is in memory only, so it is only useful during the
     same action stage ('post_approve', etc.).
 
-    Other than the registration cache, actions should not be altering database
+    Other than the task cache, actions should not be altering database
     models other than themselves. This is not enforced, just a guideline.
     """
 
@@ -89,7 +89,7 @@ class BaseAction(object):
 
     token_fields = []
 
-    def __init__(self, data, action_model=None, registration=None,
+    def __init__(self, data, action_model=None, task=None,
                  order=None):
         """
         Build itself around an existing database model,
@@ -115,7 +115,7 @@ class BaseAction(object):
                 action_name=self.__class__.__name__,
                 action_data=data,
                 need_token=need_token,
-                registration=registration,
+                task=task,
                 order=order
             )
             action.save()
@@ -144,11 +144,11 @@ class BaseAction(object):
 
     def add_note(self, note):
         """
-        Logs the note, and also adds it to the registration action notes.
+        Logs the note, and also adds it to the task action notes.
         """
         self.logger.info("(%s) - %s" % (timezone.now(), note))
         note = "%s - (%s)" % (note, timezone.now())
-        self.action.registration.add_action_note(
+        self.action.task.add_action_note(
             unicode(self), note)
 
     def pre_approve(self):
@@ -218,7 +218,7 @@ class NewUser(UserAction):
 
         user = id_manager.find_user(self.username)
 
-        keystone_user = self.action.registration.keystone_user
+        keystone_user = self.action.task.keystone_user
 
         if not keystone_user['project_id'] == self.project_id:
             self.add_note('Project id does not match keystone user project.')
@@ -392,7 +392,7 @@ class NewProject(UserAction):
     def _post_approve(self):
         project_id = self.get_cache('project_id')
         if project_id:
-            self.action.registration.cache['project_id'] = project_id
+            self.action.task.cache['project_id'] = project_id
             self.add_note("Project already created.")
             return
 
@@ -410,7 +410,7 @@ class NewProject(UserAction):
                     (e, self.project_name))
                 raise
             # put project_id into action cache:
-            self.action.registration.cache['project_id'] = project.id
+            self.action.task.cache['project_id'] = project.id
             self.set_cache('project_id', project.id)
             self.add_note("New project '%s' created." % self.project_name)
 
@@ -423,7 +423,7 @@ class NewProject(UserAction):
         if self.valid:
 
             project_id = self.get_cache('project_id')
-            self.action.registration.cache['project_id'] = project_id
+            self.action.task.cache['project_id'] = project_id
 
             project = id_manager.get_project(project_id)
 
@@ -551,7 +551,7 @@ class EditUser(UserAction):
 
         user = id_manager.find_user(self.username)
 
-        keystone_user = self.action.registration.keystone_user
+        keystone_user = self.action.task.keystone_user
 
         if not keystone_user['project_id'] == self.project_id:
             self.add_note('Project id does not match keystone user project.')

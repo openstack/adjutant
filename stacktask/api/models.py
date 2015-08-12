@@ -22,10 +22,10 @@ def hex_uuid():
     return uuid4().hex
 
 
-class Registration(models.Model):
+class Task(models.Model):
     """
     Wrapper object for the request and related actions.
-    Stores the state registration and a log for the
+    Stores the state of the Task and a log for the
     action.
     """
     uuid = models.CharField(max_length=200, default=hex_uuid,
@@ -49,7 +49,7 @@ class Registration(models.Model):
     completed_on = models.DateTimeField(null=True)
 
     def __init__(self, *args, **kwargs):
-        super(Registration, self).__init__(*args, **kwargs)
+        super(Task, self).__init__(*args, **kwargs)
         # in memory dict to be used for passing data between actions:
         self.cache = {}
 
@@ -87,28 +87,28 @@ class Registration(models.Model):
 
 class Token(models.Model):
     """
-    UUID token object bound to a registration.
+    UUID token object bound to a task.
     """
 
-    registration = models.ForeignKey(Registration)
+    task = models.ForeignKey(Task)
     token = models.CharField(max_length=200, primary_key=True)
     created = models.DateTimeField(default=timezone.now)
     expires = models.DateTimeField()
 
     def to_dict(self):
         return {
-            "registration": self.registration.uuid,
+            "task": self.task.uuid,
             "token": self.token, "expires": self.expires
         }
 
 
 class Notification(models.Model):
     """
-    Notification linked to a registration with some notes.
+    Notification linked to a task with some notes.
     """
 
     notes = JSONField(default={})
-    registration = models.ForeignKey(Registration)
+    task = models.ForeignKey(Task)
     created = models.DateTimeField(default=timezone.now)
     acknowledged = models.BooleanField(default=False)
 
@@ -116,7 +116,7 @@ class Notification(models.Model):
         return {
             "pk": self.pk,
             "notes": self.notes,
-            "registration": self.registration.uuid,
+            "task": self.task.uuid,
             "acknowledged": self.acknowledged,
             "created": self.created
         }

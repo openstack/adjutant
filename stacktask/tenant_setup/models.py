@@ -36,7 +36,7 @@ class DefaultProjectResources(BaseAction):
 
     def _validate(self):
 
-        project_id = self.action.registration.cache.get('project_id', None)
+        project_id = self.action.task.cache.get('project_id', None)
 
         valid = False
         if project_id:
@@ -49,7 +49,7 @@ class DefaultProjectResources(BaseAction):
     def _setup_resources(self):
         neutron = openstack_clients.get_neutronclient()
 
-        project_id = self.action.registration.cache['project_id']
+        project_id = self.action.task.cache['project_id']
 
         if not self.get_cache('network_id'):
             try:
@@ -69,11 +69,11 @@ class DefaultProjectResources(BaseAction):
             self.set_cache('network_id', network['network']['id'])
             self.add_note("Network %s created for project %s" %
                           (self.defaults['network_name'],
-                           self.action.registration.cache['project_id']))
+                           self.action.task.cache['project_id']))
         else:
             self.add_note("Network %s already created for project %s" %
                           (self.defaults['network_name'],
-                           self.action.registration.cache['project_id']))
+                           self.action.task.cache['project_id']))
 
         if not self.get_cache('subnet_id'):
             try:
@@ -118,10 +118,10 @@ class DefaultProjectResources(BaseAction):
                 raise
             self.set_cache('router_id', router['router']['id'])
             self.add_note("Router created for project %s" %
-                          self.action.registration.cache['project_id'])
+                          self.action.task.cache['project_id'])
         else:
             self.add_note("Router already created for project %s" %
-                          self.action.registration.cache['project_id'])
+                          self.action.task.cache['project_id'])
 
         try:
             interface_body = {
@@ -159,7 +159,7 @@ class AddAdminToProject(BaseAction):
 
     def _validate(self):
 
-        project_id = self.action.registration.cache.get('project_id', None)
+        project_id = self.action.task.cache.get('project_id', None)
 
         valid = False
         if project_id:
@@ -182,7 +182,7 @@ class AddAdminToProject(BaseAction):
             id_manager = IdentityManager()
 
             project = id_manager.get_project(
-                self.action.registration.cache['project_id'])
+                self.action.task.cache['project_id'])
             try:
                 user = id_manager.find_user(name="admin")
                 role = id_manager.find_role(name="admin")
@@ -196,7 +196,7 @@ class AddAdminToProject(BaseAction):
             self.action.save()
             self.add_note(
                 'Admin has been added to %s.' %
-                self.action.registration.cache['project_id'])
+                self.action.task.cache['project_id'])
 
     def _submit(self, token_data):
         pass
