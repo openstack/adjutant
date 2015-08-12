@@ -402,7 +402,8 @@ class NewProject(UserAction):
         if self.valid:
             id_manager = IdentityManager()
             try:
-                project = id_manager.create_project(self.project_name)
+                project = id_manager.create_project(
+                    self.project_name, created_on=str(timezone.now()))
             except Exception as e:
                 self.add_note(
                     "Error: '%s' while creating project: %s" %

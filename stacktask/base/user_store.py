@@ -81,6 +81,7 @@ class IdentityManager(object):
             project = None
         return project
 
-    def create_project(self, project_name):
-        project = self.ks_client.tenants.create(project_name)
+    def create_project(self, project_name, created_on):
+        project = self.ks_client.tenants.create(project_name,
+                                                created_on=created_on)
         return project

@@ -112,7 +112,7 @@ class FakeManager(object):
             if project.id == project_id:
                 return project
 
-    def create_project(self, project_name, p_id=None):
+    def create_project(self, project_name, created_on, p_id=None):
         global temp_cache
         project = mock.Mock()
         if p_id:
