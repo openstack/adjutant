@@ -261,9 +261,13 @@ class APITests(APITestCase):
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            response.data,
-            {'notes': 'Task completed successfully.'})
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        new_token = Token.objects.all()[0]
+        url = "/v1/token/" + new_token.token
+        data = {'confirm': True}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_add_user_existing_with_role(self):

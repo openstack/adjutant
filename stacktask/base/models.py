@@ -33,7 +33,7 @@ class Action(models.Model):
     cache = JSONField(default={})
     state = models.CharField(max_length=200, default="default")
     valid = models.BooleanField(default=False)
-    need_token = models.BooleanField()
+    need_token = models.BooleanField(default=False)
     task = models.ForeignKey('api.Task')
 
     order = models.IntegerField()
@@ -53,9 +53,6 @@ class BaseAction(object):
     Setup to allow multiple action types and different internal logic
     per type but built from a single database type.
     - 'required' defines what fields to setup from the data.
-    - 'token_fields' defined which fields are needed by this action
-      at the token stage. If there aren't any, the need_token value
-      defaults to False.
 
     If need_token MAY be true, you must implement '_token_email',
     which should return the email the action wants the token sent to.
@@ -87,8 +84,6 @@ class BaseAction(object):
 
     required = []
 
-    token_fields = []
-
     def __init__(self, data, action_model=None, task=None,
                  order=None):
         """
@@ -106,15 +101,10 @@ class BaseAction(object):
         if action_model:
             self.action = action_model
         else:
-            if self.token_fields:
-                need_token = True
-            else:
-                need_token = False
             # make new model and save in db
             action = Action.objects.create(
                 action_name=self.__class__.__name__,
                 action_data=data,
-                need_token=need_token,
                 task=task,
                 order=order
             )
@@ -140,6 +130,14 @@ class BaseAction(object):
 
     def set_cache(self, key, value):
         self.action.cache[key] = value
+        self.action.save()
+
+    @property
+    def token_fields(self):
+        return self.action.cache.get("token_fields", [])
+
+    def set_token_fields(self, token_fields):
+        self.action.cache["token_fields"] = token_fields
         self.action.save()
 
     def add_note(self, note):
@@ -211,8 +209,6 @@ class NewUser(UserAction):
         'roles'
     ]
 
-    token_fields = ['password']
-
     def _validate(self):
         id_manager = IdentityManager()
 
@@ -252,7 +248,8 @@ class NewUser(UserAction):
                     else:
                         self.roles = list(missing)
                         valid = True
-                        self.action.need_token = False
+                        self.action.need_token = True
+                        self.set_token_fields(["confirm"])
                         self.action.state = "existing"
                         self.add_note(
                             'Existing user with matching email missing roles.')
@@ -261,6 +258,8 @@ class NewUser(UserAction):
                     self.add_note('Existing user with non-matching email.')
             else:
                 valid = True
+                self.action.need_token = True
+                self.set_token_fields(["password"])
                 self.add_note('No user present with username')
 
         return valid
@@ -343,8 +342,6 @@ class NewProject(UserAction):
         'email'
     ]
 
-    token_fields = ['password']
-
     default_roles = {"Member", "project_owner", "project_mod"}
 
     def _validate_project(self):
@@ -380,6 +377,8 @@ class NewProject(UserAction):
                               self.username)
         else:
             valid = True
+            self.action.need_token = True
+            self.set_token_fields(["password"])
             self.add_note("No user present with username '%s'." %
                           self.username)
 
@@ -487,8 +486,6 @@ class ResetUser(UserAction):
         'email'
     ]
 
-    token_fields = ['password']
-
     def _validate(self):
         id_manager = IdentityManager()
 
@@ -497,6 +494,8 @@ class ResetUser(UserAction):
         if user:
             if user.email == self.email:
                 valid = True
+                self.action.need_token = True
+                self.set_token_fields(["password"])
                 self.add_note('Existing user with matching email.')
             else:
                 valid = False
