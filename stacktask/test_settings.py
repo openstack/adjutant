@@ -50,7 +50,9 @@ LOGGING = {
     },
 }
 
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+EMAIL_SETTINGS = {
+    "EMAIL_BACKEND": "django.core.mail.backends.console.EmailBackend"
+}
 
 # setting to control if user name and email are allowed
 # to have different values.
@@ -132,6 +134,9 @@ ACTIONVIEW_SETTINGS = {
 }
 
 ACTION_SETTINGS = {
+    'NewUser': {
+        'allowed_roles': ['project_mod', 'project_owner', "Member"]
+    },
     'DefaultProjectResources': {
         'RegionOne': {
             'DNS_NAMESERVERS': ['193.168.1.2', '193.168.1.3'],
@@ -149,7 +154,7 @@ conf_dict = {
     "ADDITIONAL_APPS": ADDITIONAL_APPS,
     "DATABASES": DATABASES,
     "LOGGING": LOGGING,
-    "EMAIL_BACKEND": EMAIL_BACKEND,
+    "EMAIL_SETTINGS": EMAIL_SETTINGS,
     "USERNAME_IS_EMAIL": USERNAME_IS_EMAIL,
     "KEYSTONE": KEYSTONE,
     "DEFAULT_REGION": DEFAULT_REGION,

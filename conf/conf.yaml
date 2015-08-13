@@ -35,7 +35,8 @@ LOGGING:
             level: INFO
             propagate: True
 
-EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
+EMAIL_SETTINGS:
+    EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
 
 # Application settings:
 
@@ -117,6 +118,11 @@ ACTIONVIEW_SETTINGS:
 
 # Action settings:
 ACTION_SETTINGS:
+    NewUser:
+        allowed_roles:
+            - Member
+            - project_owner
+            - project_mod
     DefaultProjectResources:
         RegionOne:
             network_name: somenetwork

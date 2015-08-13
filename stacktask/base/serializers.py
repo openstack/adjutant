@@ -30,8 +30,8 @@ class NewUserSerializer(BaseUserSerializer):
     email = serializers.EmailField()
     project_id = serializers.CharField(max_length=200)
 
-    # TODO(Adriant): These need to come from a config file I think:
-    role_options = ['project_mod', 'project_owner', "Member"]
+    role_options = settings.ACTION_SETTINGS.get("NewUser", {}).get(
+        "allowed_roles", [])
     roles = serializers.MultipleChoiceField(choices=role_options)
 
 
