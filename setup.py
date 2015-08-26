@@ -1,5 +1,7 @@
 from setuptools import setup, find_packages
 
+with open('requirements.txt') as f:
+    required = f.readlines()
 
 setup(
     name='stacktask',
@@ -28,19 +30,7 @@ setup(
             'api/v*/templates/*.txt',
             'notifications/templates/*.txt',
             'notifications/*/templates/*.txt']},
-
-    install_requires=[
-        'Django>=1.7.3',
-        'djangorestframework>=3.0.3',
-        'decorator>=3.4.0',
-        'jsonfield>=1.0.2',
-        'keystonemiddleware>=1.3.1',
-        'python-keystoneclient>=1.0.0',
-        'python-neutronclient>=2.3.10',
-        'pyyaml>=3.11',
-        'django-rest-swagger>=0.3.3',
-        'rt>=1.0.8',
-    ],
+    install_requires=required,
     entry_points={
         'console_scripts': [
             'stacktask = stacktask:management_command',
