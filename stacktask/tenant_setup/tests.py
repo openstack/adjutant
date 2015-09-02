@@ -81,7 +81,7 @@ class TenantSetupActionTests(TestCase):
         """
         setup_neutron_cache()
         task = Task.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
 
         task.cache = {'project_id': "1"}
 
@@ -119,7 +119,7 @@ class TenantSetupActionTests(TestCase):
         """
         setup_neutron_cache()
         task = Task.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
 
         data = {
             'setup_resources': True,
@@ -150,7 +150,7 @@ class TenantSetupActionTests(TestCase):
         """
         setup_neutron_cache()
         task = Task.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
 
         data = {
             'setup_resources': False,
@@ -184,7 +184,7 @@ class TenantSetupActionTests(TestCase):
         setup_neutron_cache()
         global neutron_cache
         task = Task.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
 
         data = {
             'setup_resources': True,
@@ -244,7 +244,7 @@ class TenantSetupActionTests(TestCase):
         setup_temp_cache({'test_project': project}, {})
 
         task = Task.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
 
         task.cache = {'project_id': "test_project_id"}
 
@@ -272,7 +272,7 @@ class TenantSetupActionTests(TestCase):
         setup_temp_cache({'test_project': project}, {})
 
         task = Task.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
 
         task.cache = {'project_id': "test_project_id"}
 

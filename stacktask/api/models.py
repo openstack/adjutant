@@ -31,7 +31,7 @@ class Task(models.Model):
     uuid = models.CharField(max_length=200, default=hex_uuid,
                             primary_key=True)
     # who is this:
-    reg_ip = models.GenericIPAddressField()
+    ip_address = models.GenericIPAddressField()
     keystone_user = JSONField(default={})
 
     # which ActionView initiated this
@@ -40,11 +40,11 @@ class Task(models.Model):
     # Effectively a log of what the actions are doing.
     action_notes = JSONField(default={})
 
+    cancelled = models.BooleanField(default=False)
     approved = models.BooleanField(default=False)
-
     completed = models.BooleanField(default=False)
 
-    created = models.DateTimeField(default=timezone.now)
+    created_on = models.DateTimeField(default=timezone.now)
     approved_on = models.DateTimeField(null=True)
     completed_on = models.DateTimeField(null=True)
 
@@ -71,10 +71,18 @@ class Task(models.Model):
             })
 
         return {
-            "ip_address": self.reg_ip, "notes": self.action_notes,
-            "approved": self.approved, "completed": self.completed,
-            "actions": actions, "uuid": self.uuid,
-            "keystone_user": self.keystone_user
+            "uuid": self.uuid,
+            "ip_address": self.ip_address,
+            "keystone_user": self.keystone_user,
+            "actions": actions,
+            "action_view": self.action_view,
+            "action_notes": self.action_notes,
+            "cancelled": self.cancelled,
+            "approved": self.approved,
+            "completed": self.completed,
+            "created_on": self.created_on,
+            "approved_on": self.approved_on,
+            "completed_on": self.completed_on,
         }
 
     def add_action_note(self, action, note):
@@ -92,7 +100,7 @@ class Token(models.Model):
 
     task = models.ForeignKey(Task)
     token = models.CharField(max_length=200, primary_key=True)
-    created = models.DateTimeField(default=timezone.now)
+    created_on = models.DateTimeField(default=timezone.now)
     expires = models.DateTimeField()
 
     def to_dict(self):
@@ -109,7 +117,7 @@ class Notification(models.Model):
 
     notes = JSONField(default={})
     task = models.ForeignKey(Task)
-    created = models.DateTimeField(default=timezone.now)
+    created_on = models.DateTimeField(default=timezone.now)
     acknowledged = models.BooleanField(default=False)
 
     def to_dict(self):
@@ -118,5 +126,5 @@ class Notification(models.Model):
             "notes": self.notes,
             "task": self.task.uuid,
             "acknowledged": self.acknowledged,
-            "created": self.created
+            "created_on": self.created_on
         }

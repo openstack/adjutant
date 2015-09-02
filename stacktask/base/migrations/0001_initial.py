@@ -22,7 +22,7 @@ class Migration(migrations.Migration):
                 ('cache', jsonfield.fields.JSONField(default={})),
                 ('state', models.CharField(default=b'default', max_length=200)),
                 ('valid', models.BooleanField(default=False)),
-                ('need_token', models.BooleanField()),
+                ('need_token', models.BooleanField(default=False)),
                 ('order', models.IntegerField()),
                 ('created', models.DateTimeField(default=django.utils.timezone.now)),
                 ('task', models.ForeignKey(to='api.Task')),

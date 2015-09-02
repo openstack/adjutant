@@ -880,3 +880,76 @@ class APITests(APITestCase):
         self.assertEqual(Token.objects.count(), 1)
         new_token = Token.objects.all()[0]
         self.assertNotEquals(new_token.token, uuid)
+
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
+    def test_cancel_task(self):
+        """
+        Ensure the ability to cancel a task.
+        """
+
+        setup_temp_cache({}, {})
+
+        url = "/v1/project"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,Member",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        new_task = Task.objects.all()[0]
+        url = "/v1/task/" + new_task.uuid
+        response = self.client.delete(url, format='json',
+                                      headers=headers)
+
+        response = self.client.post(url, {'approved': True}, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        response = self.client.put(url, format='json',
+                                   headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
+    def test_cancel_task_sent_token(self):
+        """
+        Ensure the ability to cancel a task after the token is sent.
+        """
+
+        setup_temp_cache({}, {})
+
+        url = "/v1/project"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,Member",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        new_task = Task.objects.all()[0]
+        url = "/v1/task/" + new_task.uuid
+        response = self.client.post(url, {'approved': True}, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response = self.client.delete(url, format='json',
+                                      headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        new_token = Token.objects.all()[0]
+        url = "/v1/token/" + new_token.token
+        data = {'password': 'testpassword'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

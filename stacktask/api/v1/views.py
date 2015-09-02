@@ -267,6 +267,14 @@ class TaskDetail(APIViewWithLogger):
                     ['This task has already been completed.']},
                 status=400)
 
+        if task.cancelled:
+            # NOTE(adriant): If we can uncancel a task, that should happen
+            # at this endpoint.
+            return Response(
+                {'errors':
+                    ['This task has been cancelled.']},
+                status=400)
+
         act_list = []
 
         valid = True
@@ -349,6 +357,14 @@ class TaskDetail(APIViewWithLogger):
                 return Response(
                     {'errors':
                         ['This task has already been completed.']},
+                    status=400)
+
+            if task.cancelled:
+                # NOTE(adriant): If we can uncancel a task, that should happen
+                # at this endpoint.
+                return Response(
+                    {'errors':
+                        ['This task has been cancelled.']},
                     status=400)
 
             need_token = False
@@ -462,6 +478,37 @@ class TaskDetail(APIViewWithLogger):
             return Response({'approved': ["this field is required."]},
                             status=400)
 
+    @admin
+    def delete(self, request, uuid, format=None):
+        """
+        Cancel the Task.
+        """
+        try:
+            task = Task.objects.get(uuid=uuid)
+        except Task.DoesNotExist:
+            return Response(
+                {'errors': ['No task with this id.']},
+                status=404)
+
+        if task.completed:
+            return Response(
+                {'errors':
+                    ['This task has already been completed.']},
+                status=400)
+
+        if task.cancelled:
+            return Response(
+                {'errors':
+                    ['This task has already been cancelled.']},
+                status=400)
+
+        task.cancelled = True
+        task.save()
+
+        return Response(
+            {'notes': "Task cancelled successfully."},
+            status=200)
+
 
 class TokenList(APIViewWithLogger):
     """
@@ -497,6 +544,13 @@ class TokenList(APIViewWithLogger):
             return Response(
                 {'errors': ['No task with this id.']},
                 status=404)
+
+        if task.cancelled:
+            return Response(
+                {'errors':
+                    ['This task has been cancelled.']},
+                status=400)
+
         if not task.approved:
             return Response(
                 {'errors': ['This task has not been approved.']},
@@ -569,6 +623,12 @@ class TokenDetail(APIViewWithLogger):
                     ['This task has already been completed.']},
                 status=400)
 
+        if token.task.cancelled:
+            return Response(
+                {'errors':
+                    ['This task has been cancelled.']},
+                status=400)
+
         if token.expires < timezone.now():
             token.delete()
             return Response({'errors': ['This token has expired.']},
@@ -603,6 +663,12 @@ class TokenDetail(APIViewWithLogger):
             return Response(
                 {'errors':
                     ['This task has already been completed.']},
+                status=400)
+
+        if token.task.cancelled:
+            return Response(
+                {'errors':
+                    ['This task has been cancelled.']},
                 status=400)
 
         if token.expires < timezone.now():
@@ -748,7 +814,7 @@ class ActionView(APIViewWithLogger):
             keystone_user = request.keystone_user
 
             task = Task.objects.create(
-                reg_ip=ip_addr, keystone_user=keystone_user,
+                ip_address=ip_addr, keystone_user=keystone_user,
                 action_view=self.__class__.__name__)
             task.save()
 

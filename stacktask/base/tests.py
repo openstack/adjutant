@@ -36,9 +36,9 @@ class BaseActionTests(TestCase):
         setup_temp_cache({'test_project': project}, {})
 
         task = Task.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
-                                                       'project_mod'],
-                                             'project_id': 'test_project_id'})
+            ip_address="0.0.0.0", keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id'})
 
         data = {
             'email': 'test@example.com',
@@ -85,7 +85,7 @@ class BaseActionTests(TestCase):
         setup_temp_cache({'test_project': project}, {user.name: user})
 
         task = Task.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
 
@@ -131,7 +131,7 @@ class BaseActionTests(TestCase):
         setup_temp_cache({'test_project': project}, {user.name: user})
 
         task = Task.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
 
@@ -165,7 +165,7 @@ class BaseActionTests(TestCase):
         setup_temp_cache({}, {})
 
         task = Task.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
 
@@ -201,7 +201,7 @@ class BaseActionTests(TestCase):
         setup_temp_cache({}, {})
 
         task = Task.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
 
@@ -245,7 +245,7 @@ class BaseActionTests(TestCase):
         setup_temp_cache({}, {})
 
         task = Task.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
 
@@ -301,7 +301,7 @@ class BaseActionTests(TestCase):
         setup_temp_cache({}, {user.name: user})
 
         task = Task.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
 
@@ -348,7 +348,7 @@ class BaseActionTests(TestCase):
         setup_temp_cache({project.name: project}, {})
 
         task = Task.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
 
@@ -380,7 +380,7 @@ class BaseActionTests(TestCase):
         setup_temp_cache({}, {user.name: user})
 
         task = Task.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
 
@@ -414,7 +414,7 @@ class BaseActionTests(TestCase):
         setup_temp_cache({}, {})
 
         task = Task.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
 
@@ -453,7 +453,7 @@ class BaseActionTests(TestCase):
         setup_temp_cache({'test_project': project}, {user.name: user})
 
         task = Task.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
 
@@ -498,7 +498,7 @@ class BaseActionTests(TestCase):
         setup_temp_cache({'test_project': project}, {user.name: user})
 
         task = Task.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
 
@@ -545,7 +545,7 @@ class BaseActionTests(TestCase):
         setup_temp_cache({'test_project': project}, {user.name: user})
 
         task = Task.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
 
@@ -589,7 +589,7 @@ class BaseActionTests(TestCase):
         setup_temp_cache({'test_project': project}, {user.name: user})
 
         task = Task.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
                                                        'project_mod'],
                                              'project_id': 'test_project_id'})
 
