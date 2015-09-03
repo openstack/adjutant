@@ -29,13 +29,12 @@ from django.conf import settings
 from django.template import loader, Context
 
 
-@decorator
-def mod_or_owner(func, *args, **kwargs):
+def require_roles(roles, func, *args, **kwargs):
     """
     endpoints setup with this decorator require the defined roles.
     """
-    req_roles = {'project_owner', 'project_mod'}
     request = args[1]
+    req_roles = set(roles)
     if not request.keystone_user.get('authenticated', False):
         return Response({'errors': ["Credentials incorrect or none given."]},
                         401)
@@ -48,6 +47,18 @@ def mod_or_owner(func, *args, **kwargs):
     return Response({'errors': ["Must have one of the following roles: %s" %
                                 list(req_roles)]},
                     403)
+
+
+@decorator
+def mod_or_owner(func, *args, **kwargs):
+    return require_roles(
+        {'project_owner', 'project_mod'}, func, *args, **kwargs)
+
+
+@decorator
+def mod_or_owner_or_admin(func, *args, **kwargs):
+    return require_roles(
+        {'project_owner', 'project_mod', 'admin'}, func, *args, **kwargs)
 
 
 @decorator
@@ -219,29 +230,42 @@ class NotificationDetail(APIViewWithLogger):
 
 class TaskList(APIViewWithLogger):
 
-    @admin
+    @mod_or_owner_or_admin
     def get(self, request, format=None):
         """
         A list of dict representations of Task objects
         and their related actions.
         """
-        tasks = Task.objects.all()
-        reg_list = []
-        for task in tasks:
-            reg_list.append(task.to_dict())
-        return Response(reg_list, status=200)
+
+        if 'admin' in request.keystone_user['roles']:
+            tasks = Task.objects.all()
+            reg_list = []
+            for task in tasks:
+                reg_list.append(task.to_dict())
+            return Response(reg_list, status=200)
+        else:
+            tasks = Task.objects.filter(
+                project_id__exact=request.keystone_user['project_id'])
+            reg_list = []
+            for task in tasks:
+                reg_list.append(task.to_dict())
+            return Response(reg_list, status=200)
 
 
 class TaskDetail(APIViewWithLogger):
 
-    @admin
+    @mod_or_owner_or_admin
     def get(self, request, uuid, format=None):
         """
         Dict representation of a Task object
         and its related actions.
         """
         try:
-            task = Task.objects.get(uuid=uuid)
+            if 'admin' in request.keystone_user['roles']:
+                task = Task.objects.get(uuid=uuid)
+            else:
+                task = Task.objects.get(
+                    uuid=uuid, project_id=request.keystone_user['project_id'])
         except Task.DoesNotExist:
             return Response(
                 {'errors': ['No task with this id.']},
