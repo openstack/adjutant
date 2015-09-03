@@ -825,9 +825,15 @@ class ActionView(APIViewWithLogger):
             ip_addr = request.META['REMOTE_ADDR']
             keystone_user = request.keystone_user
 
-            task = Task.objects.create(
-                ip_address=ip_addr, keystone_user=keystone_user,
-                action_view=self.__class__.__name__)
+            try:
+                task = Task.objects.create(
+                    ip_address=ip_addr, keystone_user=keystone_user,
+                    project_id=keystone_user['project_id'],
+                    action_view=self.__class__.__name__)
+            except KeyError:
+                task = Task.objects.create(
+                    ip_address=ip_addr, keystone_user=keystone_user,
+                    action_view=self.__class__.__name__)
             task.save()
 
             for i, act in enumerate(act_list):

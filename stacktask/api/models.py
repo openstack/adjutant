@@ -33,16 +33,17 @@ class Task(models.Model):
     # who is this:
     ip_address = models.GenericIPAddressField()
     keystone_user = JSONField(default={})
+    project_id = models.CharField(max_length=200, db_index=True, null=True)
 
     # which ActionView initiated this
-    action_view = models.CharField(max_length=200)
+    action_view = models.CharField(max_length=200, db_index=True)
 
     # Effectively a log of what the actions are doing.
     action_notes = JSONField(default={})
 
-    cancelled = models.BooleanField(default=False)
-    approved = models.BooleanField(default=False)
-    completed = models.BooleanField(default=False)
+    cancelled = models.BooleanField(default=False, db_index=True)
+    approved = models.BooleanField(default=False, db_index=True)
+    completed = models.BooleanField(default=False, db_index=True)
 
     created_on = models.DateTimeField(default=timezone.now)
     approved_on = models.DateTimeField(null=True)
@@ -101,7 +102,7 @@ class Token(models.Model):
     task = models.ForeignKey(Task)
     token = models.CharField(max_length=200, primary_key=True)
     created_on = models.DateTimeField(default=timezone.now)
-    expires = models.DateTimeField()
+    expires = models.DateTimeField(db_index=True)
 
     def to_dict(self):
         return {
@@ -118,7 +119,7 @@ class Notification(models.Model):
     notes = JSONField(default={})
     task = models.ForeignKey(Task)
     created_on = models.DateTimeField(default=timezone.now)
-    acknowledged = models.BooleanField(default=False)
+    acknowledged = models.BooleanField(default=False, db_index=True)
 
     def to_dict(self):
         return {
