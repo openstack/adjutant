@@ -253,6 +253,8 @@ class TaskDetail(APIViewWithLogger):
         """
         Allows the updating of action data and retriggering
         of the pre_approve step.
+
+        Will undo task approval, and clear tokens for the task.
         """
         try:
             task = Task.objects.get(uuid=uuid)
@@ -273,6 +275,12 @@ class TaskDetail(APIViewWithLogger):
             return Response(
                 {'errors':
                     ['This task has been cancelled.']},
+                status=400)
+
+        if task.approved:
+            return Response(
+                {'errors':
+                    ['This task has already been approved.']},
                 status=400)
 
         act_list = []
@@ -360,8 +368,6 @@ class TaskDetail(APIViewWithLogger):
                     status=400)
 
             if task.cancelled:
-                # NOTE(adriant): If we can uncancel a task, that should happen
-                # at this endpoint.
                 return Response(
                     {'errors':
                         ['This task has been cancelled.']},
@@ -544,6 +550,12 @@ class TokenList(APIViewWithLogger):
             return Response(
                 {'errors': ['No task with this id.']},
                 status=404)
+
+        if task.completed:
+            return Response(
+                {'errors':
+                    ['This task has already been completed.']},
+                status=400)
 
         if task.cancelled:
             return Response(

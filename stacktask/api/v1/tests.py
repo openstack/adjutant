@@ -953,3 +953,44 @@ class APITests(APITestCase):
         data = {'password': 'testpassword'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
+    def test_task_update_unapprove(self):
+        """
+        Ensure task update doesn't work for approved actions.
+        """
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        setup_temp_cache({}, {})
+
+        url = "/v1/project"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,Member",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        new_task = Task.objects.all()[0]
+        url = "/v1/task/" + new_task.uuid
+        response = self.client.post(url, {'approved': True}, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        new_task = Task.objects.all()[0]
+        self.assertEqual(new_task.approved, True)
+
+        data = {'project_name': "test_project2", 'email': "test2@example.com"}
+        response = self.client.put(url, data, format='json',
+                                   headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
