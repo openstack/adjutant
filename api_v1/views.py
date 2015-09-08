@@ -91,13 +91,69 @@ class NotificationList(APIViewWithLogger):
     @admin
     def get(self, request, format=None):
         """
-        A list of dict representations of Notification objects.
+        A list of unacknowledged Notification objects as dicts.
         """
-        notifications = Notification.objects.all()
+        notifications = Notification.objects.filter(acknowledged__exact=False)
         note_list = []
         for notification in notifications:
             note_list.append(notification.to_dict())
-        return Response(note_list)
+        return Response(note_list, status=200)
+
+    @admin
+    def post(self, request, format=None):
+        """
+        Acknowledge notifications.
+        """
+        note_list = request.data.get('notifications', None)
+        if note_list and isinstance(note_list, list):
+            notifications = Notification.objects.filter(pk__in=note_list)
+            for notification in notifications:
+                notification.acknowledged = True
+                notification.save()
+            return Response({'notes': ['Notifications acknowledged.']},
+                            status=200)
+        else:
+            return Response({'notifications': ["this field is required" +
+                                               "needs to be a list."]},
+                            status=400)
+
+
+class NotificationDetail(APIViewWithLogger):
+
+    @admin
+    def get(self, request, pk, format=None):
+        """
+        Dict notification of a Notification object
+        and its related actions.
+        """
+        try:
+            notification = Notification.objects.get(pk=pk)
+        except Notification.DoesNotExist:
+            return Response(
+                {'notes': ['No notification with this id.']},
+                status=404)
+        return Response(notification.to_dict())
+
+    @admin
+    def post(self, request, pk, format=None):
+        """
+        Acknowledge notification.
+        """
+        try:
+            notification = Notification.objects.get(pk=pk)
+        except Notification.DoesNotExist:
+            return Response(
+                {'notes': ['No notification with this id.']},
+                status=404)
+
+        if request.data.get('acknowledged', False) is True:
+            notification.acknowledged = True
+            notification.save()
+            return Response({'notes': ['Notification acknowledged.']},
+                            status=200)
+        else:
+            return Response({'acknowledged': ["this field is required."]},
+                            status=400)
 
 
 class RegistrationList(APIViewWithLogger):
@@ -227,9 +283,6 @@ class RegistrationDetail(APIViewWithLogger):
                     {'notes':
                         ['This registration has already been completed.']},
                     status=400)
-            registration.approved = True
-            registration.approved_on = timezone.now()
-            registration.save()
 
             need_token = False
             valid = True
@@ -264,6 +317,9 @@ class RegistrationDetail(APIViewWithLogger):
                     need_token = True
 
             if valid:
+                registration.approved = True
+                registration.approved_on = timezone.now()
+                registration.save()
                 if need_token:
                     create_token(registration)
                     return Response({'notes': ['created token']}, status=200)

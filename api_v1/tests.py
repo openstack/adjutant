@@ -706,3 +706,139 @@ class APITests(APITestCase):
         self.assertEqual(
             response.data,
             {'notes': ['created token']})
+
+    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('tenant_setup.models.IdentityManager', FakeManager)
+    def test_notification_createproject(self):
+        """
+        CreateProject should create a notification.
+        We should be able to grab it.
+        """
+        global temp_cache
+        temp_cache = {
+            'i': 0,
+            'users': {},
+            'projects': {},
+            'roles': {
+                'Member': 'Member', 'admin': 'admin',
+                'project_owner': 'project_owner'
+            }
+        }
+        url = "/api_v1/project"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        new_registration = Registration.objects.all()[0]
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,Member",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        url = "/api_v1/notification"
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data[0]['registration'],
+            new_registration.uuid)
+
+    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('tenant_setup.models.IdentityManager', FakeManager)
+    def test_notification_acknowledge(self):
+        """
+        Test that you can acknowledge a notification.
+        """
+        global temp_cache
+        temp_cache = {
+            'i': 0,
+            'users': {},
+            'projects': {},
+            'roles': {
+                'Member': 'Member', 'admin': 'admin',
+                'project_owner': 'project_owner'
+            }
+        }
+        url = "/api_v1/project"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        new_registration = Registration.objects.all()[0]
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,Member",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        url = "/api_v1/notification"
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data[0]['registration'],
+            new_registration.uuid)
+
+        url = "/api_v1/notification/%s/" % response.data[0]['pk']
+        data = {'acknowledged': True}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.data,
+                         {'notes': ['Notification acknowledged.']})
+
+        url = "/api_v1/notification"
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.data, [])
+
+    @mock.patch('base.models.IdentityManager', FakeManager)
+    @mock.patch('tenant_setup.models.IdentityManager', FakeManager)
+    def test_notification_acknowledge_list(self):
+        """
+        Test that you can acknowledge a list of notifications.
+        """
+        global temp_cache
+        temp_cache = {
+            'i': 0,
+            'users': {},
+            'projects': {},
+            'roles': {
+                'Member': 'Member', 'admin': 'admin',
+                'project_owner': 'project_owner'
+            }
+        }
+        url = "/api_v1/project"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = {'project_name': "test_project2", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,Member",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        url = "/api_v1/notification"
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        url = "/api_v1/notification"
+        data = {'notifications': [note['pk'] for note in response.data]}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.data,
+                         {'notes': ['Notifications acknowledged.']})
+
+        url = "/api_v1/notification"
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.data, [])

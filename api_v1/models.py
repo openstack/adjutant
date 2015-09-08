@@ -106,6 +106,7 @@ class Notification(models.Model):
 
     def to_dict(self):
         return {
+            "pk": self.pk,
             "notes": self.notes,
             "registration": self.registration.uuid,
             "acknowledged": self.acknowledged,
