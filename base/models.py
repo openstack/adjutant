@@ -231,10 +231,20 @@ class NewUser(UserAction):
         else:
             if user:
                 if user.email == self.email:
-                    valid = True
-                    self.action.need_token = False
-                    self.action.state = "existing"
-                    self.add_note('Existing user with matching email.')
+                    roles = id_manager.get_roles(user, project)
+                    if self.role in roles:
+                        valid = True
+                        self.action.need_token = False
+                        self.action.state = "complete"
+                        self.add_note(
+                            'Existing user already has role, no action needed.'
+                        )
+                    else:
+                        valid = True
+                        self.action.need_token = False
+                        self.action.state = "existing"
+                        self.add_note(
+                            'Existing user with matching email and no role.')
                 else:
                     valid = False
                     self.add_note('Existing user with non-matching email.')
@@ -268,7 +278,7 @@ class NewUser(UserAction):
                     id_manager.add_user_role(user, role, self.project_id)
                 except Exception as e:
                     self.add_note(
-                        "Error: '%s' while creating user: %s with role: " %
+                        "Error: '%s' while creating user: %s with role: %s" %
                         (e, self.username, self.role))
                     raise
 
@@ -282,12 +292,16 @@ class NewUser(UserAction):
                     id_manager.add_user_role(user, role, self.project_id)
                 except Exception as e:
                     self.add_note(
-                        "Error: '%s' while attaching user: %s with role: " %
+                        "Error: '%s' while attaching user: %s with role: %s" %
                         (e, self.username, self.role))
                     raise
 
                 self.add_note(
                     'Existing user %s has been given role %s in project %s.'
+                    % (self.username, self.role, self.project_id))
+            elif self.action.state == "complete":
+                self.add_note(
+                    'Existing user %s already had role %s in project %s.'
                     % (self.username, self.role, self.project_id))
 
 

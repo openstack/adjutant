@@ -22,6 +22,12 @@ from datetime import timedelta
 
 temp_cache = {}
 
+admin_user = mock.Mock()
+admin_user.id = 0
+admin_user.name = 'admin'
+admin_user.password = 'password'
+admin_user.email = 'admin@example.com'
+
 
 class FakeManager(object):
 
@@ -51,11 +57,21 @@ class FakeManager(object):
 
     def find_role(self, name):
         global temp_cache
-        temp_cache['roles'].get(name, None)
+        return temp_cache['roles'].get(name, None)
+
+    def get_roles(self, user, project):
+        global temp_cache
+        try:
+            return project.roles[user.name]
+        except KeyError:
+            return []
 
     def add_user_role(self, user, role, project_id):
         project = self.get_project(project_id)
-        project.roles.append((user, role))
+        try:
+            project.roles[user.name].append(role)
+        except KeyError:
+            project.roles[user.name] = [role]
 
     def find_project(self, project_name):
         global temp_cache
@@ -76,7 +92,7 @@ class FakeManager(object):
             temp_cache['i'] += 1
             project.id = temp_cache['i']
         project.name = project_name
-        project.roles = []
+        project.roles = {}
         temp_cache['projects'][project_name] = project
         return project
 
@@ -101,11 +117,11 @@ class APITests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
-        project.roles = []
+        project.roles = {}
 
         temp_cache = {
-            'i': 0,
-            'users': {},
+            'i': 1,
+            'users': {admin_user.name: admin_user},
             'projects': {'test_project': project},
             'roles': {
                 'Member': 'Member', 'admin': 'admin',
@@ -141,8 +157,8 @@ class APITests(APITestCase):
         global temp_cache
 
         temp_cache = {
-            'i': 0,
-            'users': {},
+            'i': 1,
+            'users': {admin_user.name: admin_user},
             'projects': {},
             'roles': {
                 'Member': 'Member', 'admin': 'admin',
@@ -172,8 +188,8 @@ class APITests(APITestCase):
         global temp_cache
 
         temp_cache = {
-            'i': 0,
-            'users': {},
+            'i': 1,
+            'users': {admin_user.name: admin_user},
             'projects': {},
             'roles': {
                 'Member': 'Member', 'admin': 'admin',
@@ -210,11 +226,11 @@ class APITests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
-        project.roles = []
+        project.roles = {}
 
         temp_cache = {
-            'i': 0,
-            'users': {},
+            'i': 1,
+            'users': {admin_user.name: admin_user},
             'projects': {'test_project': project},
             'roles': {
                 'Member': 'Member', 'admin': 'admin',
@@ -250,8 +266,8 @@ class APITests(APITestCase):
         global temp_cache
 
         temp_cache = {
-            'i': 0,
-            'users': {},
+            'i': 1,
+            'users': {admin_user.name: admin_user},
             'projects': {},
             'roles': {
                 'Member': 'Member', 'admin': 'admin',
@@ -270,6 +286,94 @@ class APITests(APITestCase):
         )
 
     @mock.patch('base.models.IdentityManager', FakeManager)
+    def test_add_user_existing(self):
+        """
+        Adding existing user to project.
+        """
+        global temp_cache
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+
+        temp_cache = {
+            'i': 1,
+            'users': {admin_user.name: admin_user, user.name: user},
+            'projects': {'test_project': project},
+            'roles': {
+                'Member': 'Member', 'admin': 'admin',
+                'project_owner': 'project_owner'
+            }
+        }
+        url = "/api_v1/user"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_owner,Member",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        data = {'email': "test@example.com", 'role': "Member",
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data,
+            {'notes': 'Registration completed successfully.'})
+
+    @mock.patch('base.models.IdentityManager', FakeManager)
+    def test_add_user_existing_with_role(self):
+        """
+        Adding existing user to project.
+        Already has role.
+        Should 'complete' anyway but do nothing.
+        """
+        global temp_cache
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {user.name: ['Member']}
+
+        temp_cache = {
+            'i': 1,
+            'users': {admin_user.name: admin_user, user.name: user},
+            'projects': {'test_project': project},
+            'roles': {
+                'Member': 'Member', 'admin': 'admin',
+                'project_owner': 'project_owner'
+            }
+        }
+        url = "/api_v1/user"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_owner,Member",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        data = {'email': "test@example.com", 'role': "Member",
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data,
+            {'notes': 'Registration completed successfully.'})
+
+    @mock.patch('base.models.IdentityManager', FakeManager)
     @mock.patch('tenant_setup.models.IdentityManager', FakeManager)
     def test_new_project(self):
         """
@@ -277,8 +381,8 @@ class APITests(APITestCase):
         """
         global temp_cache
         temp_cache = {
-            'i': 0,
-            'users': {},
+            'i': 1,
+            'users': {admin_user.name: admin_user},
             'projects': {},
             'roles': {
                 'Member': 'Member', 'admin': 'admin',
@@ -322,11 +426,11 @@ class APITests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
-        project.roles = []
+        project.roles = {}
 
         temp_cache = {
-            'i': 0,
-            'users': {},
+            'i': 1,
+            'users': {admin_user.name: admin_user},
             'projects': {'test_project': project},
             'roles': {
                 'Member': 'Member', 'admin': 'admin',
@@ -377,8 +481,8 @@ class APITests(APITestCase):
         user.email = "test@example.com"
 
         temp_cache = {
-            'i': 0,
-            'users': {user.name: user},
+            'i': 1,
+            'users': {admin_user.name: admin_user, user.name: user},
             'projects': {},
             'roles': {
                 'Member': 'Member', 'admin': 'admin',
@@ -432,8 +536,8 @@ class APITests(APITestCase):
         user.password = "test_password"
 
         temp_cache = {
-            'i': 0,
-            'users': {user.name: user},
+            'i': 1,
+            'users': {admin_user.name: admin_user, user.name: user},
             'projects': {},
             'roles': {
                 'Member': 'Member', 'admin': 'admin',
@@ -461,8 +565,8 @@ class APITests(APITestCase):
         global temp_cache
 
         temp_cache = {
-            'i': 0,
-            'users': {},
+            'i': 1,
+            'users': {admin_user.name: admin_user},
             'projects': {},
             'roles': {
                 'Member': 'Member', 'admin': 'admin',
@@ -545,8 +649,8 @@ class APITests(APITestCase):
         user.password = "test_password"
 
         temp_cache = {
-            'i': 0,
-            'users': {user.name: user},
+            'i': 1,
+            'users': {admin_user.name: admin_user, user.name: user},
             'projects': {},
             'roles': {
                 'Member': 'Member', 'admin': 'admin',
@@ -583,8 +687,8 @@ class APITests(APITestCase):
         user.password = "test_password"
 
         temp_cache = {
-            'i': 0,
-            'users': {user.name: user},
+            'i': 1,
+            'users': {admin_user.name: admin_user, user.name: user},
             'projects': {},
             'roles': {
                 'Member': 'Member', 'admin': 'admin',
@@ -614,8 +718,8 @@ class APITests(APITestCase):
         """
         global temp_cache
         temp_cache = {
-            'i': 0,
-            'users': {},
+            'i': 1,
+            'users': {admin_user.name: admin_user},
             'projects': {},
             'roles': {
                 'Member': 'Member', 'admin': 'admin',
@@ -659,11 +763,11 @@ class APITests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
-        project.roles = []
+        project.roles = {}
 
         temp_cache = {
-            'i': 0,
-            'users': {},
+            'i': 1,
+            'users': {admin_user.name: admin_user},
             'projects': {'test_project': project},
             'roles': {
                 'Member': 'Member', 'admin': 'admin',
@@ -714,8 +818,8 @@ class APITests(APITestCase):
         """
         global temp_cache
         temp_cache = {
-            'i': 0,
-            'users': {},
+            'i': 1,
+            'users': {admin_user.name: admin_user},
             'projects': {},
             'roles': {
                 'Member': 'Member', 'admin': 'admin',
@@ -753,8 +857,8 @@ class APITests(APITestCase):
         """
         global temp_cache
         temp_cache = {
-            'i': 0,
-            'users': {},
+            'i': 1,
+            'users': {admin_user.name: admin_user},
             'projects': {},
             'roles': {
                 'Member': 'Member', 'admin': 'admin',
@@ -802,8 +906,8 @@ class APITests(APITestCase):
         """
         global temp_cache
         temp_cache = {
-            'i': 0,
-            'users': {},
+            'i': 1,
+            'users': {admin_user.name: admin_user},
             'projects': {},
             'roles': {
                 'Member': 'Member', 'admin': 'admin',
@@ -861,8 +965,9 @@ class APITests(APITestCase):
         user2.password = "test_password"
 
         temp_cache = {
-            'i': 0,
-            'users': {user.name: user, user2.name: user2},
+            'i': 1,
+            'users': {admin_user.name: admin_user,
+                      user.name: user, user2.name: user2},
             'projects': {},
             'roles': {
                 'Member': 'Member', 'admin': 'admin',
@@ -918,8 +1023,8 @@ class APITests(APITestCase):
         user.password = "test_password"
 
         temp_cache = {
-            'i': 0,
-            'users': {user.name: user},
+            'i': 1,
+            'users': {admin_user.name: admin_user, user.name: user},
             'projects': {},
             'roles': {
                 'Member': 'Member', 'admin': 'admin',
