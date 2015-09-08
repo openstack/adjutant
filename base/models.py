@@ -55,6 +55,11 @@ class BaseAction(object):
       at the token stage. If there aren't any, the need_token value
       defaults to False.
 
+    If need_token MAY be true, you must implement '_token_email',
+    which should return the email the action wants the token sent to.
+    While there are checks to prevent duplicates or different emails,
+    try and only have one action in your chain provide the email.
+
     The Action can do anything it needs at one of the three functions
     called by the views:
     - 'pre_approve'
@@ -73,6 +78,9 @@ class BaseAction(object):
     Passing data along to other actions is done via the registration and
     it's cache, but this is in memory only, so it is only useful during the
     same action stage ('post_approve', etc.).
+
+    Other than the registration cache, actions should not be altering database
+    models other than themselves. This is not enforced, just a guideline.
     """
 
     required = []
@@ -118,6 +126,12 @@ class BaseAction(object):
     @property
     def need_token(self):
         return self.action.need_token
+
+    def token_email(self):
+        return self._token_email()
+
+    def _token_email(self):
+        raise NotImplementedError
 
     def get_cache(self, key):
         return self.action.cache.get(key, None)
@@ -175,6 +189,9 @@ class UserAction(BaseAction):
             self.username = self.email
         else:
             super(UserAction, self).__init__(*args, **kwargs)
+
+    def _token_email(self):
+        return self.email
 
 
 class NewUser(UserAction):
