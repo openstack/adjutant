@@ -17,10 +17,6 @@ from api_v1 import views
 
 urlpatterns = patterns(
     '',
-    # Examples:
-    # url(r'^$', 'user_reg.views.home', name='home'),
-    # url(r'^blog/', include('blog.urls')),
-
     url(r'^registration/(?P<uuid>\w+)', views.RegistrationDetail.as_view()),
     url(r'^registration', views.RegistrationList.as_view()),
     url(r'^project', views.CreateProject.as_view()),

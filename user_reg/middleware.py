@@ -58,6 +58,7 @@ class TestingHeaderUnwrapper(object):
 class RequestLoggingMiddleware(object):
     """
     Middleware to log the requests and responses.
+    Will time the duration of a request and log that.
     """
 
     def __init__(self):

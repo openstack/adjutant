@@ -52,13 +52,20 @@ class BaseAction(object):
     per type but built from a single database type.
     - 'required' defines what fields to setup from the data.
     - 'token_fields' defined which fields are needed by this action
-      at the token stage.
+      at the token stage. If there aren't any, the need_token value
+      defaults to False.
 
     The Action can do anything it needs at one of the three functions
     called by the views:
     - 'pre_approve'
     - 'post_approve'
     - 'submit'
+
+    All logic and validation should be handled within the action itself,
+    and any other actions it is linked to. The way in which pre_approve,
+    post_approve, and submit are called should rarely change. Actions
+    should be built with those steps in mind, thinking about what they mean,
+    and when they execute.
 
     By using 'get_cache' and 'set_cache' they can pass data along which
     may be needed by the action later. This cache is backed to the database.
@@ -120,6 +127,9 @@ class BaseAction(object):
         self.action.save()
 
     def add_note(self, note):
+        """
+        Logs the note, and also adds it to the registration action notes.
+        """
         self.logger.info("(%s) - %s" % (timezone.now(), note))
         note = "%s - (%s)" % (note, timezone.now())
         self.action.registration.add_action_note(
