@@ -22,11 +22,27 @@ from datetime import timedelta
 
 temp_cache = {}
 
-admin_user = mock.Mock()
-admin_user.id = 0
-admin_user.name = 'admin'
-admin_user.password = 'password'
-admin_user.email = 'admin@example.com'
+
+def setup_temp_cache(projects, users):
+    admin_user = mock.Mock()
+    admin_user.id = 0
+    admin_user.name = 'admin'
+    admin_user.password = 'password'
+    admin_user.email = 'admin@example.com'
+
+    users.update({admin_user.name: admin_user})
+
+    global temp_cache
+
+    temp_cache = {
+        'i': 1,
+        'users': users,
+        'projects': projects,
+        'roles': {
+            'Member': 'Member', 'admin': 'admin',
+            'project_owner': 'project_owner'
+        }
+    }
 
 
 class FakeManager(object):
@@ -112,22 +128,13 @@ class APITests(APITestCase):
         Ensure the new user workflow goes as expected.
         Create registration, create token, submit token.
         """
-        global temp_cache
-
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
         project.roles = {}
 
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user},
-            'projects': {'test_project': project},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({'test_project': project}, {})
+
         url = "/api_v1/user"
         headers = {
             'project_name': "test_project",
@@ -154,17 +161,8 @@ class APITests(APITestCase):
         """
         Can't create a user for a non-existent project.
         """
-        global temp_cache
+        setup_temp_cache({}, {})
 
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user},
-            'projects': {},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
         url = "/api_v1/user"
         headers = {
             'project_name': "test_project",
@@ -185,17 +183,8 @@ class APITests(APITestCase):
         """
         Can't create a user for project that isn't mine.
         """
-        global temp_cache
+        setup_temp_cache({}, {})
 
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user},
-            'projects': {},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
         url = "/api_v1/user"
         headers = {
             'project_name': "test_project",
@@ -221,22 +210,13 @@ class APITests(APITestCase):
         """
         Can create a user for project that isn't mine if admin.
         """
-        global temp_cache
-
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
         project.roles = {}
 
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user},
-            'projects': {'test_project': project},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({'test_project': project}, {})
+
         url = "/api_v1/user"
         headers = {
             'project_name': "test_project",
@@ -263,17 +243,9 @@ class APITests(APITestCase):
         """
         Can't create a user if unauthenticated.
         """
-        global temp_cache
 
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user},
-            'projects': {},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({}, {})
+
         url = "/api_v1/user"
         headers = {}
         data = {'email': "test@example.com", 'role': "Member",
@@ -290,8 +262,6 @@ class APITests(APITestCase):
         """
         Adding existing user to project.
         """
-        global temp_cache
-
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
@@ -302,15 +272,8 @@ class APITests(APITestCase):
         user.name = "test@example.com"
         user.email = "test@example.com"
 
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user, user.name: user},
-            'projects': {'test_project': project},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({'test_project': project}, {user.name: user})
+
         url = "/api_v1/user"
         headers = {
             'project_name': "test_project",
@@ -335,8 +298,6 @@ class APITests(APITestCase):
         Already has role.
         Should 'complete' anyway but do nothing.
         """
-        global temp_cache
-
         user = mock.Mock()
         user.id = 'user_id'
         user.name = "test@example.com"
@@ -347,15 +308,8 @@ class APITests(APITestCase):
         project.name = 'test_project'
         project.roles = {user.name: ['Member']}
 
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user, user.name: user},
-            'projects': {'test_project': project},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({'test_project': project}, {user.name: user})
+
         url = "/api_v1/user"
         headers = {
             'project_name': "test_project",
@@ -379,16 +333,9 @@ class APITests(APITestCase):
         """
         Ensure the new project workflow goes as expected.
         """
-        global temp_cache
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user},
-            'projects': {},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+
+        setup_temp_cache({}, {})
+
         url = "/api_v1/project"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
@@ -421,22 +368,14 @@ class APITests(APITestCase):
         Test to ensure validation marks actions as invalid
         if project is already present.
         """
-        global temp_cache
 
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
         project.roles = {}
 
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user},
-            'projects': {'test_project': project},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({'test_project': project}, {})
+
         url = "/api_v1/user"
         headers = {
             'project_name': "test_project",
@@ -473,22 +412,14 @@ class APITests(APITestCase):
         Project created if not present, existing user attached.
         No token should be needed.
         """
-        global temp_cache
 
         user = mock.Mock()
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
 
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user, user.name: user},
-            'projects': {},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({}, {user.name: user})
+
         url = "/api_v1/user"
         headers = {
             'project_name': "test_project",
@@ -527,7 +458,6 @@ class APITests(APITestCase):
         Ensure the reset user workflow goes as expected.
         Create registration + create token, submit token.
         """
-        global temp_cache
 
         user = mock.Mock()
         user.id = 'user_id'
@@ -535,15 +465,8 @@ class APITests(APITestCase):
         user.email = "test@example.com"
         user.password = "test_password"
 
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user, user.name: user},
-            'projects': {},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({}, {user.name: user})
+
         url = "/api_v1/reset"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
@@ -562,17 +485,9 @@ class APITests(APITestCase):
         """
         Actions should be invalid.
         """
-        global temp_cache
 
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user},
-            'projects': {},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({}, {})
+
         url = "/api_v1/reset"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
@@ -640,7 +555,6 @@ class APITests(APITestCase):
         """
         Expired token should do nothing, then delete itself.
         """
-        global temp_cache
 
         user = mock.Mock()
         user.id = 'user_id'
@@ -648,15 +562,8 @@ class APITests(APITestCase):
         user.email = "test@example.com"
         user.password = "test_password"
 
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user, user.name: user},
-            'projects': {},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({}, {user.name: user})
+
         url = "/api_v1/reset"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
@@ -678,7 +585,6 @@ class APITests(APITestCase):
         """
         Expired token should do nothing, then delete itself.
         """
-        global temp_cache
 
         user = mock.Mock()
         user.id = 'user_id'
@@ -686,15 +592,8 @@ class APITests(APITestCase):
         user.email = "test@example.com"
         user.password = "test_password"
 
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user, user.name: user},
-            'projects': {},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({}, {user.name: user})
+
         url = "/api_v1/reset"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
@@ -716,16 +615,8 @@ class APITests(APITestCase):
         """
         Can't approve a completed registration.
         """
-        global temp_cache
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user},
-            'projects': {},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({}, {})
+
         url = "/api_v1/project"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
@@ -758,22 +649,14 @@ class APITests(APITestCase):
 
         Updates it and attempts to reapprove.
         """
-        global temp_cache
 
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
         project.roles = {}
 
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user},
-            'projects': {'test_project': project},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({'test_project': project}, {})
+
         url = "/api_v1/project"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
@@ -816,16 +699,8 @@ class APITests(APITestCase):
         CreateProject should create a notification.
         We should be able to grab it.
         """
-        global temp_cache
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user},
-            'projects': {},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({}, {})
+
         url = "/api_v1/project"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
@@ -855,16 +730,8 @@ class APITests(APITestCase):
         """
         Test that you can acknowledge a notification.
         """
-        global temp_cache
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user},
-            'projects': {},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({}, {})
+
         url = "/api_v1/project"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
@@ -904,16 +771,8 @@ class APITests(APITestCase):
         """
         Test that you can acknowledge a list of notifications.
         """
-        global temp_cache
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user},
-            'projects': {},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({}, {})
+
         url = "/api_v1/project"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
@@ -950,7 +809,6 @@ class APITests(APITestCase):
         """
         test deleting of expired tokens.
         """
-        global temp_cache
 
         user = mock.Mock()
         user.id = 'user_id'
@@ -964,16 +822,8 @@ class APITests(APITestCase):
         user2.email = "test2@example.com"
         user2.password = "test_password"
 
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user,
-                      user.name: user, user2.name: user2},
-            'projects': {},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({}, {user.name: user, user2.name: user2})
+
         url = "/api_v1/reset"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
@@ -1014,7 +864,6 @@ class APITests(APITestCase):
         """
         test for reissue of tokens
         """
-        global temp_cache
 
         user = mock.Mock()
         user.id = 'user_id'
@@ -1022,15 +871,8 @@ class APITests(APITestCase):
         user.email = "test@example.com"
         user.password = "test_password"
 
-        temp_cache = {
-            'i': 1,
-            'users': {admin_user.name: admin_user, user.name: user},
-            'projects': {},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({}, {user.name: user})
+
         url = "/api_v1/reset"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')

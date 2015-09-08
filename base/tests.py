@@ -14,7 +14,7 @@
 
 from django.test import TestCase
 from api_v1.models import Registration
-from api_v1.tests import FakeManager
+from api_v1.tests import FakeManager, setup_temp_cache
 from api_v1 import tests
 from base.models import NewUser, NewProject, ResetUser
 import mock
@@ -33,15 +33,8 @@ class BaseActionTests(TestCase):
         project.name = 'test_project'
         project.roles = {}
 
-        tests.temp_cache = {
-            'i': 0,
-            'users': {},
-            'projects': {'test_project': project},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({'test_project': project}, {})
+
         registration = Registration.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
 
@@ -62,7 +55,7 @@ class BaseActionTests(TestCase):
         token_data = {'password': '123456'}
         action.submit(token_data)
         self.assertEquals(action.valid, True)
-        self.assertEquals(len(tests.temp_cache['users']), 1)
+        self.assertEquals(len(tests.temp_cache['users']), 2)
         self.assertEquals(
             tests.temp_cache['users']['test@example.com'].email,
             'test@example.com')
@@ -87,15 +80,8 @@ class BaseActionTests(TestCase):
         user.name = "test@example.com"
         user.email = "test@example.com"
 
-        tests.temp_cache = {
-            'i': 0,
-            'users': {user.name: user},
-            'projects': {'test_project': project},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({'test_project': project}, {user.name: user})
+
         registration = Registration.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
 
@@ -138,15 +124,8 @@ class BaseActionTests(TestCase):
         project.name = 'test_project'
         project.roles = {user.name: ['Member']}
 
-        tests.temp_cache = {
-            'i': 0,
-            'users': {user.name: user},
-            'projects': {'test_project': project},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({'test_project': project}, {user.name: user})
+
         registration = Registration.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
 
@@ -177,15 +156,8 @@ class BaseActionTests(TestCase):
         No user, no tenant.
         """
 
-        tests.temp_cache = {
-            'i': 0,
-            'users': {},
-            'projects': {},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({}, {})
+
         registration = Registration.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
 
@@ -207,7 +179,7 @@ class BaseActionTests(TestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, False)
 
-        self.assertEquals(tests.temp_cache['users'], {})
+        self.assertEquals('admin' in tests.temp_cache['users'], True)
 
     @mock.patch('base.models.IdentityManager', FakeManager)
     def test_new_project(self):
@@ -218,15 +190,8 @@ class BaseActionTests(TestCase):
         user at submit step.
         """
 
-        tests.temp_cache = {
-            'i': 0,
-            'users': {},
-            'projects': {},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({}, {})
+
         registration = Registration.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
 
@@ -245,8 +210,8 @@ class BaseActionTests(TestCase):
         self.assertEquals(
             tests.temp_cache['projects']['test_project'].name,
             'test_project')
-        self.assertEquals(tests.temp_cache['users'], {})
-        self.assertEquals(registration.cache, {'project_id': 1})
+        self.assertEquals('admin' in tests.temp_cache['users'], True)
+        self.assertEquals(registration.cache, {'project_id': 2})
 
         token_data = {'password': '123456'}
         action.submit(token_data)
@@ -271,15 +236,8 @@ class BaseActionTests(TestCase):
         user.name = "test@example.com"
         user.email = "test@example.com"
 
-        tests.temp_cache = {
-            'i': 0,
-            'users': {user.name: user},
-            'projects': {},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({}, {user.name: user})
+
         registration = Registration.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
 
@@ -298,7 +256,7 @@ class BaseActionTests(TestCase):
         self.assertEquals(
             tests.temp_cache['projects']['test_project'].name,
             'test_project')
-        self.assertEquals(registration.cache, {'project_id': 1})
+        self.assertEquals(registration.cache, {'project_id': 2})
 
         token_data = {'password': '123456'}
         action.submit(token_data)
@@ -323,15 +281,8 @@ class BaseActionTests(TestCase):
         project.name = 'test_project'
         project.roles = {}
 
-        tests.temp_cache = {
-            'i': 0,
-            'users': {},
-            'projects': {project.name: project},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({project.name: project}, {})
+
         registration = Registration.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
 
@@ -360,15 +311,8 @@ class BaseActionTests(TestCase):
         user.email = "test@example.com"
         user.password = "gibberish"
 
-        tests.temp_cache = {
-            'i': 0,
-            'users': {user.name: user},
-            'projects': {},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({}, {user.name: user})
+
         registration = Registration.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
 
@@ -399,15 +343,8 @@ class BaseActionTests(TestCase):
         No user.
         """
 
-        tests.temp_cache = {
-            'i': 0,
-            'users': {},
-            'projects': {},
-            'roles': {
-                'Member': 'Member', 'admin': 'admin',
-                'project_owner': 'project_owner'
-            }
-        }
+        setup_temp_cache({}, {})
+
         registration = Registration.objects.create(
             reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
 
