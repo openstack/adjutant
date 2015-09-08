@@ -112,7 +112,7 @@ class RegistrationList(APIViewWithLogger):
         reg_list = []
         for registration in registrations:
             reg_list.append(registration.to_dict())
-        return Response(reg_list)
+        return Response(reg_list, status=200)
 
 
 class RegistrationDetail(APIViewWithLogger):
@@ -130,6 +130,81 @@ class RegistrationDetail(APIViewWithLogger):
                 {'notes': ['No registration with this id.']},
                 status=404)
         return Response(registration.to_dict())
+
+    @admin
+    def put(self, request, uuid, format=None):
+        """
+        Allows the updating of action data and retriggering
+        of the pre_approve step.
+        """
+        try:
+            registration = Registration.objects.get(uuid=uuid)
+        except Registration.DoesNotExist:
+            return Response(
+                {'notes': ['No registration with this id.']},
+                status=404)
+
+        act_list = []
+
+        valid = True
+        for action in registration.actions:
+            action_serializer = settings.ACTION_CLASSES[action.action_name][1]
+
+            if action_serializer is not None:
+                serializer = action_serializer(data=request.data)
+            else:
+                serializer = None
+
+            act_list.append({
+                'name': action.action_name,
+                'action': action,
+                'serializer': serializer})
+
+            if serializer is not None and not serializer.is_valid():
+                valid = False
+
+        if valid:
+            for act in act_list:
+                if act['serializer'] is not None:
+                    data = act['serializer'].validated_data
+                else:
+                    data = {}
+                act['action'].action_data = data
+                act['action'].save()
+
+                try:
+                    act['action'].get_action().pre_approve()
+                except Exception as e:
+                    notes = {
+                        'errors':
+                            [("Error: '%s' while updating registration. " +
+                              "See registration itself for details.") % e],
+                        'registration': registration.uuid
+                    }
+                    create_notification(registration, notes)
+
+                    import traceback
+                    trace = traceback.format_exc()
+                    self.logger.critical(("(%s) - Exception escaped! %s\n" +
+                                          "Trace: \n%s") %
+                                         (timezone.now(), e, trace))
+
+                    response_dict = {
+                        'errors':
+                            ["Error: Something went wrong on the server. " +
+                             "It will be looked into shortly."]
+                    }
+                    return Response(response_dict, status=500)
+
+            return Response(
+                {'notes': ["Registration successfully updated."]},
+                status=200)
+        else:
+            errors = {}
+            for act in act_list:
+                if act['serializer'] is not None:
+                    errors.update(act['serializer'].errors)
+            return Response({'errors': errors}, status=400)
 
     @admin
     def post(self, request, uuid, format=None):
@@ -598,7 +673,7 @@ class AttachUser(ActionView):
         This endpoint requires either Admin access or the
         request to come from a project_owner.
         As such this Registration is considered pre-approved.
-        Runs process_actions, then does the approve and
+        Runs process_actions, then does the approve step and
         post_approve validation, and creates a Token if valid.
         """
         self.logger.info("(%s) - New AttachUser request." % timezone.now())
