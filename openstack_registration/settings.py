@@ -65,19 +65,19 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'user_reg.middleware.KeystoneHeaderUnwrapper',
-    'user_reg.middleware.RequestLoggingMiddleware'
+    'openstack_registration.middleware.KeystoneHeaderUnwrapper',
+    'openstack_registration.middleware.RequestLoggingMiddleware'
 )
 
 if 'test' in sys.argv:
     # modify MIDDLEWARE_CLASSES
     MIDDLEWARE_CLASSES = list(MIDDLEWARE_CLASSES)
-    MIDDLEWARE_CLASSES.remove('user_reg.middleware.KeystoneHeaderUnwrapper')
-    MIDDLEWARE_CLASSES.append('user_reg.middleware.TestingHeaderUnwrapper')
+    MIDDLEWARE_CLASSES.remove('openstack_registration.middleware.KeystoneHeaderUnwrapper')
+    MIDDLEWARE_CLASSES.append('openstack_registration.middleware.TestingHeaderUnwrapper')
 
-ROOT_URLCONF = 'user_reg.urls'
+ROOT_URLCONF = 'openstack_registration.urls'
 
-WSGI_APPLICATION = 'user_reg.wsgi.application'
+WSGI_APPLICATION = 'openstack_registration.wsgi.application'
 
 
 # Database
