@@ -840,3 +840,118 @@ class APITests(APITestCase):
         url = "/api_v1/notification"
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.data, [])
+
+    @mock.patch('base.models.IdentityManager', FakeManager)
+    def test_token_expired_delete(self):
+        """
+        test deleting of expired tokens.
+        """
+        global temp_cache
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.password = "test_password"
+
+        user2 = mock.Mock()
+        user2.id = 'user_id2'
+        user2.name = "test2@example.com"
+        user2.email = "test2@example.com"
+        user2.password = "test_password"
+
+        temp_cache = {
+            'i': 0,
+            'users': {user.name: user, user2.name: user2},
+            'projects': {},
+            'roles': {
+                'Member': 'Member', 'admin': 'admin',
+                'project_owner': 'project_owner'
+            }
+        }
+        url = "/api_v1/reset"
+        data = {'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        url = "/api_v1/reset"
+        data = {'email': "test2@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        tokens = Token.objects.all()
+
+        self.assertEqual(len(tokens), 2)
+
+        new_token = tokens[0]
+        new_token.expires = timezone.now() - timedelta(hours=24)
+        new_token.save()
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,Member",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        url = "/api_v1/token/"
+        response = self.client.delete(url, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data,
+                         {'notes': ['Deleted all expired tokens.']})
+        self.assertEqual(Token.objects.count(), 1)
+
+    @mock.patch('base.models.IdentityManager', FakeManager)
+    def test_token_reissue(self):
+        """
+        test for reissue of tokens
+        """
+        global temp_cache
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.password = "test_password"
+
+        temp_cache = {
+            'i': 0,
+            'users': {user.name: user},
+            'projects': {},
+            'roles': {
+                'Member': 'Member', 'admin': 'admin',
+                'project_owner': 'project_owner'
+            }
+        }
+        url = "/api_v1/reset"
+        data = {'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        registration = Registration.objects.all()[0]
+        new_token = Token.objects.all()[0]
+
+        uuid = new_token.token
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,Member",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        url = "/api_v1/token/"
+        data = {"registration": registration.uuid}
+        response = self.client.post(url, data, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data,
+                         {'notes': ['Token reissued.']})
+        self.assertEqual(Token.objects.count(), 1)
+        new_token = Token.objects.all()[0]
+        self.assertNotEquals(new_token.token, uuid)
