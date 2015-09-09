@@ -24,7 +24,8 @@ def get_keystoneclient():
         username=settings.KEYSTONE['username'],
         password=settings.KEYSTONE['password'],
         tenant_name=settings.KEYSTONE['project_name'],
-        auth_url=settings.KEYSTONE['auth_url']
+        auth_url=settings.KEYSTONE['auth_url'],
+        region_name=settings.DEFAULT_REGION
     )
     return auth
 
@@ -35,5 +36,7 @@ def get_neutronclient():
         username=settings.KEYSTONE['username'],
         password=settings.KEYSTONE['password'],
         tenant_name=settings.KEYSTONE['project_name'],
-        auth_url=settings.KEYSTONE['auth_url'])
+        auth_url=settings.KEYSTONE['auth_url'],
+        region_name=settings.DEFAULT_REGION
+    )
     return neutron
