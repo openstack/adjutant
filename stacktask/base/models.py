@@ -212,6 +212,8 @@ class NewUser(UserAction):
 
     token_fields = ['password']
 
+    default_roles = ["Member"]
+
     def _validate(self):
         id_manager = IdentityManager()
 
@@ -222,6 +224,11 @@ class NewUser(UserAction):
         if not ("admin" in keystone_user['roles'] or
                 keystone_user['project_id'] == self.project_id):
             self.add_note('Project id does not match keystone user project.')
+            return False
+
+        if ('project_owner' not in keystone_user['roles'] and
+                self.role == "project_mod"):
+            self.add_note('User does not have permission to add role.')
             return False
 
         project = id_manager.get_project(self.project_id)
@@ -275,8 +282,12 @@ class NewUser(UserAction):
                     user = id_manager.create_user(
                         name=self.username, password=token_data['password'],
                         email=self.email, project_id=self.project_id)
-                    role = id_manager.find_role(self.role)
-                    id_manager.add_user_role(user, role, self.project_id)
+
+                    self.default_roles.append(self.role)
+                    for role in set(self.default_roles):
+                        ks_role = id_manager.find_role(role)
+                        id_manager.add_user_role(user, ks_role,
+                                                 self.project_id)
                 except Exception as e:
                     self.add_note(
                         "Error: '%s' while creating user: %s with role: %s" %
@@ -289,8 +300,12 @@ class NewUser(UserAction):
             elif self.action.state == "existing":
                 try:
                     user = id_manager.find_user(self.username)
-                    role = id_manager.find_role(self.role)
-                    id_manager.add_user_role(user, role, self.project_id)
+
+                    self.default_roles.append(self.role)
+                    for role in set(self.default_roles):
+                        ks_role = id_manager.find_role(role)
+                        id_manager.add_user_role(user, ks_role,
+                                                 self.project_id)
                 except Exception as e:
                     self.add_note(
                         "Error: '%s' while attaching user: %s with role: %s" %
@@ -319,9 +334,9 @@ class NewProject(UserAction):
         'email'
     ]
 
-    default_roles = ["Member", "project_owner"]
-
     token_fields = ['password']
+
+    default_roles = ["Member", "project_owner", "project_mod"]
 
     def _validate_project(self):
         id_manager = IdentityManager()
@@ -421,9 +436,9 @@ class NewProject(UserAction):
                     "New user '%s' created for project %s with roles: %s" %
                     (self.username, self.project_name, self.default_roles))
             elif self.action.state == "existing":
-                user = id_manager.find_user(self.username)
-
                 try:
+                    user = id_manager.find_user(self.username)
+
                     for role in self.default_roles:
                         ks_role = id_manager.find_role(role)
                         id_manager.add_user_role(user, ks_role, project.id)

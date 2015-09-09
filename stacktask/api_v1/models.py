@@ -70,7 +70,8 @@ class Registration(models.Model):
         return {
             "ip_address": self.reg_ip, "notes": self.action_notes,
             "approved": self.approved, "completed": self.completed,
-            "actions": actions, "uuid": self.uuid
+            "actions": actions, "uuid": self.uuid,
+            "keystone_user": self.keystone_user
         }
 
     def add_action_note(self, action, note):
