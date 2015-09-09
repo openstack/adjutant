@@ -409,7 +409,7 @@ class RegistrationDetail(APIViewWithLogger):
                     return Response(
                         {'notes': "Registration completed successfully."},
                         status=200)
-            return Response({'notes': ['actions invalid']}, status=400)
+            return Response({'errors': ['actions invalid']}, status=400)
         else:
             return Response({'approved': ["this field is required."]},
                             status=400)

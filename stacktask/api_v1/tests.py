@@ -177,7 +177,7 @@ class APITests(APITestCase):
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {'notes': ['actions invalid']})
+        self.assertEqual(response.data, {'errors': ['actions invalid']})
 
     @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_new_user_not_my_project(self):
@@ -201,7 +201,7 @@ class APITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(
             response.data,
-            {'notes':
+            {'errors':
                 [("Must have one of the following roles: " +
                   "['admin', 'project_mod', 'project_owner']")]}
         )
@@ -255,7 +255,7 @@ class APITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(
             response.data,
-            {'notes': ["Credentials incorrect or none given."]}
+            {'errors': ["Credentials incorrect or none given."]}
         )
 
     @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
@@ -404,7 +404,7 @@ class APITests(APITestCase):
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {'notes': ['actions invalid']})
+        self.assertEqual(response.data, {'errors': ['actions invalid']})
 
     @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
@@ -493,7 +493,7 @@ class APITests(APITestCase):
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {'notes': ['actions invalid']})
+        self.assertEqual(response.data, {'errors': ['actions invalid']})
 
     def test_no_token_get(self):
         """
@@ -503,7 +503,7 @@ class APITests(APITestCase):
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(
-            response.data, {'notes': ['This token does not exist.']})
+            response.data, {'errors': ['This token does not exist.']})
 
     def test_no_token_post(self):
         """
@@ -513,7 +513,7 @@ class APITests(APITestCase):
         response = self.client.post(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(
-            response.data, {'notes': ['This token does not exist.']})
+            response.data, {'errors': ['This token does not exist.']})
 
     def test_no_registration_get(self):
         """
@@ -531,7 +531,7 @@ class APITests(APITestCase):
         response = self.client.get(url, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(
-            response.data, {'notes': ['No registration with this id.']})
+            response.data, {'errors': ['No registration with this id.']})
 
     def test_no_registration_post(self):
         """
@@ -549,7 +549,7 @@ class APITests(APITestCase):
         response = self.client.post(url, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(
-            response.data, {'notes': ['No registration with this id.']})
+            response.data, {'errors': ['No registration with this id.']})
 
     @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_token_expired_post(self):
@@ -578,7 +578,7 @@ class APITests(APITestCase):
         data = {'password': 'new_test_password'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {'notes': ['This token has expired.']})
+        self.assertEqual(response.data, {'errors': ['This token has expired.']})
         self.assertEqual(0, Token.objects.count())
 
     @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
@@ -607,7 +607,7 @@ class APITests(APITestCase):
         url = "/v1/token/" + new_token.token
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {'notes': ['This token has expired.']})
+        self.assertEqual(response.data, {'errors': ['This token has expired.']})
         self.assertEqual(0, Token.objects.count())
 
     @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
@@ -640,7 +640,7 @@ class APITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.data,
-            {'notes': ['This registration has already been completed.']})
+            {'errors': ['This registration has already been completed.']})
 
     @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
