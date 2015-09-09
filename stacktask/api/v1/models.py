@@ -12,11 +12,4 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.conf.urls import patterns, include, url
-from django.contrib import admin
-
-urlpatterns = patterns(
-    '',
-    url(r'^admin/', include(admin.site.urls)),
-    url(r'^', include('stacktask.api.urls')),
-)
+from django.db import models

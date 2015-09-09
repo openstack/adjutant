@@ -13,7 +13,7 @@
 #    under the License.
 
 from django.conf.urls import patterns, url
-from stacktask.api_v1 import views
+from stacktask.api.v1 import views
 
 urlpatterns = patterns(
     '',

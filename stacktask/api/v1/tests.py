@@ -14,7 +14,7 @@
 
 from rest_framework import status
 from rest_framework.test import APITestCase
-from stacktask.api_v1.models import Registration, Token
+from stacktask.api.models import Registration, Token
 import mock
 from django.utils import timezone
 from datetime import timedelta

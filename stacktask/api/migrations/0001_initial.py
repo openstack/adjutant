@@ -4,7 +4,7 @@ from __future__ import unicode_literals
 from django.db import models, migrations
 import jsonfield.fields
 import django.utils.timezone
-import stacktask.api_v1.models
+import stacktask.api.models
 
 
 class Migration(migrations.Migration):
@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Registration',
             fields=[
-                ('uuid', models.CharField(default=stacktask.api_v1.models.hex_uuid, max_length=200, serialize=False, primary_key=True)),
+                ('uuid', models.CharField(default=stacktask.api.models.hex_uuid, max_length=200, serialize=False, primary_key=True)),
                 ('reg_ip', models.GenericIPAddressField()),
                 ('keystone_user', jsonfield.fields.JSONField(default={})),
                 ('action_view', models.CharField(max_length=200)),
@@ -43,12 +43,12 @@ class Migration(migrations.Migration):
                 ('token', models.CharField(max_length=200, serialize=False, primary_key=True)),
                 ('created', models.DateTimeField(default=django.utils.timezone.now)),
                 ('expires', models.DateTimeField()),
-                ('registration', models.ForeignKey(to='api_v1.Registration')),
+                ('registration', models.ForeignKey(to='api.Registration')),
             ],
         ),
         migrations.AddField(
             model_name='notification',
             name='registration',
-            field=models.ForeignKey(to='api_v1.Registration'),
+            field=models.ForeignKey(to='api.Registration'),
         ),
     ]

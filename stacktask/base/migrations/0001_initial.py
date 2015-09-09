@@ -9,7 +9,7 @@ import jsonfield.fields
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('api_v1', '0001_initial'),
+        ('api', '0001_initial'),
     ]
 
     operations = [
@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
                 ('need_token', models.BooleanField()),
                 ('order', models.IntegerField()),
                 ('created', models.DateTimeField(default=django.utils.timezone.now)),
-                ('registration', models.ForeignKey(to='api_v1.Registration')),
+                ('registration', models.ForeignKey(to='api.Registration')),
             ],
         ),
     ]

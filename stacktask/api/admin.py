@@ -13,7 +13,7 @@
 #    under the License.
 
 from django.contrib import admin
-from stacktask.api_v1.models import Token, Registration
+from stacktask.api.models import Token, Registration
 
 admin.site.register(Token)
 admin.site.register(Registration)
