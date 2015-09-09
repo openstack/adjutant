@@ -12,18 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.conf.urls import patterns, url
-from api_v1 import views
+from django.conf.urls import patterns, include, url
+from django.contrib import admin
 
 urlpatterns = patterns(
     '',
-    url(r'^registration/(?P<uuid>\w+)', views.RegistrationDetail.as_view()),
-    url(r'^registration', views.RegistrationList.as_view()),
-    url(r'^token/(?P<id>\w+)', views.TokenDetail.as_view()),
-    url(r'^token', views.TokenList.as_view()),
-    url(r'^notification/(?P<pk>\w+)', views.NotificationDetail.as_view()),
-    url(r'^notification', views.NotificationList.as_view()),
-    url(r'^project', views.CreateProject.as_view()),
-    url(r'^user', views.AttachUser.as_view()),
-    url(r'^reset', views.ResetPassword.as_view()),
+    url(r'^admin/', include(admin.site.urls)),
+    url(r'^api_v1/', include('stacktask.api_v1.urls')),
 )

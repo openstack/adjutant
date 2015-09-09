@@ -25,14 +25,12 @@ https://docs.djangoproject.com/en/1.7/ref/settings/
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
 import sys
+import yaml
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.7/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '+er!!4olta#17a=n%uotcazg2ncpl==yjog%1*o-(cr%zys-)!'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -52,9 +50,8 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    'base',
-    'api_v1',
-    'tenant_setup',
+    'stacktask.base',
+    'stacktask.api_v1',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -65,33 +62,19 @@ MIDDLEWARE_CLASSES = (
     'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'stack_task.middleware.KeystoneHeaderUnwrapper',
-    'stack_task.middleware.RequestLoggingMiddleware'
+    'stacktask.middleware.KeystoneHeaderUnwrapper',
+    'stacktask.middleware.RequestLoggingMiddleware'
 )
 
 if 'test' in sys.argv:
     # modify MIDDLEWARE_CLASSES
     MIDDLEWARE_CLASSES = list(MIDDLEWARE_CLASSES)
-    MIDDLEWARE_CLASSES.remove('stack_task.middleware.KeystoneHeaderUnwrapper')
-    MIDDLEWARE_CLASSES.append('stack_task.middleware.TestingHeaderUnwrapper')
+    MIDDLEWARE_CLASSES.remove('stacktask.middleware.KeystoneHeaderUnwrapper')
+    MIDDLEWARE_CLASSES.append('stacktask.middleware.TestingHeaderUnwrapper')
 
-ROOT_URLCONF = 'stack_task.urls'
+ROOT_URLCONF = 'stacktask.urls'
 
-WSGI_APPLICATION = 'stack_task.wsgi.application'
-
-
-# Database
-# https://docs.djangoproject.com/en/1.7/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-    }
-}
-
-# Internationalization
-# https://docs.djangoproject.com/en/1.7/topics/i18n/
+WSGI_APPLICATION = 'stacktask.wsgi.application'
 
 LANGUAGE_CODE = 'en-us'
 
@@ -103,73 +86,42 @@ USE_L10N = True
 
 USE_TZ = True
 
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/1.7/howto/static-files/
-
 STATIC_URL = '/static/'
 
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': 'reg_log.log',
-        },
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['file'],
-            'level': 'INFO',
-            'propagate': True,
-        },
-        'keystonemiddleware': {
-            'handlers': ['file'],
-            'level': 'INFO',
-            'propagate': True,
-        },
-    },
-}
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Setup of local settings data
 
+with open("/etc/stacktask/conf.yaml") as f:
+    CONFIG = yaml.load(f)
 
-# App apecific settings:
+SECRET_KEY = CONFIG['SECRET_KEY']
+
+for app in CONFIG['ADDITIONAL_APPS']:
+    INSTALLED_APPS = list(INSTALLED_APPS)
+    INSTALLED_APPS.append(app)
+
+DATABASES = CONFIG['DATABASES']
+
+LOGGING = CONFIG['LOGGING']
+
+EMAIL_BACKEND = CONFIG['EMAIL_BACKEND']
 
 # setting to control if user name and email are allowed
 # to have different values.
-USERNAME_IS_EMAIL = True
+USERNAME_IS_EMAIL = CONFIG['USERNAME_IS_EMAIL']
 
 # Keystone admin credentials:
-KEYSTONE = {
-    'username': 'admin',
-    'password': 'openstack',
-    'project_name': 'admin',
-    'auth_url': "http://localhost:5000/v2.0"
-}
+KEYSTONE = CONFIG['KEYSTONE']
 
-DEFAULT_REGION = "REGION_ONE"
-
-NETWORK_DEFAULTS = {
-    "REGION_ONE": {
-        'network_name': 'somenetwork',
-        'subnet_name': 'somesubnet',
-        'router_name': 'somerouter',
-        # this depends on region and needs to be pulled from somewhere:
-        'public_network': '1eb739bb-607d-4a34-a590-9c15d03ccbe7',
-        'DNS_NAMESERVERS': ['193.168.1.2',
-                            '193.168.1.3'],
-        'SUBNET_CIDR': '192.168.1.0/24'
-    }
-}
+DEFAULT_REGION = CONFIG['DEFAULT_REGION']
 
 # Additonal actions for views:
 # - The order of the actions matters. These will run after the default action,
 #   in the given order.
 API_ACTIONS = {'CreateProject': ['AddAdminToProject',
                                  'DefaultProjectResources']}
+
+ACTION_SETTINGS = CONFIG['ACTION_SETTINGS']
 
 # Dict of actions and their serializers.
 # - This is populated from the various model modules at startup:

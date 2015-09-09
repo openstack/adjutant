@@ -15,7 +15,7 @@
 from decorator import decorator
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from models import Registration, Token, Notification
+from .models import Registration, Token, Notification
 from django.utils import timezone
 from datetime import timedelta
 from uuid import uuid4
