@@ -33,7 +33,8 @@ setup(
         'keystonemiddleware>=1.3.1',
         'python-keystoneclient>=1.0.0',
         'python-neutronclient>=2.3.10',
-        'pyyaml>=3.11'
+        'pyyaml>=3.11',
+        'django-rest-swagger>=0.3.3'
     ],
     entry_points={
         'console_scripts': [
