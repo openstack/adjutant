@@ -48,19 +48,65 @@ DEFAULT_REGION: RegionOne
 # Additonal actions for views:
 # - The order of the actions matters. These will run after the default action,
 #   in the given order.
-API_ACTIONS:
+ACTIONVIEW_SETTINGS:
     CreateProject:
-        - AddAdminToProject
-        - DefaultProjectResources
+        actions:
+            - AddAdminToProject
+            - DefaultProjectResources
+        emails:
+            initial:
+                subject: Initial Confirmation
+                reply: no-reply@example.com
+                template: initial.txt
+                html_template: initial.txt
+            # If the related actions 'can' send a token,
+            # this field should here.
+            token:
+                subject: Your Token
+                reply: no-reply@example.com
+                template: token.txt
+                html_template: token.txt
+            completed:
+                subject: Registration completed
+                reply: no-reply@example.com
+                template: completed.txt
+                html_template: completed.txt
+    AttachUser:
+        emails:
+            # To not send this email, set the value to null,
+            # or don't have the field there at all.
+            initial: null
+            token:
+                subject: Your Token
+                reply: no-reply@example.com
+                template: token.txt
+                html_template: token.txt
+            completed:
+                subject: Registration completed
+                reply: no-reply@example.com
+                template: completed.txt
+                html_template: completed.txt
+    ResetPassword:
+        emails:
+            token:
+                subject: Your Token
+                reply: no-reply@example.com
+                template: token.txt
+                html_template: token.txt
+            completed:
+                subject: Registration completed
+                reply: no-reply@example.com
+                template: completed.txt
+                html_template: completed.txt
 
 # Action settings:
 ACTION_SETTINGS:
     DefaultProjectResources:
-        "RegionOne":
+        RegionOne:
             network_name: somenetwork
             subnet_name: somesubnet
             router_name: somerouter
-            public_network: 83559fa7-0a67-4716-94b9-10596e3ed1e6
+            public_network: 3cb50d61-5bce-4c03-96e6-8e262e12bb35
             DNS_NAMESERVERS: 
                 - 193.168.1.2
                 - 193.168.1.3

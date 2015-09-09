@@ -80,44 +80,52 @@ def create_token(registration):
     return token
 
 
-def email_token(registration, token):
+def send_email(registration, email_conf, token=None):
+    if email_conf:
+        template = loader.get_template(email_conf['template'])
+        html_template = loader.get_template(email_conf['html_template'])
 
-    emails = set()
-    actions = []
-    for action in registration.actions:
-        act = action.get_action()
-        if act.need_token:
-            emails.add(act.token_email())
-            actions.append(unicode(act))
+        emails = set()
+        actions = []
+        for action in registration.actions:
+            act = action.get_action()
+            email = act.get_email()
+            if email:
+                emails.add(email)
+                actions.append(unicode(act))
 
-    if len(emails) > 1:
-        notes = {
-            'notes':
-                (("Error: Unable to send token, More than one email for" +
-                 " registration: %s") % registration.uuid)
-        }
-        create_notification(registration, notes)
-        # TODO(adriant): raise some error?
-        # and surround calls to this function with try/except
+        if len(emails) > 1:
+            notes = {
+                'notes':
+                    (("Error: Unable to send token, More than one email for" +
+                     " registration: %s") % registration.uuid)
+            }
+            create_notification(registration, notes)
+            return
+            # TODO(adriant): raise some error?
+            # and surround calls to this function with try/except
 
-    context = {'actions': actions, 'token': token.token}
+        if token:
+            context = {'registration': registration, 'actions': actions,
+                       'token': token.token}
+        else:
+            context = {'registration': registration, 'actions': actions}
 
-    email_template = loader.get_template("token.txt")
-
-    try:
-        message = email_template.render(Context(context))
-        send_mail(
-            'Your token', message, 'no-reply@example.com',
-            [emails.pop()], fail_silently=False)
-    except SMTPException as e:
-        notes = {
-            'notes':
-                ("Error: '%s' while emailing token for registration: %s" %
-                 (e, registration.uuid))
-        }
-        create_notification(registration, notes)
-        # TODO(adriant): raise some error?
-        # and surround calls to this function with try/except
+        try:
+            message = template.render(Context(context))
+            html_message = html_template.render(Context(context))
+            send_mail(
+                email_conf['subject'], message, email_conf['reply'],
+                [emails.pop()], fail_silently=False, html_message=html_message)
+        except SMTPException as e:
+            notes = {
+                'notes':
+                    ("Error: '%s' while emailing token for registration: %s" %
+                     (e, registration.uuid))
+            }
+            create_notification(registration, notes)
+            # TODO(adriant): raise some error?
+            # and surround calls to this function with try/except
 
 
 def create_notification(registration, notes):
@@ -379,8 +387,38 @@ class RegistrationDetail(APIViewWithLogger):
                 registration.save()
                 if need_token:
                     token = create_token(registration)
-                    email_token(registration, token)
-                    return Response({'notes': ['created token']}, status=200)
+                    try:
+                        class_conf = settings.ACTIONVIEW_SETTINGS[
+                            registration.action_view]
+
+                        # will throw a key error if the token template has not
+                        # been specified
+                        email_conf = class_conf['emails']['token']
+                        send_email(registration, email_conf, token)
+                        return Response({'notes': ['created token']},
+                                        status=200)
+                    except KeyError as e:
+                        notes = {
+                            'errors':
+                                [("Error: '%s' while sending " +
+                                  "token. See registration " +
+                                  "itself for details.") % e],
+                            'registration': registration.uuid
+                        }
+                        create_notification(registration, notes)
+
+                        import traceback
+                        trace = traceback.format_exc()
+                        self.logger.critical(("(%s) - Exception escaped!" +
+                                              " %s\n Trace: \n%s") %
+                                             (timezone.now(), e, trace))
+
+                        response_dict = {
+                            'errors':
+                                ["Error: Something went wrong on the " +
+                                 "server. It will be looked into shortly."]
+                        }
+                        return Response(response_dict, status=500)
                 else:
                     for action in actions:
                         try:
@@ -406,6 +444,14 @@ class RegistrationDetail(APIViewWithLogger):
                     registration.completed = True
                     registration.completed_on = timezone.now()
                     registration.save()
+
+                    # Sending confirmation email:
+                    class_conf = settings.ACTIONVIEW_SETTINGS.get(
+                        registration.action_view, {})
+                    email_conf = class_conf.get(
+                        'emails', {}).get('completed', None)
+                    send_email(registration, email_conf)
+
                     return Response(
                         {'notes': "Registration completed successfully."},
                         status=200)
@@ -458,7 +504,36 @@ class TokenList(APIViewWithLogger):
             token.delete()
 
         token = create_token(registration)
-        email_token(registration, token)
+        try:
+            class_conf = settings.ACTIONVIEW_SETTINGS[
+                registration.action_view]
+
+            # will throw a key error if the token template has not
+            # been specified
+            email_conf = class_conf['emails']['token']
+            send_email(registration, email_conf, token)
+        except KeyError as e:
+            notes = {
+                'errors':
+                    [("Error: '%s' while sending " +
+                      "token. See registration " +
+                      "itself for details.") % e],
+                'registration': registration.uuid
+            }
+            create_notification(registration, notes)
+
+            import traceback
+            trace = traceback.format_exc()
+            self.logger.critical(("(%s) - Exception escaped!" +
+                                  " %s\n Trace: \n%s") %
+                                 (timezone.now(), e, trace))
+
+            response_dict = {
+                'errors':
+                    ["Error: Something went wrong on the " +
+                     "server. It will be looked into shortly."]
+            }
+            return Response(response_dict, status=500)
         return Response(
             {'notes': ['Token reissued.']}, status=200)
 
@@ -584,6 +659,13 @@ class TokenDetail(APIViewWithLogger):
         token.registration.save()
         token.delete()
 
+        # Sending confirmation email:
+        class_conf = settings.ACTIONVIEW_SETTINGS.get(
+            token.registration.action_view, {})
+        email_conf = class_conf.get(
+            'emails', {}).get('completed', None)
+        send_email(token.registration, email_conf)
+
         return Response(
             {'notes': "Token submitted successfully."},
             status=200)
@@ -630,9 +712,12 @@ class ActionView(APIViewWithLogger):
         function on all the actions.
         """
 
+        class_conf = settings.ACTIONVIEW_SETTINGS.get(self.__class__.__name__,
+                                                      {})
+
         actions = [self.default_action, ]
 
-        actions += settings.API_ACTIONS.get(self.__class__.__name__, [])
+        actions += class_conf.get('actions', [])
 
         act_list = []
 
@@ -658,7 +743,8 @@ class ActionView(APIViewWithLogger):
             keystone_user = request.keystone_user
 
             registration = Registration.objects.create(
-                reg_ip=ip_addr, keystone_user=keystone_user)
+                reg_ip=ip_addr, keystone_user=keystone_user,
+                action_view=self.__class__.__name__)
             registration.save()
 
             for i, act in enumerate(act_list):
@@ -694,6 +780,10 @@ class ActionView(APIViewWithLogger):
                              "It will be looked into shortly."]
                     }
                     return response_dict
+
+            # send initial conformation email:
+            email_conf = class_conf.get('emails', {}).get('initial', None)
+            send_email(registration, email_conf)
 
             return {'registration': registration}
         else:
@@ -759,8 +849,38 @@ class ActionView(APIViewWithLogger):
             if valid:
                 if need_token:
                     token = create_token(registration)
-                    email_token(registration, token)
-                    return Response({'notes': ['created token']}, status=200)
+                    try:
+                        class_conf = settings.ACTIONVIEW_SETTINGS[
+                            self.__class__.__name__]
+
+                        # will throw a key error if the token template has not
+                        # been specified
+                        email_conf = class_conf['emails']['token']
+                        send_email(registration, email_conf, token)
+                        return Response({'notes': ['created token']},
+                                        status=200)
+                    except KeyError as e:
+                        notes = {
+                            'errors':
+                                [("Error: '%s' while sending " +
+                                  "token. See registration " +
+                                  "itself for details.") % e],
+                            'registration': registration.uuid
+                        }
+                        create_notification(registration, notes)
+
+                        import traceback
+                        trace = traceback.format_exc()
+                        self.logger.critical(("(%s) - Exception escaped!" +
+                                              " %s\n Trace: \n%s") %
+                                             (timezone.now(), e, trace))
+
+                        response_dict = {
+                            'errors':
+                                ["Error: Something went wrong on the " +
+                                 "server. It will be looked into shortly."]
+                        }
+                        return Response(response_dict, status=500)
                 else:
                     for action in actions:
                         try:
@@ -791,6 +911,13 @@ class ActionView(APIViewWithLogger):
                     registration.completed = True
                     registration.completed_on = timezone.now()
                     registration.save()
+
+                    # Sending confirmation email:
+                    class_conf = settings.ACTIONVIEW_SETTINGS.get(
+                        self.__class__.__name__, {})
+                    email_conf = class_conf.get(
+                        'emails', {}).get('completed', None)
+                    send_email(registration, email_conf)
                     return Response(
                         {'notes': "Registration completed successfully."},
                         status=200)

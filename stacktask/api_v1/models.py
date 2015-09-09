@@ -34,6 +34,9 @@ class Registration(models.Model):
     reg_ip = models.GenericIPAddressField()
     keystone_user = JSONField(default={})
 
+    # which ActionView initiated this
+    action_view = models.CharField(max_length=200)
+
     # Effectively a log of what the actions are doing.
     action_notes = JSONField(default={})
 

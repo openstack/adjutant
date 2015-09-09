@@ -1,0 +1,11 @@
+Hello,
+
+Your registration has been completed.
+
+The actions you had requested are:
+{% for action in actions %}
+- {{ action }}
+{% endfor %}
+
+Thank you for using our service.
+
