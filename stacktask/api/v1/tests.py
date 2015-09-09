@@ -199,12 +199,6 @@ class APITests(APITestCase):
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(
-            response.data,
-            {'errors':
-                [("Must have one of the following roles: " +
-                  "['admin', 'project_mod', 'project_owner']")]}
-        )
 
     @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_new_user_not_my_project_admin(self):
