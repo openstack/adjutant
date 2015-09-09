@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 
 setup(
-    name='openstack-registration',
+    name='stack-task',
 
     version='0.1.0a1',
     description='A user registration service for openstack.',
