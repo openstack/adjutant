@@ -79,7 +79,12 @@ class FakeManager(object):
     def get_roles(self, user, project):
         global temp_cache
         try:
-            return project.roles[user.name]
+            roles = []
+            for role in project.roles[user.name]:
+                r = mock.Mock()
+                r.name = role
+                roles.append(r)
+            return roles
         except KeyError:
             return []
 
@@ -89,6 +94,13 @@ class FakeManager(object):
             project.roles[user.name].append(role)
         except KeyError:
             project.roles[user.name] = [role]
+
+    def remove_user_role(self, user, role, project_id):
+        project = self.get_project(project_id)
+        try:
+            project.roles[user.name].remove(role)
+        except KeyError:
+            pass
 
     def find_project(self, project_name):
         global temp_cache
@@ -140,12 +152,12 @@ class APITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member",
+            'roles': "project_owner,Member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'role': "Member",
+        data = {'email': "test@example.com", 'roles': ["Member"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -168,12 +180,12 @@ class APITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member",
+            'roles': "project_owner,Member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'role': "Member",
+        data = {'email': "test@example.com", 'roles': ["Member"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -195,43 +207,10 @@ class APITests(APITestCase):
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'role': "Member",
+        data = {'email': "test@example.com", 'roles': ["Member"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-
-    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
-    def test_new_user_not_my_project_admin(self):
-        """
-        Can create a user for project that isn't mine if admin.
-        """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.roles = {}
-
-        setup_temp_cache({'test_project': project}, {})
-
-        url = "/v1/user"
-        headers = {
-            'project_name': "test_project",
-            'project_id': "test_project_id",
-            'roles': "admin",
-            'username': "test@example.com",
-            'user_id': "test_user_id",
-            'authenticated': True
-        }
-        data = {'email': "test@example.com", 'role': "Member",
-                'project_id': 'test_project_id'}
-        response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'notes': ['created token']})
-
-        new_token = Token.objects.all()[0]
-        url = "/v1/token/" + new_token.token
-        data = {'password': 'testpassword'}
-        response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
     def test_new_user_not_authenticated(self):
@@ -243,7 +222,7 @@ class APITests(APITestCase):
 
         url = "/v1/user"
         headers = {}
-        data = {'email': "test@example.com", 'role': "Member",
+        data = {'email': "test@example.com", 'roles': ["Member"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -273,12 +252,12 @@ class APITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member",
+            'roles': "project_owner,Member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'role': "Member",
+        data = {'email': "test@example.com", 'roles': ["Member"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -309,12 +288,12 @@ class APITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member",
+            'roles': "project_owner,Member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'role': "Member",
+        data = {'email': "test@example.com", 'roles': ["Member"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -375,7 +354,7 @@ class APITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member",
+            'roles': "project_owner,Member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -419,7 +398,7 @@ class APITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member",
+            'roles': "project_owner,Member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True

@@ -99,6 +99,16 @@ ACTIONVIEW_SETTINGS:
                 reply: no-reply@example.com
                 template: completed.txt
                 html_template: completed.txt
+    EditUser:
+        emails:
+            completed:
+                subject: Registration completed
+                reply: no-reply@example.com
+                template: completed.txt
+                html_template: completed.txt
+        filter:
+            - admin
+            - Admin
 
 # Action settings:
 ACTION_SETTINGS:

@@ -30,9 +30,9 @@ class NewUserSerializer(BaseUserSerializer):
     email = serializers.EmailField()
     project_id = serializers.CharField(max_length=200)
 
-    role_options = (('project_mod', 'Project Owner (can add new users)'),
-                    ('Member', "Project Member (can't add new users)"))
-    role = serializers.ChoiceField(choices=role_options)
+    # TODO(Adriant): These need to come from a config file I think:
+    role_options = ['project_mod', 'project_owner', "Member"]
+    roles = serializers.MultipleChoiceField(choices=role_options)
 
 
 class NewProjectSerializer(BaseUserSerializer):
@@ -44,3 +44,7 @@ class NewProjectSerializer(BaseUserSerializer):
 class ResetUserSerializer(BaseUserSerializer):
     username = serializers.CharField(max_length=200)
     email = serializers.EmailField()
+
+
+class EditUserSerializer(NewUserSerializer):
+    remove = serializers.BooleanField(default=False)

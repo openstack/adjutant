@@ -16,7 +16,7 @@ from django.test import TestCase
 from stacktask.api.models import Registration
 from stacktask.api.v1.tests import FakeManager, setup_temp_cache
 from stacktask.api.v1 import tests
-from stacktask.base.models import NewUser, NewProject, ResetUser
+from stacktask.base.models import NewUser, NewProject, ResetUser, EditUser
 import mock
 
 
@@ -36,12 +36,14 @@ class BaseActionTests(TestCase):
         setup_temp_cache({'test_project': project}, {})
 
         registration = Registration.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
+            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+                                                       'project_mod'],
+                                             'project_id': 'test_project_id'})
 
         data = {
             'email': 'test@example.com',
             'project_id': 'test_project_id',
-            'role': 'Member'
+            'roles': ['Member']
         }
 
         action = NewUser(data, registration=registration, order=1)
@@ -83,12 +85,14 @@ class BaseActionTests(TestCase):
         setup_temp_cache({'test_project': project}, {user.name: user})
 
         registration = Registration.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
+            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+                                                       'project_mod'],
+                                             'project_id': 'test_project_id'})
 
         data = {
             'email': 'test@example.com',
             'project_id': 'test_project_id',
-            'role': 'Member'
+            'roles': ['Member']
         }
 
         action = NewUser(data, registration=registration, order=1)
@@ -127,12 +131,14 @@ class BaseActionTests(TestCase):
         setup_temp_cache({'test_project': project}, {user.name: user})
 
         registration = Registration.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
+            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+                                                       'project_mod'],
+                                             'project_id': 'test_project_id'})
 
         data = {
             'email': 'test@example.com',
             'project_id': 'test_project_id',
-            'role': 'Member'
+            'roles': ['Member']
         }
 
         action = NewUser(data, registration=registration, order=1)
@@ -159,12 +165,14 @@ class BaseActionTests(TestCase):
         setup_temp_cache({}, {})
 
         registration = Registration.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
+            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+                                                       'project_mod'],
+                                             'project_id': 'test_project_id'})
 
         data = {
             'email': 'test@example.com',
             'project_id': 'test_project_id',
-            'role': 'Member'
+            'roles': ['Member']
         }
 
         action = NewUser(data, registration=registration, order=1)
@@ -193,7 +201,9 @@ class BaseActionTests(TestCase):
         setup_temp_cache({}, {})
 
         registration = Registration.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
+            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+                                                       'project_mod'],
+                                             'project_id': 'test_project_id'})
 
         data = {
             'email': 'test@example.com',
@@ -235,7 +245,9 @@ class BaseActionTests(TestCase):
         setup_temp_cache({}, {})
 
         registration = Registration.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
+            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+                                                       'project_mod'],
+                                             'project_id': 'test_project_id'})
 
         data = {
             'email': 'test@example.com',
@@ -289,7 +301,9 @@ class BaseActionTests(TestCase):
         setup_temp_cache({}, {user.name: user})
 
         registration = Registration.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
+            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+                                                       'project_mod'],
+                                             'project_id': 'test_project_id'})
 
         data = {
             'email': 'test@example.com',
@@ -334,7 +348,9 @@ class BaseActionTests(TestCase):
         setup_temp_cache({project.name: project}, {})
 
         registration = Registration.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
+            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+                                                       'project_mod'],
+                                             'project_id': 'test_project_id'})
 
         data = {
             'email': 'test@example.com',
@@ -364,7 +380,9 @@ class BaseActionTests(TestCase):
         setup_temp_cache({}, {user.name: user})
 
         registration = Registration.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
+            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+                                                       'project_mod'],
+                                             'project_id': 'test_project_id'})
 
         data = {
             'email': 'test@example.com',
@@ -396,7 +414,9 @@ class BaseActionTests(TestCase):
         setup_temp_cache({}, {})
 
         registration = Registration.objects.create(
-            reg_ip="0.0.0.0", keystone_user={'roles': ['admin']})
+            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+                                                       'project_mod'],
+                                             'project_id': 'test_project_id'})
 
         data = {
             'email': 'test@example.com',
@@ -414,3 +434,183 @@ class BaseActionTests(TestCase):
         token_data = {}
         action.submit(token_data)
         self.assertEquals(action.valid, False)
+
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
+    def test_edit_user_add(self):
+        """
+        Add roles to existing user.
+        """
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+
+        setup_temp_cache({'test_project': project}, {user.name: user})
+
+        registration = Registration.objects.create(
+            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+                                                       'project_mod'],
+                                             'project_id': 'test_project_id'})
+
+        data = {
+            'email': 'test@example.com',
+            'project_id': 'test_project_id',
+            'roles': ['Member', 'project_mod'],
+            'remove': False
+        }
+
+        action = EditUser(data, registration=registration, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
+        token_data = {}
+        action.submit(token_data)
+        self.assertEquals(action.valid, True)
+
+        self.assertEquals(len(project.roles[user.name]), 2)
+        self.assertEquals(set(project.roles[user.name]),
+                          set(['Member', 'project_mod']))
+
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
+    def test_edit_user_add_complete(self):
+        """
+        Add roles to existing user.
+        """
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {user.name: ['Member', 'project_mod']}
+
+        setup_temp_cache({'test_project': project}, {user.name: user})
+
+        registration = Registration.objects.create(
+            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+                                                       'project_mod'],
+                                             'project_id': 'test_project_id'})
+
+        data = {
+            'email': 'test@example.com',
+            'project_id': 'test_project_id',
+            'roles': ['Member', 'project_mod'],
+            'remove': False
+        }
+
+        action = EditUser(data, registration=registration, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+        self.assertEquals(action.action.state, "complete")
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
+        token_data = {}
+        action.submit(token_data)
+        self.assertEquals(action.valid, True)
+
+        self.assertEquals(len(project.roles[user.name]), 2)
+        self.assertEquals(set(project.roles[user.name]),
+                          set(['Member', 'project_mod']))
+
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
+    def test_edit_user_remove(self):
+        """
+        Remove roles from existing user.
+        """
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {user.name: ['Member', 'project_mod']}
+
+        setup_temp_cache({'test_project': project}, {user.name: user})
+
+        registration = Registration.objects.create(
+            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+                                                       'project_mod'],
+                                             'project_id': 'test_project_id'})
+
+        data = {
+            'email': 'test@example.com',
+            'project_id': 'test_project_id',
+            'roles': ['project_mod'],
+            'remove': True
+        }
+
+        action = EditUser(data, registration=registration, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
+        token_data = {}
+        action.submit(token_data)
+        self.assertEquals(action.valid, True)
+
+        self.assertEquals(project.roles[user.name], ['Member'])
+
+    @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
+    def test_edit_user_remove_complete(self):
+        """
+        Remove roles from existing user.
+        """
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {user.name: ['Member']}
+
+        setup_temp_cache({'test_project': project}, {user.name: user})
+
+        registration = Registration.objects.create(
+            reg_ip="0.0.0.0", keystone_user={'roles': ['admin',
+                                                       'project_mod'],
+                                             'project_id': 'test_project_id'})
+
+        data = {
+            'email': 'test@example.com',
+            'project_id': 'test_project_id',
+            'roles': ['project_mod'],
+            'remove': True
+        }
+
+        action = EditUser(data, registration=registration, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+        self.assertEquals(action.action.state, "complete")
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
+        token_data = {}
+        action.submit(token_data)
+        self.assertEquals(action.valid, True)
+
+        self.assertEquals(project.roles[user.name], ['Member'])

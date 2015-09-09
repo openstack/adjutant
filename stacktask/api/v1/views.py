@@ -15,6 +15,7 @@
 from decorator import decorator
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from stacktask.base.user_store import IdentityManager
 from stacktask.api.models import Registration, Token, Notification
 from django.utils import timezone
 from datetime import timedelta
@@ -23,16 +24,17 @@ from logging import getLogger
 from django.core.mail import send_mail
 from smtplib import SMTPException
 
+
 from django.conf import settings
 from django.template import loader, Context
 
 
 @decorator
-def admin_or_owner(func, *args, **kwargs):
+def mod_or_owner(func, *args, **kwargs):
     """
     endpoints setup with this decorator require the defined roles.
     """
-    req_roles = {'admin', 'project_owner', 'project_mod'}
+    req_roles = {'project_owner', 'project_mod'}
     request = args[1]
     if not request.keystone_user.get('authenticated', False):
         return Response({'errors': ["Credentials incorrect or none given."]},
@@ -688,9 +690,12 @@ class ActionView(APIViewWithLogger):
         The get method will return a json listing the actions this
         view will run, and the data fields that those actons require.
         """
+        class_conf = settings.ACTIONVIEW_SETTINGS.get(self.__class__.__name__,
+                                                      {})
+
         actions = [self.default_action, ]
 
-        actions += settings.API_ACTIONS.get(self.__class__.__name__, [])
+        actions += class_conf.get('actions', [])
 
         required_fields = []
 
@@ -960,11 +965,11 @@ class AttachUser(ActionView):
 
     default_action = 'NewUser'
 
-    @admin_or_owner
+    @mod_or_owner
     def get(self, request):
         return super(AttachUser, self).get(request)
 
-    @admin_or_owner
+    @mod_or_owner
     def post(self, request, format=None):
         """
         This endpoint requires either Admin access or the
@@ -1007,5 +1012,75 @@ class ResetPassword(ActionView):
 
         registration = processed['registration']
         self.logger.info("(%s) - AutoApproving Resetuser request."
+                         % timezone.now())
+        return self.approve(registration)
+
+
+class EditUser(ActionView):
+
+    default_action = 'EditUser'
+
+    @mod_or_owner
+    def get(self, request):
+        class_conf = settings.ACTIONVIEW_SETTINGS.get(self.__class__.__name__,
+                                                      {})
+
+        actions = [self.default_action, ]
+
+        actions += class_conf.get('actions', [])
+        filters = class_conf.get('filters', [])
+
+        required_fields = []
+
+        for action in actions:
+            action_class, action_serializer = settings.ACTION_CLASSES[action]
+            for field in action_class.required:
+                if field not in required_fields:
+                    required_fields.append(field)
+
+        user_list = []
+        id_manager = IdentityManager()
+        project_id = request.keystone_user['project_id']
+        project = id_manager.get_project(project_id)
+
+        for user in project.list_users():
+            skip = False
+            self.logger.info(user)
+            roles = []
+            for role in id_manager.get_roles(user, project):
+                if role.name in filters:
+                    skip = True
+                    continue
+                roles.append(role.name)
+            if skip:
+                continue
+            user_list.append({"username": user.username,
+                              "email": user.username,
+                              "roles": roles})
+
+        return Response({'actions': actions,
+                         'required_fields': required_fields,
+                         'users': user_list})
+
+    @mod_or_owner
+    def post(self, request, format=None):
+        """
+        This endpoint requires either mod access or the
+        request to come from a project_owner.
+        As such this Registration is considered pre-approved.
+        Runs process_actions, then does the approve step and
+        post_approve validation, and creates a Token if valid.
+        """
+        self.logger.info("(%s) - New EditUser request." % timezone.now())
+        processed = self.process_actions(request)
+
+        errors = processed.get('errors', None)
+        if errors:
+            self.logger.info("(%s) - Validation errors with registration." %
+                             timezone.now())
+            return Response(errors, status=400)
+
+        registration = processed['registration']
+        self.logger.info("(%s) - AutoApproving EditUser request."
                          % timezone.now())
         return self.approve(registration)
