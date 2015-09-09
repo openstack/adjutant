@@ -212,7 +212,7 @@ class NewUser(UserAction):
 
     token_fields = ['password']
 
-    default_roles = ["Member"]
+    default_roles = {"Member"}
 
     def _validate(self):
         id_manager = IdentityManager()
@@ -279,15 +279,18 @@ class NewUser(UserAction):
 
             if self.action.state == "default":
                 try:
+                    self.default_roles.add(self.role)
+
+                    roles = []
+                    for role in self.default_roles:
+                        roles.append(id_manager.find_role(role))
+
                     user = id_manager.create_user(
                         name=self.username, password=token_data['password'],
                         email=self.email, project_id=self.project_id)
 
-                    self.default_roles.append(self.role)
-                    for role in set(self.default_roles):
-                        ks_role = id_manager.find_role(role)
-                        id_manager.add_user_role(user, ks_role,
-                                                 self.project_id)
+                    for role in roles:
+                        id_manager.add_user_role(user, role, self.project_id)
                 except Exception as e:
                     self.add_note(
                         "Error: '%s' while creating user: %s with role: %s" %
@@ -301,11 +304,12 @@ class NewUser(UserAction):
                 try:
                     user = id_manager.find_user(self.username)
 
-                    self.default_roles.append(self.role)
-                    for role in set(self.default_roles):
-                        ks_role = id_manager.find_role(role)
-                        id_manager.add_user_role(user, ks_role,
-                                                 self.project_id)
+                    roles = []
+                    for role in self.default_roles:
+                        roles.append(id_manager.find_role(role))
+
+                    for role in roles:
+                        id_manager.add_user_role(user, role, self.project_id)
                 except Exception as e:
                     self.add_note(
                         "Error: '%s' while attaching user: %s with role: %s" %
@@ -336,7 +340,7 @@ class NewProject(UserAction):
 
     token_fields = ['password']
 
-    default_roles = ["Member", "project_owner", "project_mod"]
+    default_roles = {"Member", "project_owner", "project_mod"}
 
     def _validate_project(self):
         id_manager = IdentityManager()
@@ -419,13 +423,16 @@ class NewProject(UserAction):
 
             if self.action.state == "default":
                 try:
+                    roles = []
+                    for role in self.default_roles:
+                        roles.append(id_manager.find_role(role))
+
                     user = id_manager.create_user(
                         name=self.username, password=token_data['password'],
                         email=self.email, project_id=project.id)
 
-                    for role in self.default_roles:
-                        ks_role = id_manager.find_role(role)
-                        id_manager.add_user_role(user, ks_role, project.id)
+                    for role in roles:
+                        id_manager.add_user_role(user, role, project.id)
                 except Exception as e:
                     self.add_note(
                         "Error: '%s' while creating user: %s with roles: %s" %
@@ -439,9 +446,12 @@ class NewProject(UserAction):
                 try:
                     user = id_manager.find_user(self.username)
 
+                    roles = []
                     for role in self.default_roles:
-                        ks_role = id_manager.find_role(role)
-                        id_manager.add_user_role(user, ks_role, project.id)
+                        roles.append(id_manager.find_role(role))
+
+                    for role in roles:
+                        id_manager.add_user_role(user, role, project.id)
                 except Exception as e:
                     self.add_note(
                         "Error: '%s' while attaching user: %s with roles: %s" %
