@@ -139,7 +139,7 @@ DEFAULT_REGION = CONFIG['DEFAULT_REGION']
 # Additonal actions for views:
 # - The order of the actions matters. These will run after the default action,
 #   in the given order.
-ACTIONVIEW_SETTINGS = CONFIG['ACTIONVIEW_SETTINGS']
+TASKVIEW_SETTINGS = CONFIG['TASKVIEW_SETTINGS']
 
 ACTION_SETTINGS = CONFIG['ACTION_SETTINGS']
 

@@ -36,7 +36,7 @@ class Task(models.Model):
     project_id = models.CharField(max_length=200, db_index=True, null=True)
 
     # which ActionView initiated this
-    action_view = models.CharField(max_length=200, db_index=True)
+    task_view = models.CharField(max_length=200, db_index=True)
 
     # Effectively a log of what the actions are doing.
     action_notes = JSONField(default={})

@@ -14,18 +14,27 @@
 
 from django.conf.urls import patterns, url
 from stacktask.api.v1 import views
+from stacktask.api.v1 import tasks
+from stacktask.api.v1 import openstack
 
 
 urlpatterns = patterns(
     '',
-    url(r'^task/(?P<uuid>\w+)', views.TaskDetail.as_view()),
-    url(r'^task', views.TaskList.as_view()),
-    url(r'^token/(?P<id>\w+)', views.TokenDetail.as_view()),
-    url(r'^token', views.TokenList.as_view()),
-    url(r'^notification/(?P<pk>\w+)', views.NotificationDetail.as_view()),
-    url(r'^notification', views.NotificationList.as_view()),
-    url(r'^project', views.CreateProject.as_view()),
-    url(r'^user', views.AttachUser.as_view()),
-    url(r'^reset', views.ResetPassword.as_view()),
-    url(r'^edit', views.EditUser.as_view()),
+    url(r'^tasks/(?P<uuid>\w+)', views.TaskDetail.as_view()),
+    url(r'^tasks', views.TaskList.as_view()),
+    url(r'^tokens/(?P<id>\w+)', views.TokenDetail.as_view()),
+    url(r'^tokens', views.TokenList.as_view()),
+    url(r'^notifications/(?P<pk>\w+)', views.NotificationDetail.as_view()),
+    url(r'^notifications', views.NotificationList.as_view()),
+
+    url(r'^actions/CreateProject', tasks.CreateProject.as_view()),
+    url(r'^actions/InviteUser', tasks.InviteUser.as_view()),
+    url(r'^actions/ResetPassword', tasks.ResetPassword.as_view()),
+    url(r'^actions/EditUser', tasks.EditUser.as_view()),
+
+    url(r'^openstack/users/(?P<user_id>\w+)', openstack.UserDetail.as_view()),
+    url(r'^openstack/users/(?P<user_id>\w+)/roles',
+        openstack.UserRoles.as_view()),
+    url(r'^openstack/users/?$', openstack.UserList.as_view()),
+    url(r'^openstack/roles/?$', openstack.RoleList.as_view()),
 )

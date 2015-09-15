@@ -78,7 +78,7 @@ ACTIONVIEW_SETTINGS:
                 reply: no-reply@example.com
                 template: completed.txt
                 html_template: completed.txt
-    AttachUser:
+    InviteUser:
         emails:
             # To not send this email, set the value to null,
             # or don't have the field there at all.
@@ -105,6 +105,15 @@ ACTIONVIEW_SETTINGS:
                 reply: no-reply@example.com
                 template: completed.txt
                 html_template: completed.txt
+    UserList:
+        emails:
+            initial: null
+            token:
+                subject: Invitation to join the Catalyst Cloud(rego)
+                reply: no-reply@example.com
+                template: token.txt
+                html_template: token.txt
+            completed: null
     EditUser:
         emails:
             completed:

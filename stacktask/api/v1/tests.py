@@ -148,7 +148,7 @@ class APITests(APITestCase):
 
         setup_temp_cache({'test_project': project}, {})
 
-        url = "/v1/user"
+        url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
@@ -164,7 +164,7 @@ class APITests(APITestCase):
         self.assertEqual(response.data, {'notes': ['created token']})
 
         new_token = Token.objects.all()[0]
-        url = "/v1/token/" + new_token.token
+        url = "/v1/tokens/" + new_token.token
         data = {'password': 'testpassword'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -176,7 +176,7 @@ class APITests(APITestCase):
         """
         setup_temp_cache({}, {})
 
-        url = "/v1/user"
+        url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
@@ -198,7 +198,7 @@ class APITests(APITestCase):
         """
         setup_temp_cache({}, {})
 
-        url = "/v1/user"
+        url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
@@ -220,7 +220,7 @@ class APITests(APITestCase):
 
         setup_temp_cache({}, {})
 
-        url = "/v1/user"
+        url = "/v1/actions/InviteUser"
         headers = {}
         data = {'email': "test@example.com", 'roles': ["Member"],
                 'project_id': 'test_project_id'}
@@ -248,7 +248,7 @@ class APITests(APITestCase):
 
         setup_temp_cache({'test_project': project}, {user.name: user})
 
-        url = "/v1/user"
+        url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
@@ -264,7 +264,7 @@ class APITests(APITestCase):
         self.assertEqual(response.data, {'notes': ['created token']})
 
         new_token = Token.objects.all()[0]
-        url = "/v1/token/" + new_token.token
+        url = "/v1/tokens/" + new_token.token
         data = {'confirm': True}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -288,7 +288,7 @@ class APITests(APITestCase):
 
         setup_temp_cache({'test_project': project}, {user.name: user})
 
-        url = "/v1/user"
+        url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
@@ -314,7 +314,7 @@ class APITests(APITestCase):
 
         setup_temp_cache({}, {})
 
-        url = "/v1/project"
+        url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -328,13 +328,13 @@ class APITests(APITestCase):
             'authenticated': True
         }
         new_task = Task.objects.all()[0]
-        url = "/v1/task/" + new_task.uuid
+        url = "/v1/tasks/" + new_task.uuid
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         new_token = Token.objects.all()[0]
-        url = "/v1/token/" + new_token.token
+        url = "/v1/tokens/" + new_token.token
         data = {'password': 'testpassword'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -354,7 +354,7 @@ class APITests(APITestCase):
 
         setup_temp_cache({'test_project': project}, {})
 
-        url = "/v1/user"
+        url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
@@ -363,7 +363,7 @@ class APITests(APITestCase):
             'user_id': "test_user_id",
             'authenticated': True
         }
-        url = "/v1/project"
+        url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -377,7 +377,7 @@ class APITests(APITestCase):
             'authenticated': True
         }
         new_task = Task.objects.all()[0]
-        url = "/v1/task/" + new_task.uuid
+        url = "/v1/tasks/" + new_task.uuid
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -398,7 +398,7 @@ class APITests(APITestCase):
 
         setup_temp_cache({}, {user.name: user})
 
-        url = "/v1/user"
+        url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
@@ -407,7 +407,7 @@ class APITests(APITestCase):
             'user_id': "test_user_id",
             'authenticated': True
         }
-        url = "/v1/project"
+        url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -421,7 +421,7 @@ class APITests(APITestCase):
             'authenticated': True
         }
         new_task = Task.objects.all()[0]
-        url = "/v1/task/" + new_task.uuid
+        url = "/v1/tasks/" + new_task.uuid
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -445,14 +445,14 @@ class APITests(APITestCase):
 
         setup_temp_cache({}, {user.name: user})
 
-        url = "/v1/reset"
+        url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {'notes': ['created token']})
 
         new_token = Token.objects.all()[0]
-        url = "/v1/token/" + new_token.token
+        url = "/v1/tokens/" + new_token.token
         data = {'password': 'new_test_password'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -466,7 +466,7 @@ class APITests(APITestCase):
 
         setup_temp_cache({}, {})
 
-        url = "/v1/reset"
+        url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -476,7 +476,7 @@ class APITests(APITestCase):
         """
         Should be a 404.
         """
-        url = "/v1/token/e8b3f57f5da64bf3a6bf4f9bbd3a40b5"
+        url = "/v1/tokens/e8b3f57f5da64bf3a6bf4f9bbd3a40b5"
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(
@@ -486,7 +486,7 @@ class APITests(APITestCase):
         """
         Should be a 404.
         """
-        url = "/v1/token/e8b3f57f5da64bf3a6bf4f9bbd3a40b5"
+        url = "/v1/tokens/e8b3f57f5da64bf3a6bf4f9bbd3a40b5"
         response = self.client.post(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(
@@ -504,7 +504,7 @@ class APITests(APITestCase):
             'user_id': "test_user_id",
             'authenticated': True
         }
-        url = "/v1/task/e8b3f57f5da64bf3a6bf4f9bbd3a40b5"
+        url = "/v1/tasks/e8b3f57f5da64bf3a6bf4f9bbd3a40b5"
         response = self.client.get(url, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(
@@ -522,7 +522,7 @@ class APITests(APITestCase):
             'user_id': "test_user_id",
             'authenticated': True
         }
-        url = "/v1/task/e8b3f57f5da64bf3a6bf4f9bbd3a40b5"
+        url = "/v1/tasks/e8b3f57f5da64bf3a6bf4f9bbd3a40b5"
         response = self.client.post(url, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(
@@ -542,7 +542,7 @@ class APITests(APITestCase):
 
         setup_temp_cache({}, {user.name: user})
 
-        url = "/v1/reset"
+        url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -551,7 +551,7 @@ class APITests(APITestCase):
         new_token = Token.objects.all()[0]
         new_token.expires = timezone.now() - timedelta(hours=24)
         new_token.save()
-        url = "/v1/token/" + new_token.token
+        url = "/v1/tokens/" + new_token.token
         data = {'password': 'new_test_password'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -572,7 +572,7 @@ class APITests(APITestCase):
 
         setup_temp_cache({}, {user.name: user})
 
-        url = "/v1/reset"
+        url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -581,7 +581,7 @@ class APITests(APITestCase):
         new_token = Token.objects.all()[0]
         new_token.expires = timezone.now() - timedelta(hours=24)
         new_token.save()
-        url = "/v1/token/" + new_token.token
+        url = "/v1/tokens/" + new_token.token
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {'errors': ['This token has expired.']})
@@ -595,7 +595,7 @@ class APITests(APITestCase):
         """
         setup_temp_cache({}, {})
 
-        url = "/v1/project"
+        url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -611,7 +611,7 @@ class APITests(APITestCase):
         new_task = Task.objects.all()[0]
         new_task.completed = True
         new_task.save()
-        url = "/v1/task/" + new_task.uuid
+        url = "/v1/tasks/" + new_task.uuid
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -635,7 +635,7 @@ class APITests(APITestCase):
 
         setup_temp_cache({'test_project': project}, {})
 
-        url = "/v1/project"
+        url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -650,7 +650,7 @@ class APITests(APITestCase):
         }
 
         new_task = Task.objects.all()[0]
-        url = "/v1/task/" + new_task.uuid
+        url = "/v1/tasks/" + new_task.uuid
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -679,7 +679,7 @@ class APITests(APITestCase):
         """
         setup_temp_cache({}, {})
 
-        url = "/v1/project"
+        url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -695,7 +695,7 @@ class APITests(APITestCase):
             'authenticated': True
         }
 
-        url = "/v1/notification"
+        url = "/v1/notifications"
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
@@ -710,7 +710,7 @@ class APITests(APITestCase):
         """
         setup_temp_cache({}, {})
 
-        url = "/v1/project"
+        url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -726,20 +726,20 @@ class APITests(APITestCase):
             'authenticated': True
         }
 
-        url = "/v1/notification"
+        url = "/v1/notifications"
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             response.data[0]['task'],
             new_task.uuid)
 
-        url = "/v1/notification/%s/" % response.data[0]['pk']
+        url = "/v1/notifications/%s/" % response.data[0]['pk']
         data = {'acknowledged': True}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.data,
                          {'notes': ['Notification acknowledged.']})
 
-        url = "/v1/notification"
+        url = "/v1/notifications"
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.data, [])
 
@@ -751,7 +751,7 @@ class APITests(APITestCase):
         """
         setup_temp_cache({}, {})
 
-        url = "/v1/project"
+        url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -768,17 +768,17 @@ class APITests(APITestCase):
             'authenticated': True
         }
 
-        url = "/v1/notification"
+        url = "/v1/notifications"
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        url = "/v1/notification"
+        url = "/v1/notifications"
         data = {'notifications': [note['pk'] for note in response.data]}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.data,
                          {'notes': ['Notifications acknowledged.']})
 
-        url = "/v1/notification"
+        url = "/v1/notifications"
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.data, [])
 
@@ -802,13 +802,13 @@ class APITests(APITestCase):
 
         setup_temp_cache({}, {user.name: user, user2.name: user2})
 
-        url = "/v1/reset"
+        url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {'notes': ['created token']})
 
-        url = "/v1/reset"
+        url = "/v1/actions/ResetPassword"
         data = {'email': "test2@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -830,7 +830,7 @@ class APITests(APITestCase):
             'user_id': "test_user_id",
             'authenticated': True
         }
-        url = "/v1/token/"
+        url = "/v1/tokens/"
         response = self.client.delete(url, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data,
@@ -851,7 +851,7 @@ class APITests(APITestCase):
 
         setup_temp_cache({}, {user.name: user})
 
-        url = "/v1/reset"
+        url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -870,7 +870,7 @@ class APITests(APITestCase):
             'user_id': "test_user_id",
             'authenticated': True
         }
-        url = "/v1/token/"
+        url = "/v1/tokens/"
         data = {"task": task.uuid}
         response = self.client.post(url, data, format='json',
                                     headers=headers)
@@ -890,7 +890,7 @@ class APITests(APITestCase):
 
         setup_temp_cache({}, {})
 
-        url = "/v1/project"
+        url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -904,9 +904,10 @@ class APITests(APITestCase):
             'authenticated': True
         }
         new_task = Task.objects.all()[0]
-        url = "/v1/task/" + new_task.uuid
+        url = "/v1/tasks/" + new_task.uuid
         response = self.client.delete(url, format='json',
                                       headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
@@ -925,7 +926,7 @@ class APITests(APITestCase):
 
         setup_temp_cache({}, {})
 
-        url = "/v1/project"
+        url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -939,7 +940,7 @@ class APITests(APITestCase):
             'authenticated': True
         }
         new_task = Task.objects.all()[0]
-        url = "/v1/task/" + new_task.uuid
+        url = "/v1/tasks/" + new_task.uuid
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -949,7 +950,7 @@ class APITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         new_token = Token.objects.all()[0]
-        url = "/v1/token/" + new_token.token
+        url = "/v1/tokens/" + new_token.token
         data = {'password': 'testpassword'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -968,7 +969,7 @@ class APITests(APITestCase):
 
         setup_temp_cache({}, {})
 
-        url = "/v1/project"
+        url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -983,7 +984,7 @@ class APITests(APITestCase):
         }
 
         new_task = Task.objects.all()[0]
-        url = "/v1/task/" + new_task.uuid
+        url = "/v1/tasks/" + new_task.uuid
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

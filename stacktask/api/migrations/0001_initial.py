@@ -29,7 +29,7 @@ class Migration(migrations.Migration):
                 ('ip_address', models.GenericIPAddressField()),
                 ('keystone_user', jsonfield.fields.JSONField(default={})),
                 ('project_id', models.CharField(max_length=200, null=True, db_index=True)),
-                ('action_view', models.CharField(max_length=200, db_index=True)),
+                ('task_view', models.CharField(max_length=200, db_index=True)),
                 ('action_notes', jsonfield.fields.JSONField(default={})),
                 ('cancelled', models.BooleanField(default=False, db_index=True)),
                 ('approved', models.BooleanField(default=False, db_index=True)),

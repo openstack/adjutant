@@ -71,8 +71,8 @@ DEFAULT_REGION = 'RegionOne'
 # Additonal actions for views:
 # - The order of the actions matters. These will run after the default action,
 #   in the given order.
-ACTIONVIEW_SETTINGS = {
-    'AttachUser': {
+TASKVIEW_SETTINGS = {
+    'InviteUser': {
         'emails': {
             'token': {
                 'reply': 'no-reply@example.com',
@@ -158,6 +158,6 @@ conf_dict = {
     "USERNAME_IS_EMAIL": USERNAME_IS_EMAIL,
     "KEYSTONE": KEYSTONE,
     "DEFAULT_REGION": DEFAULT_REGION,
-    "ACTIONVIEW_SETTINGS": ACTIONVIEW_SETTINGS,
+    "TASKVIEW_SETTINGS": TASKVIEW_SETTINGS,
     "ACTION_SETTINGS": ACTION_SETTINGS
 }

@@ -1,0 +1,66 @@
+# Copyright (C) 2015 Catalyst IT Ltd
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
+
+from decorator import decorator
+
+from rest_framework.response import Response
+
+
+def require_roles(roles, func, *args, **kwargs):
+    """
+    endpoints setup with this decorator require the defined roles.
+    """
+    request = args[1]
+    req_roles = set(roles)
+    if not request.keystone_user.get('authenticated', False):
+        return Response({'errors': ["Credentials incorrect or none given."]},
+                        401)
+
+    roles = set(request.keystone_user.get('roles', []))
+
+    if roles & req_roles:
+        return func(*args, **kwargs)
+
+    return Response({'errors': ["Must have one of the following roles: %s" %
+                                list(req_roles)]},
+                    403)
+
+
+@decorator
+def mod_or_owner(func, *args, **kwargs):
+    return require_roles(
+        {'project_owner', 'project_mod'}, func, *args, **kwargs)
+
+
+@decorator
+def mod_or_owner_or_admin(func, *args, **kwargs):
+    return require_roles(
+        {'project_owner', 'project_mod', 'admin'}, func, *args, **kwargs)
+
+
+@decorator
+def admin(func, *args, **kwargs):
+    """
+    endpoints setup with this decorator require the admin role.
+    """
+    request = args[1]
+    if not request.keystone_user.get('authenticated', False):
+        return Response({'errors': ["Credentials incorrect or none given."]},
+                        401)
+
+    roles = request.keystone_user.get('roles', [])
+    if "admin" in roles:
+        return func(*args, **kwargs)
+
+    return Response({'errors': ["Must be admin."]}, 403)
