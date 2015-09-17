@@ -68,6 +68,8 @@ KEYSTONE = {
 
 DEFAULT_REGION = 'RegionOne'
 
+TOKEN_SUBMISSION_URL = 'http://localhost:8080/token/'
+
 # Additonal actions for views:
 # - The order of the actions matters. These will run after the default action,
 #   in the given order.
@@ -159,5 +161,6 @@ conf_dict = {
     "KEYSTONE": KEYSTONE,
     "DEFAULT_REGION": DEFAULT_REGION,
     "TASKVIEW_SETTINGS": TASKVIEW_SETTINGS,
-    "ACTION_SETTINGS": ACTION_SETTINGS
+    "ACTION_SETTINGS": ACTION_SETTINGS,
+    "TOKEN_SUBMISSION_URL": TOKEN_SUBMISSION_URL
 }

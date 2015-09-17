@@ -82,6 +82,7 @@ class TaskView(APIViewWithLogger):
         for action in actions:
             action_class, action_serializer = settings.ACTION_CLASSES[action]
 
+            # instantiate serializer class
             if action_serializer is not None:
                 serializer = action_serializer(data=request.data)
             else:
@@ -109,6 +110,8 @@ class TaskView(APIViewWithLogger):
                     data = act['serializer'].validated_data
                 else:
                     data = {}
+
+                # construct the action class
                 action = act['action'](
                     data=data, task=task,
                     order=i

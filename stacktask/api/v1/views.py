@@ -481,10 +481,10 @@ class TokenList(APIViewWithLogger):
             send_email(task, email_conf, token)
         except KeyError as e:
             notes = {
-                'errors':
-                    [("Error: '%s' while sending " +
-                      "token. See task " +
-                      "itself for details.") % e],
+                'errors': [
+                    ("Error: '%(error)s' while sending token. " +
+                     "See registration itself for details.") % {'error': e}
+                ],
                 'task': task.uuid
             }
             create_notification(task, notes)
@@ -524,9 +524,13 @@ class TokenDetail(APIViewWithLogger):
         """
         try:
             token = Token.objects.get(token=id)
+            if token.expires < timezone.now():
+                token.delete()
+                token = Token.objects.get(token=id)
         except Token.DoesNotExist:
             return Response(
-                {'errors': ['This token does not exist.']}, status=404)
+                {'errors': ['This token does not exist or has expired.']},
+                status=404)
 
         if token.task.completed:
             return Response(
@@ -566,9 +570,13 @@ class TokenDetail(APIViewWithLogger):
         """
         try:
             token = Token.objects.get(token=id)
+            if token.expires < timezone.now():
+                token.delete()
+                token = Token.objects.get(token=id)
         except Token.DoesNotExist:
             return Response(
-                {'errors': ['This token does not exist.']}, status=404)
+                {'errors': ['This token does not exist or has expired.']},
+                status=404)
 
         if token.task.completed:
             return Response(
@@ -589,11 +597,10 @@ class TokenDetail(APIViewWithLogger):
 
         required_fields = set()
         actions = []
-
         for action in token.task.actions:
-            action = action.get_action()
-            actions.append(action)
-            for field in action.token_fields:
+            a = action.get_action()
+            actions.append(a)
+            for field in a.token_fields:
                 required_fields.add(field)
 
         errors = {}

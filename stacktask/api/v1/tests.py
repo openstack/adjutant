@@ -480,7 +480,8 @@ class APITests(APITestCase):
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(
-            response.data, {'errors': ['This token does not exist.']})
+            response.data,
+            {'errors': ['This token does not exist or has expired.']})
 
     def test_no_token_post(self):
         """
@@ -490,7 +491,8 @@ class APITests(APITestCase):
         response = self.client.post(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(
-            response.data, {'errors': ['This token does not exist.']})
+            response.data,
+            {'errors': ['This token does not exist or has expired.']})
 
     def test_no_task_get(self):
         """
@@ -554,8 +556,10 @@ class APITests(APITestCase):
         url = "/v1/tokens/" + new_token.token
         data = {'password': 'new_test_password'}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {'errors': ['This token has expired.']})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            response.data,
+            {'errors': ['This token does not exist or has expired.']})
         self.assertEqual(0, Token.objects.count())
 
     @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
@@ -583,8 +587,10 @@ class APITests(APITestCase):
         new_token.save()
         url = "/v1/tokens/" + new_token.token
         response = self.client.get(url)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {'errors': ['This token has expired.']})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            response.data,
+            {'errors': ['This token does not exist or has expired.']})
         self.assertEqual(0, Token.objects.count())
 
     @mock.patch('stacktask.base.models.IdentityManager', FakeManager)
