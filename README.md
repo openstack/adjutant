@@ -2,7 +2,7 @@
 
 A basic workflow framework built to help automate basic Admin tasks within an OpenStack cluster.
 
-Primariliy built as user registration service that fits into the OpenStack ecosystem alongside Keystone, its purpose to fill functionality missing from Keystone. Ultimately it is just a framework with actions that are tied to an endpoint and can require certain data fields and perform actions via the OpenStack clients.
+Primarily built as user registration service that fits into the OpenStack ecosystem alongside Keystone, its purpose to fill functionality missing from Keystone. Ultimately it is just a framework with actions that are tied to an endpoint and can require certain data fields and perform actions via the OpenStack clients.
 
 Useful for automating generic admin tasks that users might request but otherwise can't do without the admin role. Also allows automating the signup and creation of new users, but also allows such requests to require approval first if wanted. Due to issuing of uri+tokens for final steps of some actions, allows for a password submit/reset system as well.
 
@@ -15,7 +15,7 @@ The base use case is three stages:
 * Recieve Request
   * Validate request data against action serializers.
   * If valid, setup Registration to represent the request, and the Actions specified for that ActionView.
-  * The service runs the pre_approve function on all actions which should do any self validation to mark the actions themselves as valid or invalid, and populating the notes in the Registration based on that.
+  * The service runs the pre_approve function on all actions which should do any self validation to mark the actions themselves as valid or invalid, and populating the nodes in the Registration based on that.
 * Admin Approval
   * An admin looks at the Registration and its notes.
   * If they decide it is safe to approve, they do so.
@@ -159,6 +159,13 @@ See 'api_v1.views' and look at the ActionView class to get a better idea.
 
 Dev is mainly done within a virtualenv setup alongside a devstack deployment.
 
+$ cd openstack-registration
+$ virtualenv venv
+$ source ./venv/bin/activate
+$ pip install -r requirements.txt
+$ python setup.py develop
+$ stacktask runserver
+
 ### Adding Actions:
 
 Adding new actions is done by creating a new django app and defining the action models and their serializers. Action must extend the BaseAction class as defined in the base.models module. They also must add themselves to the global store of actions (see the bottom of existing models modules).
@@ -181,7 +188,7 @@ This section is a work in progress, although eventually there should be a puppet
 * Finish and clean up the client/shell tools
 * Nicer handling of token emails and email templates
 * Tests for username isn't email vs username is email
-* Basic admin panel in horizon, and example public forms for registration and token submition.
+* Basic admin panel in horizon, and example public forms for registration and token submission.
 
 ## Future Plans:
 
