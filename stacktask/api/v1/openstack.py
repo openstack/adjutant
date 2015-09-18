@@ -26,8 +26,8 @@ class UserList(tasks.InviteUser):
     @utils.mod_or_owner
     def get(self, request):
         """Get a list of all users who have been added to a tenant"""
-        class_conf = settings.ACTIONVIEW_SETTINGS.get(self.__class__.__name__,
-                                                      {})
+        class_conf = settings.TASKVIEW_SETTINGS.get(self.__class__.__name__,
+                                                    {})
         filters = class_conf.get('filters', [])
         user_list = []
         id_manager = IdentityManager()
@@ -160,9 +160,9 @@ class RoleList(tasks.TaskView):
             ],
         }
         # merge mapping lists to form a flat permitted roles list
-        managable_role_names = [mrole for role in user_roles
-                                if role.name in manage_mapping
-                                for mrole in manage_mapping[role.name]]
+        managable_role_names = [mrole for role_name in user_roles
+                                if role_name in manage_mapping
+                                for mrole in manage_mapping[role_name]]
         # a set has unique items
         managable_role_names = set(managable_role_names)
 
@@ -175,5 +175,4 @@ class RoleList(tasks.TaskView):
             if role:
                 managable_roles.append(role.to_dict())
 
-        managable_roles = utils.get
         return Response({'roles': managable_roles})
