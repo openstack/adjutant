@@ -18,19 +18,19 @@ DATABASES:
 LOGGING:
     version: 1
     disable_existing_loggers: False
-    handlers: 
-        file: 
+    handlers:
+        file:
             level: INFO
             class: logging.FileHandler
             filename: reg_log.log
-    loggers: 
-        django: 
-            handlers: 
+    loggers:
+        django:
+            handlers:
                 - file
             level: INFO
             propagate: True
-        keystonemiddleware: 
-            handlers: 
+        keystonemiddleware:
+            handlers:
                 - file
             level: INFO
             propagate: True
@@ -134,13 +134,15 @@ ACTION_SETTINGS:
             - Member
             - project_owner
             - project_mod
+            - heat_stack_owner
+            - _member_
     DefaultProjectResources:
         RegionOne:
             network_name: somenetwork
             subnet_name: somesubnet
             router_name: somerouter
             public_network: 3cb50d61-5bce-4c03-96e6-8e262e12bb35
-            DNS_NAMESERVERS: 
+            DNS_NAMESERVERS:
                 - 193.168.1.2
                 - 193.168.1.3
             SUBNET_CIDR: 192.168.1.0/24

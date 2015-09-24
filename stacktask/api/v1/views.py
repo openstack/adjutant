@@ -105,7 +105,7 @@ class NotificationDetail(APIViewWithLogger):
 
 class TaskList(APIViewWithLogger):
 
-    @utils.mod_or_owner_or_admin
+    @utils.mod_or_owner
     def get(self, request, format=None):
         """
         A list of dict representations of Task objects
@@ -129,7 +129,7 @@ class TaskList(APIViewWithLogger):
 
 class TaskDetail(APIViewWithLogger):
 
-    @utils.mod_or_owner_or_admin
+    @utils.mod_or_owner
     def get(self, request, uuid, format=None):
         """
         Dict representation of a Task object

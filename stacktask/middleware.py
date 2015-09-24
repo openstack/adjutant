@@ -75,11 +75,15 @@ class RequestLoggingMiddleware(object):
         request.timer = time()
 
     def process_response(self, request, response):
+        if getattr(request, 'timer'):
+            time_delta = time() - request.timer
+        else:
+            time_delta = -1
         self.logger.info(
             '(%s) - <%s> [%s] - (%.1fs)',
             timezone.now(),
             response.status_code,
             request.get_full_path(),
-            time() - request.timer
+            time_delta
         )
         return response

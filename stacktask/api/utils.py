@@ -33,18 +33,15 @@ def require_roles(roles, func, *args, **kwargs):
         return func(*args, **kwargs)
 
     return Response({'errors': ["Must have one of the following roles: %s" %
-                                list(req_roles)]},
-                    403)
+                                list(req_roles)]}, 403)
 
 
 @decorator
 def mod_or_owner(func, *args, **kwargs):
-    return require_roles(
-        {'project_owner', 'project_mod'}, func, *args, **kwargs)
-
-
-@decorator
-def mod_or_owner_or_admin(func, *args, **kwargs):
+    """
+    Require project mod or owner.
+    Admin is allowed everything, so is also included.
+    """
     return require_roles(
         {'project_owner', 'project_mod', 'admin'}, func, *args, **kwargs)
 

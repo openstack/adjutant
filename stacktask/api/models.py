@@ -75,8 +75,9 @@ class Task(models.Model):
             "uuid": self.uuid,
             "ip_address": self.ip_address,
             "keystone_user": self.keystone_user,
+            "project_id": self.project_id,
             "actions": actions,
-            "action_view": self.action_view,
+            "task_view": self.task_view,
             "action_notes": self.action_notes,
             "cancelled": self.cancelled,
             "approved": self.approved,
@@ -107,7 +108,9 @@ class Token(models.Model):
     def to_dict(self):
         return {
             "task": self.task.uuid,
-            "token": self.token, "expires": self.expires
+            "token": self.token,
+            "created_on": self.created_on,
+            "expires": self.expires
         }
 
 

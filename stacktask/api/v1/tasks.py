@@ -16,7 +16,7 @@ from rest_framework.response import Response
 from stacktask.base.user_store import IdentityManager
 from stacktask.api.models import Task
 from django.utils import timezone
-from stacktask.api.utils import mod_or_owner
+from stacktask.api import utils
 from stacktask.api.v1.views import APIViewWithLogger
 from stacktask.api.v1.utils import (
     send_email, create_notification, create_token)
@@ -32,7 +32,7 @@ class TaskView(APIViewWithLogger):
     required hardcoded field.
 
     The default_action is considered the primary action and
-    will always run first. Addtional actions are defined in
+    will always run first. Additional actions are defined in
     the settings file and will run in the order supplied, but
     after the default_action.
     """
@@ -40,7 +40,7 @@ class TaskView(APIViewWithLogger):
     def get(self, request):
         """
         The get method will return a json listing the actions this
-        view will run, and the data fields that those actons require.
+        view will run, and the data fields that those actions require.
         """
         class_conf = settings.TASKVIEW_SETTINGS.get(self.__class__.__name__,
                                                     {})
@@ -76,7 +76,7 @@ class TaskView(APIViewWithLogger):
 
         actions += class_conf.get('actions', [])
 
-        act_list = []
+        action_list = []
 
         valid = True
         for action in actions:
@@ -88,7 +88,7 @@ class TaskView(APIViewWithLogger):
             else:
                 serializer = None
 
-            act_list.append({
+            action_list.append({
                 'name': action,
                 'action': action_class,
                 'serializer': serializer})
@@ -96,62 +96,68 @@ class TaskView(APIViewWithLogger):
             if serializer is not None and not serializer.is_valid():
                 valid = False
 
-        if valid:
-            ip_addr = request.META['REMOTE_ADDR']
-            keystone_user = request.keystone_user
-
-            task = Task.objects.create(
-                ip_address=ip_addr, keystone_user=keystone_user,
-                task_view=self.__class__.__name__)
-            task.save()
-
-            for i, act in enumerate(act_list):
-                if act['serializer'] is not None:
-                    data = act['serializer'].validated_data
-                else:
-                    data = {}
-
-                # construct the action class
-                action = act['action'](
-                    data=data, task=task,
-                    order=i
-                )
-
-                try:
-                    action.pre_approve()
-                except Exception as e:
-                    notes = {
-                        'errors':
-                            [("Error: '%s' while setting up task. " +
-                              "See task itself for details.") % e],
-                        'task': task.uuid
-                    }
-                    create_notification(task, notes)
-
-                    import traceback
-                    trace = traceback.format_exc()
-                    self.logger.critical(("(%s) - Exception escaped! %s\n" +
-                                          "Trace: \n%s") %
-                                         (timezone.now(), e, trace))
-
-                    response_dict = {
-                        'errors':
-                            ["Error: Something went wrong on the server. " +
-                             "It will be looked into shortly."]
-                    }
-                    return response_dict
-
-            # send initial conformation email:
-            email_conf = class_conf.get('emails', {}).get('initial', None)
-            send_email(task, email_conf)
-
-            return {'task': task}
-        else:
+        if not valid:
             errors = {}
-            for act in act_list:
-                if act['serializer'] is not None:
-                    errors.update(act['serializer'].errors)
+            for action in action_list:
+                if action['serializer'] is not None:
+                    errors.update(action['serializer'].errors)
             return {'errors': errors}
+
+        ip_address = request.META['REMOTE_ADDR']
+        keystone_user = request.keystone_user
+
+        try:
+            task = Task.objects.create(
+                ip_address=ip_address, keystone_user=keystone_user,
+                project_id=keystone_user['project_id'],
+                task_view=self.__class__.__name__)
+        except KeyError:
+            task = Task.objects.create(
+                ip_address=ip_address, keystone_user=keystone_user,
+                task_view=self.__class__.__name__)
+        task.save()
+
+        for i, action in enumerate(action_list):
+            if action['serializer'] is not None:
+                data = action['serializer'].validated_data
+            else:
+                data = {}
+
+            # construct the action class
+            action_instance = action['action'](
+                data=data, task=task,
+                order=i
+            )
+
+            try:
+                action_instance.pre_approve()
+            except Exception as e:
+                notes = {
+                    'errors':
+                        [("Error: '%s' while setting up task. " +
+                          "See task itself for details.") % e],
+                    'task': task.uuid
+                }
+                create_notification(task, notes)
+
+                import traceback
+                trace = traceback.format_exc()
+                self.logger.critical(("(%s) - Exception escaped! %s\n" +
+                                      "Trace: \n%s") %
+                                     (timezone.now(), e, trace))
+
+                response_dict = {
+                    'errors':
+                        ["Error: Something went wrong on the server. " +
+                         "It will be looked into shortly."]
+                }
+                return response_dict
+
+        # send initial conformation email:
+        email_conf = class_conf.get('emails', {}).get('initial', None)
+        send_email(task, email_conf)
+
+        return {'task': task}
 
     def approve(self, task):
         """
@@ -320,13 +326,15 @@ class InviteUser(TaskView):
 
     default_action = 'NewUser'
 
-    @mod_or_owner
+    @utils.mod_or_owner
     def get(self, request):
         return super(InviteUser, self).get(request)
 
-    @mod_or_owner
+    @utils.mod_or_owner
     def post(self, request, format=None):
         """
+        Invites a user to the current tenant.
+
         This endpoint requires either Admin access or the
         request to come from a project_owner.
         As such this Task is considered pre-approved.
@@ -334,6 +342,11 @@ class InviteUser(TaskView):
         post_approve validation, and creates a Token if valid.
         """
         self.logger.info("(%s) - New AttachUser request." % timezone.now())
+
+        # Default project_id to the keystone user's project
+        if 'project_id' not in request.data or request.data['project_id'] is None:
+            request.data['project_id'] = request.keystone_user['project_id']
+
         processed = self.process_actions(request)
 
         errors = processed.get('errors', None)
@@ -375,7 +388,7 @@ class EditUser(TaskView):
 
     default_action = 'EditUser'
 
-    @mod_or_owner
+    @utils.mod_or_owner
     def get(self, request):
         class_conf = settings.TASKVIEW_SETTINGS.get(self.__class__.__name__,
                                                     {})
@@ -417,7 +430,7 @@ class EditUser(TaskView):
                          'required_fields': required_fields,
                          'users': user_list})
 
-    @mod_or_owner
+    @utils.mod_or_owner
     def post(self, request, format=None):
         """
         This endpoint requires either mod access or the

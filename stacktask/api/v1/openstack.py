@@ -11,14 +11,14 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
-
 from django.utils import timezone
 from django.conf import settings
 from rest_framework.response import Response
 
 from stacktask.api.v1 import tasks
 from stacktask.api import utils
-from stacktask.base.user_store import IdentityManager
+from stacktask.api import models
+from stacktask.base import user_store
 
 
 class UserList(tasks.InviteUser):
@@ -30,10 +30,11 @@ class UserList(tasks.InviteUser):
                                                     {})
         filters = class_conf.get('filters', [])
         user_list = []
-        id_manager = IdentityManager()
+        id_manager = user_store.IdentityManager()
         project_id = request.keystone_user['project_id']
         project = id_manager.get_project(project_id)
 
+        active_emails = set()
         for user in project.list_users():
             skip = False
             self.logger.info(user)
@@ -45,13 +46,42 @@ class UserList(tasks.InviteUser):
                 roles.append(role.name)
             if skip:
                 continue
-            email = ''
-            if 'email' in user.to_dict():
-                email = user.email
+
+            email = getattr(user, 'email', '')
+            active_emails.add(email)
             user_list.append({'id': user.id,
-                              'username': user.username,
+                              'name': user.username,
                               'email': email,
-                              'roles': roles})
+                              'roles': roles,
+                              'status': 'Active'
+                              })
+
+        # Get my active tasks for this project:
+        project_tasks = models.Task.objects.filter(
+            project_id=project_id,
+            task_view='UserList',
+            completed=0,
+            cancelled=0)
+
+        # get the actions for the related tasks
+        # NOTE(adriant): We should later check for the correct action type
+        # if this task_view ends up having more than one.
+        registrations = []
+        for task in project_tasks:
+            registrations.extend(task.actions)
+
+        unconfirmed = set()
+        for action in registrations:
+            # NOTE(flwang): If there are duplicated registrations, we need to
+            # make sure it's filtered.
+            if (action.action_data['email'] not in unconfirmed and
+                    action.action_data['email'] not in active_emails):
+                unconfirmed.add(action.action_data['email'])
+                user_list.append({'id': action.task.uuid,
+                                  'name': action.action_data['email'],
+                                  'email': action.action_data['email'],
+                                  'roles': action.action_data['roles'],
+                                  'status': 'Unconfirmed'})
 
         return Response({'users': user_list})
 
@@ -63,8 +93,11 @@ class UserDetail(tasks.TaskView):
         """
         Get user info based on the user id.
         """
-        id_manager = IdentityManager()
+        id_manager = user_store.IdentityManager()
         user = id_manager.get_user(user_id)
+        if not user:
+            return Response({'errors': ['No user with this id.']},
+                            status=404)
         project_id = request.keystone_user['project_id']
         project = id_manager.get_project(project_id)
         roles = []
@@ -72,25 +105,54 @@ class UserDetail(tasks.TaskView):
             roles.append(role.name)
         return Response({'id': user.id,
                          "username": user.username,
-                         "email": user.username})
+                         "email": getattr(user, 'email', ''),
+                         'roles': roles})
+
+    @utils.mod_or_owner
+    def delete(self, request, user_id):
+        """
+        Remove this user from the tenant.
+        This may cancel a pending user invite, or simply revoke roles.
+        """
+        id_manager = user_store.IdentityManager()
+        user = id_manager.get_user(user_id)
+        project_id = request.data['project_id'] or request.keystone_user['project_id']
+        # NOTE(dale): For now, we only support cancelling pending invites.
+        if user:
+            return Response({'errors':
+                            ['Revoking keystone users not implemented. ' +
+                            'Try removing all roles instead.']},
+                            status=501)
+        project_tasks = models.Task.objects.filter(
+            project_id=project_id,
+            task_view='UserList',
+            completed=0,
+            cancelled=0)
+        for task in project_tasks:
+            if task.uuid == user_id:
+                task.add_action_note(self.__class__.__name__, 'Cancelled.')
+                task.cancelled = True
+                task.save()
+                return Response('Cancelled pending invite task!', status=200)
+        return Response('Not found.', status=404)
 
 
 class UserRoles(tasks.TaskView):
 
-    default_action = 'EditUser'
+    default_action = 'EditUserRoles'
 
     @utils.mod_or_owner
     def get(self, request, user_id):
         """
         Get user info based on the user id.
         """
-        id_manager = IdentityManager()
+        id_manager = user_store.IdentityManager()
         user = id_manager.get_user(user_id)
         project_id = request.keystone_user['project_id']
         project = id_manager.get_project(project_id)
         roles = []
         for role in id_manager.get_roles(user, project):
-            roles.append(role.name)
+            roles.append(role.to_dict())
         return Response({"roles": roles})
 
     @utils.mod_or_owner
@@ -98,10 +160,12 @@ class UserRoles(tasks.TaskView):
         """
         Add user roles to the current tenant.
         """
-
         request.data['remove'] = False
+        if 'project_id' not in request.data:
+            request.data['project_id'] = request.keystone_user['project_id']
+        request.data['user_id'] = user_id
 
-        self.logger.info("(%s) - New EditUser request." % timezone.now())
+        self.logger.info("(%s) - New EditUserRoles request." % timezone.now())
         processed = self.process_actions(request)
 
         errors = processed.get('errors', None)
@@ -110,18 +174,21 @@ class UserRoles(tasks.TaskView):
                              timezone.now())
             return Response(errors, status=400)
 
-        registration = processed['registration']
-        self.logger.info("(%s) - AutoApproving EditUser request."
+        task = processed['task']
+        self.logger.info("(%s) - AutoApproving EditUserRoles request."
                          % timezone.now())
-        return self.approve(registration)
+        return self.approve(task)
 
     @utils.mod_or_owner
     def delete(self, request, user_id, format=None):
         """
         Revoke user roles to the current tenant.
+        This only supports Active users.
         """
-
         request.data['remove'] = True
+        if 'project_id' not in request.data:
+            request.data['project_id'] = request.keystone_user['project_id']
+        request.data['user_id'] = user_id
 
         self.logger.info("(%s) - New EditUser request." % timezone.now())
         processed = self.process_actions(request)
@@ -132,10 +199,10 @@ class UserRoles(tasks.TaskView):
                              timezone.now())
             return Response(errors, status=400)
 
-        registration = processed['registration']
+        task = processed['task']
         self.logger.info("(%s) - AutoApproving EditUser request."
                          % timezone.now())
-        return self.approve(registration)
+        return self.approve(task)
 
 
 class RoleList(tasks.TaskView):
@@ -146,27 +213,9 @@ class RoleList(tasks.TaskView):
 
         # get roles for this user on the project
         user_roles = request.keystone_user['roles']
-        # hardcoded mapping between roles and managable roles
-        # Todo: relocate to settings file.
-        manage_mapping = {
-            'admin': [
-                'project_owner', 'project_mod', 'Member', 'heat_stack_user'
-            ],
-            'project_owner': [
-                'project_mod', 'Member', 'heat_stack_user'
-            ],
-            'project_mod': [
-                'Member', 'heat_stack_user'
-            ],
-        }
-        # merge mapping lists to form a flat permitted roles list
-        managable_role_names = [mrole for role_name in user_roles
-                                if role_name in manage_mapping
-                                for mrole in manage_mapping[role_name]]
-        # a set has unique items
-        managable_role_names = set(managable_role_names)
+        managable_role_names = user_store.get_managable_roles(user_roles)
 
-        id_manager = IdentityManager()
+        id_manager = user_store.IdentityManager()
 
         # look up role names and form output dict of valid roles
         managable_roles = []

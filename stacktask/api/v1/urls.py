@@ -20,21 +20,21 @@ from stacktask.api.v1 import openstack
 
 urlpatterns = patterns(
     '',
-    url(r'^tasks/(?P<uuid>\w+)', views.TaskDetail.as_view()),
-    url(r'^tasks', views.TaskList.as_view()),
+    url(r'^tasks/(?P<uuid>\w+)/?$', views.TaskDetail.as_view()),
+    url(r'^tasks/?$', views.TaskList.as_view()),
     url(r'^tokens/(?P<id>\w+)', views.TokenDetail.as_view()),
-    url(r'^tokens', views.TokenList.as_view()),
-    url(r'^notifications/(?P<pk>\w+)', views.NotificationDetail.as_view()),
-    url(r'^notifications', views.NotificationList.as_view()),
+    url(r'^tokens/?$', views.TokenList.as_view()),
+    url(r'^notifications/(?P<pk>\w+)/?$', views.NotificationDetail.as_view()),
+    url(r'^notifications/?$', views.NotificationList.as_view()),
 
-    url(r'^actions/CreateProject', tasks.CreateProject.as_view()),
-    url(r'^actions/InviteUser', tasks.InviteUser.as_view()),
-    url(r'^actions/ResetPassword', tasks.ResetPassword.as_view()),
-    url(r'^actions/EditUser', tasks.EditUser.as_view()),
+    url(r'^actions/CreateProject/?$', tasks.CreateProject.as_view()),
+    url(r'^actions/InviteUser/?$', tasks.InviteUser.as_view()),
+    url(r'^actions/ResetPassword/?$', tasks.ResetPassword.as_view()),
+    url(r'^actions/EditUser/?$', tasks.EditUser.as_view()),
 
-    url(r'^openstack/users/(?P<user_id>\w+)', openstack.UserDetail.as_view()),
-    url(r'^openstack/users/(?P<user_id>\w+)/roles',
+    url(r'^openstack/users/(?P<user_id>\w+)/roles/?$',
         openstack.UserRoles.as_view()),
+    url(r'^openstack/users/(?P<user_id>\w+)/?$', openstack.UserDetail.as_view()),
     url(r'^openstack/users/?$', openstack.UserList.as_view()),
     url(r'^openstack/roles/?$', openstack.RoleList.as_view()),
 )

@@ -14,11 +14,8 @@
 
 from django.db import models
 from django.utils import timezone
-from stacktask.base.user_store import IdentityManager
-from stacktask.base.serializers import (NewUserSerializer,
-                                        NewProjectSerializer,
-                                        ResetUserSerializer,
-                                        EditUserSerializer)
+from stacktask.base import user_store
+from stacktask.base import serializers
 from django.conf import settings
 from jsonfield import JSONField
 from logging import getLogger
@@ -173,12 +170,44 @@ class BaseAction(object):
 
 class UserAction(BaseAction):
     """
+    Base action for dealing with users.
+    Contains role utility functions.
+    """
+
+    def are_roles_managable(self, user_roles=[], requested_roles=[]):
+        requested_roles = set(requested_roles)
+        # blacklist checks
+        blacklist_roles = set(['admin'])
+        if len(blacklist_roles & requested_roles) > 0:
+            return False
+
+        # user managable role
+        managable_roles = user_store.get_managable_roles(user_roles)
+        intersection = set(managable_roles) & requested_roles
+        # if all requested roles match, we can proceed
+        return intersection == requested_roles
+
+
+class UserIdAction(UserAction):
+
+    def _get_target_user(self):
+        """
+        Gets the target user by id
+        """
+        id_manager = user_store.IdentityManager()
+        user = id_manager.get_user(self.user_id)
+
+        return user
+    pass
+
+
+class UserNameAction(UserAction):
+    """
     Base action for dealing with users. Removes username if
     USERNAME_IS_EMAIL and sets email to be username.
     """
 
     def __init__(self, *args, **kwargs):
-
         if settings.USERNAME_IS_EMAIL:
             try:
                 self.required.remove('username')
@@ -193,8 +222,18 @@ class UserAction(BaseAction):
     def _get_email(self):
         return self.email
 
+    def _get_target_user(self):
+        """
+        Gets the target user by their username
+        """
+        id_manager = user_store.IdentityManager()
+        user = id_manager.find_user(self.username)
 
-class NewUser(UserAction):
+        return user
+
+
+# TODO: rename to InviteUser
+class NewUser(UserNameAction):
     """
     Setup a new user with a role on the given project.
     Creates the user if they don't exist, otherwise
@@ -210,31 +249,30 @@ class NewUser(UserAction):
     ]
 
     def _validate(self):
-        id_manager = IdentityManager()
+        id_manager = user_store.IdentityManager()
 
         # Default state is invalid
         self.action.valid = False
 
         keystone_user = self.action.task.keystone_user
 
-        if not keystone_user['project_id'] == self.project_id:
+        if keystone_user['project_id'] != self.project_id:
             self.add_note('Project id does not match keystone user project.')
-            return False
+            return
 
-        # TODO: validate list of desired roles with managable_roles
-        if ("admin" in self.roles or
-                'project_mod' not in keystone_user['roles'] or
-                ('project_owner' not in keystone_user['roles'] and
-                 "project_owner" in self.roles)):
-            self.add_note('User does not have permission to add role.')
-            return False
+        # Role permissions check
+        if not self.are_roles_managable(user_roles=keystone_user['roles'],
+                                        requested_roles=self.roles):
+            self.add_note('User does not have permission to edit role(s).')
+            return
 
         project = id_manager.get_project(self.project_id)
         if not project:
             self.add_note('Project does not exist.')
             return
 
-        user = id_manager.find_user(self.username)
+        # Get target user
+        user = self._get_target_user()
         if not user:
             self.action.need_token = True
             self.set_token_fields(["password"])
@@ -283,7 +321,7 @@ class NewUser(UserAction):
         if not self.valid:
             return
 
-        id_manager = IdentityManager()
+        id_manager = user_store.IdentityManager()
 
         if self.action.state == "default":
             # default action: Create a new user in the tenant and add roles
@@ -338,7 +376,7 @@ class NewUser(UserAction):
                 % (self.username, self.roles, self.project_id))
 
 
-class NewProject(UserAction):
+class NewProject(UserNameAction):
     """
     Similar functionality as the NewUser action,
     but will create the project if valid. Will setup
@@ -351,26 +389,30 @@ class NewProject(UserAction):
         'email'
     ]
 
-    default_roles = {"Member", "project_owner", "project_mod"}
+    default_roles = {"Member", "project_owner", "project_mod", "_member_", "heat_stack_owner"}
+
+    def _validate(self):
+        project_valid = self._validate_project()
+        user_valid = self._validate_user()
+
+        self.action.valid = project_valid and user_valid
+        self.action.save()
 
     def _validate_project(self):
-        id_manager = IdentityManager()
+        id_manager = user_store.IdentityManager()
 
         project = id_manager.find_project(self.project_name)
-
-        valid = self._validate_user(id_manager)
-
         if project:
-            valid = False
             self.add_note("Existing project with name '%s'." %
                           self.project_name)
-        else:
-            self.add_note("No existing project with name '%s'." %
-                          self.project_name)
+            return False
 
-        return valid
+        self.add_note("No existing project with name '%s'." %
+                      self.project_name)
+        return True
 
-    def _validate_user(self, id_manager):
+    def _validate_user(self):
+        id_manager = user_store.IdentityManager()
         user = id_manager.find_user(self.username)
 
         if user:
@@ -394,23 +436,25 @@ class NewProject(UserAction):
         return valid
 
     def _pre_approve(self):
-        self.action.valid = self._validate_project()
-        self.action.save()
+        self._validate()
 
     def _post_approve(self):
+        """
+        Approving a registration means we set up the project itself,
+        and then the user registration token is valid for submission and
+        creating the user themselves.
+        """
         project_id = self.get_cache('project_id')
         if project_id:
             self.action.task.cache['project_id'] = project_id
             self.add_note("Project already created.")
             return
 
-        self.action.valid = self._validate_project()
-        self.action.save()
-
+        self._validate()
         if not self.valid:
             return
 
-        id_manager = IdentityManager()
+        id_manager = user_store.IdentityManager()
         try:
             project = id_manager.create_project(
                 self.project_name, created_on=str(timezone.now()))
@@ -425,9 +469,15 @@ class NewProject(UserAction):
         self.add_note("New project '%s' created." % self.project_name)
 
     def _submit(self, token_data):
-        id_manager = IdentityManager()
+        """
+        The submit action is prformed when a token is submitted.
+        This is done for a user account only, and so should now only set up the user,
+        not the project, which was done in approve.
+        """
 
-        self.action.valid = self._validate_user(id_manager)
+        id_manager = user_store.IdentityManager()
+
+        self.action.valid = self._validate_user()
         self.action.save()
 
         if not self.valid:
@@ -485,7 +535,7 @@ class NewProject(UserAction):
                              self.default_roles))
 
 
-class ResetUser(UserAction):
+class ResetUser(UserNameAction):
     """
     Simple action to reset a password for a given user.
     """
@@ -499,7 +549,7 @@ class ResetUser(UserAction):
     ]
 
     def _validate(self):
-        id_manager = IdentityManager()
+        id_manager = user_store.IdentityManager()
 
         user = id_manager.find_user(self.username)
 
@@ -533,7 +583,7 @@ class ResetUser(UserAction):
         if not self.valid:
             return
 
-        id_manager = IdentityManager()
+        id_manager = user_store.IdentityManager()
 
         user = id_manager.find_user(self.username)
         try:
@@ -546,65 +596,60 @@ class ResetUser(UserAction):
         self.add_note('User %s password has been changed.' % self.username)
 
 
-class EditUser(UserAction):
+class EditUserRoles(UserIdAction):
     """
-    Adds or removes roles from a user on the given project.
+    A class for adding or removing roles
+    on a user for the given project.
     """
 
     required = [
-        'username',
-        'email',
+        'user_id',
         'project_id',
         'roles',
         'remove'
     ]
 
     def _validate(self):
-        id_manager = IdentityManager()
+        id_manager = user_store.IdentityManager()
 
         keystone_user = self.action.task.keystone_user
 
+        # TODO: This is potentially too limiting and could be changed into
+        # an auth check. Perhaps just allowing 'admin' role users is enough.
         if not keystone_user['project_id'] == self.project_id:
             self.add_note('Project id does not match keystone user project.')
             self.action.valid = False
             return
 
-        if ("admin" in self.roles or
-                'project_mod' not in keystone_user['roles'] or
-                ('project_owner' not in keystone_user['roles'] and
-                 "project_owner" in self.roles)):
-            self.add_note('User does not have permission to edit role.')
+        # Role permissions check
+        if not self.are_roles_managable(user_roles=keystone_user['roles'],
+                                        requested_roles=self.roles):
+            self.add_note('User does not have permission to edit role(s).')
             self.action.valid = False
             return
 
         project = id_manager.get_project(self.project_id)
-
         if not project:
             self.add_note('Project does not exist.')
             self.action.valid = False
             return
 
-        user = id_manager.find_user(self.username)
-
+        # Get target user
+        user = self._get_target_user()
         if not user:
+            self.add_note('No user present with user_id')
             self.action.valid = False
-            self.add_note('No user present with username')
             return
 
-        if user.email != self.email:
-            self.action.valid = False
-            self.add_note('User with non-matching email.')
-            return
-
-        roles = id_manager.get_roles(user, project)
-        roles = {role.name for role in roles}
+        current_roles = id_manager.get_roles(user, project)
+        current_role_names = {role.name for role in current_roles}
         if self.remove:
-            remaining = set(roles) & set(self.roles)
+            remaining = set(current_role_names) & set(self.roles)
             if not remaining:
                 self.action.valid = True
                 self.action.state = "complete"
                 self.add_note(
-                    "User does't have roles."
+                    "User doesn't have roles."
                 )
             else:
                 self.roles = list(remaining)
@@ -612,7 +657,7 @@ class EditUser(UserAction):
                 self.add_note(
                     'User has roles to remove.')
         else:
-            missing = set(self.roles) - set(roles)
+            missing = set(self.roles) - set(current_role_names)
             if not missing:
                 self.action.valid = True
                 self.action.state = "complete"
@@ -640,11 +685,12 @@ class EditUser(UserAction):
         if not self.valid:
             return
 
-        id_manager = IdentityManager()
+        id_manager = user_store.IdentityManager()
 
         if self.action.state == "default":
             try:
-                user = id_manager.find_user(self.username)
+                #user = id_manager.find_user(self.username)
+                user = self._get_target_user()
 
                 roles = []
                 for role in self.roles:
@@ -662,39 +708,40 @@ class EditUser(UserAction):
                 if self.remove:
                     self.add_note(
                         "Error: '%s' removing roles: %s from user: %s" %
-                        (e, self.roles, self.username))
+                        (e, self.roles, self.user_id))
                 else:
                     self.add_note(
                         "Error: '%s' adding roles: %s to user: %s" %
-                        (e, self.roles, self.username))
+                        (e, self.roles, self.user_id))
                 raise
 
             if self.remove:
                 self.add_note(
                     'User %s has had roles %s removed from project %s.'
-                    % (self.username, self.roles, self.project_id))
+                    % (self.user_id, self.roles, self.project_id))
             else:
                 self.add_note(
                     'User %s has been given roles %s in project %s.'
-                    % (self.username, self.roles, self.project_id))
+                    % (self.user_id, self.roles, self.project_id))
         elif self.action.state == "complete":
             if self.remove:
                 self.add_note(
                     'User %s already had roles %s in project %s.'
-                    % (self.username, self.roles, self.project_id))
+                    % (self.user_id, self.roles, self.project_id))
             else:
                 self.add_note(
                     "User %s didn't have roles %s in project %s."
-                    % (self.username, self.roles, self.project_id))
+                    % (self.user_id, self.roles, self.project_id))
 
 
-# A dict of tuples in the format: (<ActionClass>, <ActionSerializer>)
-action_classes = {
-    'NewUser': (NewUser, NewUserSerializer),
-    'NewProject': (NewProject, NewProjectSerializer),
-    'ResetUser': (ResetUser, ResetUserSerializer),
-    'EditUser': (EditUser, EditUserSerializer)
-}
+# Update settings dict with tuples in the format: (<ActionClass>, <ActionSerializer>)
+def register_action_class(action_class, serializer_class):
+    data = {}
+    data[action_class.__name__] = (action_class, serializer_class)
+    settings.ACTION_CLASSES.update(data)
 
-# setup action classes and serializers for global access
-settings.ACTION_CLASSES.update(action_classes)
+# Register each action model
+register_action_class(NewUser, serializers.NewUserSerializer)
+register_action_class(NewProject, serializers.NewProjectSerializer)
+register_action_class(ResetUser, serializers.ResetUserSerializer)
+register_action_class(EditUserRoles, serializers.EditUserSerializer)

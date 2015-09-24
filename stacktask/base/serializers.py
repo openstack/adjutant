@@ -16,35 +16,43 @@ from rest_framework import serializers
 from django.conf import settings
 
 
-class BaseUserSerializer(serializers.Serializer):
+role_options = settings.ACTION_SETTINGS.get("NewUser", {}).get(
+    "allowed_roles", [])
+
+
+class BaseUserNameSerializer(serializers.Serializer):
+    """
+    A serializer where the user is identified by username/email.
+    """
+    username = serializers.CharField(max_length=200)
+    email = serializers.EmailField()
 
     def __init__(self, *args, **kwargs):
-        super(BaseUserSerializer, self).__init__(*args, **kwargs)
+        super(BaseUserNameSerializer, self).__init__(*args, **kwargs)
 
         if settings.USERNAME_IS_EMAIL:
             self.fields.pop('username')
 
 
-class NewUserSerializer(BaseUserSerializer):
-    username = serializers.CharField(max_length=200)
-    email = serializers.EmailField()
-    project_id = serializers.CharField(max_length=200)
+class BaseUserIdSerializer(serializers.Serializer):
+    user_id = serializers.CharField(max_length=200)
 
-    role_options = settings.ACTION_SETTINGS.get("NewUser", {}).get(
-        "allowed_roles", [])
+
+class NewUserSerializer(BaseUserNameSerializer):
     roles = serializers.MultipleChoiceField(choices=role_options)
+    project_id = serializers.CharField(max_length=200)
+    pass
 
 
-class NewProjectSerializer(BaseUserSerializer):
+class NewProjectSerializer(BaseUserNameSerializer):
     project_name = serializers.CharField(max_length=200)
-    username = serializers.CharField(max_length=200)
-    email = serializers.EmailField()
 
 
-class ResetUserSerializer(BaseUserSerializer):
-    username = serializers.CharField(max_length=200)
-    email = serializers.EmailField()
+class ResetUserSerializer(BaseUserNameSerializer):
+    pass
 
 
-class EditUserSerializer(NewUserSerializer):
+class EditUserSerializer(BaseUserIdSerializer):
+    roles = serializers.MultipleChoiceField(choices=role_options)
     remove = serializers.BooleanField(default=False)
+    project_id = serializers.CharField(max_length=200)

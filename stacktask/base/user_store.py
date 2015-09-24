@@ -18,6 +18,34 @@ from keystoneclient.openstack.common.apiclient import (
 )
 
 
+def get_managable_roles(user_roles):
+    """
+    Given a list of user role names, returns a list of names
+    that the user is allowed to manage.
+    """
+    # hardcoded mapping between roles and managable roles
+    # Todo: relocate to settings file.
+    manage_mapping = {
+        'admin': [
+            'project_owner', 'project_mod', 'Member', 'heat_stack_owner',
+            '_member_'
+        ],
+        'project_owner': [
+            'project_mod', 'Member', 'heat_stack_owner', '_member_'
+        ],
+        'project_mod': [
+            'Member', 'heat_stack_owner', '_member_'
+        ],
+    }
+    # merge mapping lists to form a flat permitted roles list
+    managable_role_names = [mrole for role_name in user_roles
+                            if role_name in manage_mapping
+                            for mrole in manage_mapping[role_name]]
+    # a set has unique items
+    managable_role_names = set(managable_role_names)
+    return managable_role_names
+
+
 class IdentityManager(object):
     """
     A wrapper object for the Keystone Client. Mainly setup as
