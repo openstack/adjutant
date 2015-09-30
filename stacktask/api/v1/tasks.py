@@ -42,8 +42,7 @@ class TaskView(APIViewWithLogger):
         The get method will return a json listing the actions this
         view will run, and the data fields that those actions require.
         """
-        class_conf = settings.TASKVIEW_SETTINGS.get(self.__class__.__name__,
-                                                    {})
+        class_conf = settings.TASK_SETTINGS.get(self.task_type, {})
 
         actions = [self.default_action, ]
 
@@ -69,8 +68,7 @@ class TaskView(APIViewWithLogger):
         function on all the actions.
         """
 
-        class_conf = settings.TASKVIEW_SETTINGS.get(self.__class__.__name__,
-                                                    {})
+        class_conf = settings.TASK_SETTINGS.get(self.task_type, {})
 
         actions = [self.default_action, ]
 
@@ -110,11 +108,11 @@ class TaskView(APIViewWithLogger):
             task = Task.objects.create(
                 ip_address=ip_address, keystone_user=keystone_user,
                 project_id=keystone_user['project_id'],
-                task_view=self.__class__.__name__)
+                task_type=self.task_type)
         except KeyError:
             task = Task.objects.create(
                 ip_address=ip_address, keystone_user=keystone_user,
-                task_view=self.__class__.__name__)
+                task_type=self.task_type)
         task.save()
 
         for i, action in enumerate(action_list):
@@ -216,8 +214,7 @@ class TaskView(APIViewWithLogger):
                 if need_token:
                     token = create_token(task)
                     try:
-                        class_conf = settings.TASKVIEW_SETTINGS[
-                            self.__class__.__name__]
+                        class_conf = settings.TASK_SETTINGS[self.task_type]
 
                         # will throw a key error if the token template has not
                         # been specified
@@ -279,8 +276,8 @@ class TaskView(APIViewWithLogger):
                     task.save()
 
                     # Sending confirmation email:
-                    class_conf = settings.TASKVIEW_SETTINGS.get(
-                        self.__class__.__name__, {})
+                    class_conf = settings.TASK_SETTINGS.get(
+                        self.task_type, {})
                     email_conf = class_conf.get(
                         'emails', {}).get('completed', None)
                     send_email(task, email_conf)
@@ -292,6 +289,8 @@ class TaskView(APIViewWithLogger):
 
 
 class CreateProject(TaskView):
+
+    task_type = "create_project"
 
     default_action = "NewProject"
 
@@ -324,6 +323,8 @@ class CreateProject(TaskView):
 
 class InviteUser(TaskView):
 
+    task_type = "invite_user"
+
     default_action = 'NewUser'
 
     @utils.mod_or_owner
@@ -336,16 +337,17 @@ class InviteUser(TaskView):
         Invites a user to the current tenant.
 
         This endpoint requires either Admin access or the
-        request to come from a project_owner.
+        request to come from a project_owner|project_mod.
         As such this Task is considered pre-approved.
-        Runs process_actions, then does the approve step and
-        post_approve validation, and creates a Token if valid.
         """
         self.logger.info("(%s) - New AttachUser request." % timezone.now())
 
         # Default project_id to the keystone user's project
         if 'project_id' not in request.data or request.data['project_id'] is None:
             request.data['project_id'] = request.keystone_user['project_id']
+
+        # TODO: First check if the user already exists or is pending
+        # We should not allow duplicate invites.
 
         processed = self.process_actions(request)
 
@@ -362,6 +364,8 @@ class InviteUser(TaskView):
 
 
 class ResetPassword(TaskView):
+
+    task_type = "reset_password"
 
     default_action = 'ResetUser'
 
@@ -386,12 +390,13 @@ class ResetPassword(TaskView):
 
 class EditUser(TaskView):
 
+    task_type = "edit_user"
+
     default_action = 'EditUser'
 
     @utils.mod_or_owner
     def get(self, request):
-        class_conf = settings.TASKVIEW_SETTINGS.get(self.__class__.__name__,
-                                                    {})
+        class_conf = settings.TASK_SETTINGS.get(self.task_type, {})
 
         actions = [self.default_action, ]
 

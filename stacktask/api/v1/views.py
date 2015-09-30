@@ -311,8 +311,7 @@ class TaskDetail(APIViewWithLogger):
                 if need_token:
                     token = create_token(task)
                     try:
-                        class_conf = settings.TASKVIEW_SETTINGS[
-                            task.task_view]
+                        class_conf = settings.TASK_SETTINGS[task.task_type]
 
                         # will throw a key error if the token template has not
                         # been specified
@@ -369,8 +368,7 @@ class TaskDetail(APIViewWithLogger):
                     task.save()
 
                     # Sending confirmation email:
-                    class_conf = settings.TASKVIEW_SETTINGS.get(
-                        task.task_view, {})
+                    class_conf = settings.TASK_SETTINGS.get(task.task_type, {})
                     email_conf = class_conf.get(
                         'emails', {}).get('completed', None)
                     send_email(task, email_conf)
@@ -472,8 +470,7 @@ class TokenList(APIViewWithLogger):
 
         token = create_token(task)
         try:
-            class_conf = settings.TASKVIEW_SETTINGS[
-                task.task_view]
+            class_conf = settings.TASK_SETTINGS[task.task_type]
 
             # will throw a key error if the token template has not
             # been specified
@@ -646,8 +643,8 @@ class TokenDetail(APIViewWithLogger):
         token.delete()
 
         # Sending confirmation email:
-        class_conf = settings.TASKVIEW_SETTINGS.get(
-            token.task.task_view, {})
+        class_conf = settings.TASK_SETTINGS.get(
+            token.task.task_type, {})
         email_conf = class_conf.get(
             'emails', {}).get('completed', None)
         send_email(token.task, email_conf)

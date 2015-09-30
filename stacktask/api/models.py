@@ -35,8 +35,8 @@ class Task(models.Model):
     keystone_user = JSONField(default={})
     project_id = models.CharField(max_length=200, db_index=True, null=True)
 
-    # which ActionView initiated this
-    task_view = models.CharField(max_length=200, db_index=True)
+    # type of the task, for easy grouping
+    task_type = models.CharField(max_length=200, db_index=True)
 
     # Effectively a log of what the actions are doing.
     action_notes = JSONField(default={})
@@ -77,7 +77,7 @@ class Task(models.Model):
             "keystone_user": self.keystone_user,
             "project_id": self.project_id,
             "actions": actions,
-            "task_view": self.task_view,
+            "task_type": self.task_type,
             "action_notes": self.action_notes,
             "cancelled": self.cancelled,
             "approved": self.approved,

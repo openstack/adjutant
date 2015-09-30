@@ -57,8 +57,8 @@ TOKEN_SUBMISSION_URL: http://192.168.122.160:8080/token/
 # Additonal actions for views:
 # - The order of the actions matters. These will run after the default action,
 #   in the given order.
-TASKVIEW_SETTINGS:
-    CreateProject:
+TASK_SETTINGS:
+    create_project:
         actions:
             - AddAdminToProject
             - DefaultProjectResources
@@ -80,7 +80,7 @@ TASKVIEW_SETTINGS:
                 reply: no-reply@example.com
                 template: completed.txt
                 html_template: completed.txt
-    InviteUser:
+    invite_user:
         emails:
             # To not send this email, set the value to null,
             # or don't have the field there at all.
@@ -95,7 +95,7 @@ TASKVIEW_SETTINGS:
                 reply: no-reply@example.com
                 template: completed.txt
                 html_template: completed.txt
-    ResetPassword:
+    reset_password:
         emails:
             token:
                 subject: Your Token
@@ -107,16 +107,7 @@ TASKVIEW_SETTINGS:
                 reply: no-reply@example.com
                 template: completed.txt
                 html_template: completed.txt
-    UserList:
-        emails:
-            initial: null
-            token:
-                subject: Invitation to join the Catalyst Cloud(rego)
-                reply: no-reply@example.com
-                template: token.txt
-                html_template: token.txt
-            completed: null
-    EditUser:
+    edit_user:
         emails:
             completed:
                 subject: Task completed

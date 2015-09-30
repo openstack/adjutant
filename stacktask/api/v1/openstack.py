@@ -26,8 +26,7 @@ class UserList(tasks.InviteUser):
     @utils.mod_or_owner
     def get(self, request):
         """Get a list of all users who have been added to a tenant"""
-        class_conf = settings.TASKVIEW_SETTINGS.get(self.__class__.__name__,
-                                                    {})
+        class_conf = settings.TASK_SETTINGS.get('edit_user', {})
         filters = class_conf.get('filters', [])
         user_list = []
         id_manager = user_store.IdentityManager()
@@ -59,13 +58,13 @@ class UserList(tasks.InviteUser):
         # Get my active tasks for this project:
         project_tasks = models.Task.objects.filter(
             project_id=project_id,
-            task_view='UserList',
+            task_type="invite_user",
             completed=0,
             cancelled=0)
 
         # get the actions for the related tasks
         # NOTE(adriant): We should later check for the correct action type
-        # if this task_view ends up having more than one.
+        # if this task_type ends up having more than one.
         registrations = []
         for task in project_tasks:
             registrations.extend(task.actions)
@@ -87,6 +86,7 @@ class UserList(tasks.InviteUser):
 
 
 class UserDetail(tasks.TaskView):
+    task_type = 'edit_user'
 
     @utils.mod_or_owner
     def get(self, request, user_id):
@@ -125,7 +125,7 @@ class UserDetail(tasks.TaskView):
                             status=501)
         project_tasks = models.Task.objects.filter(
             project_id=project_id,
-            task_view='UserList',
+            task_type="invite_user",
             completed=0,
             cancelled=0)
         for task in project_tasks:
@@ -140,6 +140,7 @@ class UserDetail(tasks.TaskView):
 class UserRoles(tasks.TaskView):
 
     default_action = 'EditUserRoles'
+    task_type = 'edit_roles'
 
     @utils.mod_or_owner
     def get(self, request, user_id):
@@ -206,6 +207,7 @@ class UserRoles(tasks.TaskView):
 
 
 class RoleList(tasks.TaskView):
+    task_type = 'edit_roles'
 
     @utils.mod_or_owner
     def get(self, request):

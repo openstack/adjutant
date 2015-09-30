@@ -145,7 +145,7 @@ TOKEN_SUBMISSION_URL = CONFIG['TOKEN_SUBMISSION_URL']
 # Additonal actions for views:
 # - The order of the actions matters. These will run after the default action,
 #   in the given order.
-TASKVIEW_SETTINGS = CONFIG['TASKVIEW_SETTINGS']
+TASK_SETTINGS = CONFIG['TASK_SETTINGS']
 
 ACTION_SETTINGS = CONFIG['ACTION_SETTINGS']
 
