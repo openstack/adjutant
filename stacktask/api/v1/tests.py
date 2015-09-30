@@ -18,6 +18,7 @@ from stacktask.api.models import Task, Token
 import mock
 from django.utils import timezone
 from datetime import timedelta
+import json
 
 
 temp_cache = {}
@@ -512,6 +513,32 @@ class APITests(APITestCase):
             response.data,
             {'errors': ['This token does not exist or has expired.']})
 
+    @mock.patch(
+        'stacktask.actions.models.user_store.IdentityManager', FakeManager)
+    def test_task_get(self):
+        """
+        Test the basic task detail view.
+        """
+        setup_temp_cache({}, {})
+
+        url = "/v1/actions/CreateProject"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,Member",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        new_task = Task.objects.all()[0]
+        url = "/v1/tasks/" + new_task.uuid
+        response = self.client.get(url, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
     def test_no_task_get(self):
         """
         Should be a 404.
@@ -731,7 +758,7 @@ class APITests(APITestCase):
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            response.data[0]['task'],
+            response.data["notifications"][0]['task'],
             new_task.uuid)
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
@@ -764,18 +791,25 @@ class APITests(APITestCase):
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            response.data[0]['task'],
+            response.data["notifications"][0]['task'],
             new_task.uuid)
 
-        url = "/v1/notifications/%s/" % response.data[0]['pk']
+        url = "/v1/notifications/%s/" % response.data["notifications"][0]['pk']
         data = {'acknowledged': True}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.data,
                          {'notes': ['Notification acknowledged.']})
 
         url = "/v1/notifications"
-        response = self.client.get(url, headers=headers)
-        self.assertEqual(response.data, [])
+        params = {
+            "filters": json.dumps({
+                "acknowledged": {"exact": False}
+            })
+        }
+        response = self.client.get(
+            url, params, format='json', headers=headers
+        )
+        self.assertEqual(response.data, {'notifications': []})
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
@@ -809,14 +843,22 @@ class APITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         url = "/v1/notifications"
-        data = {'notifications': [note['pk'] for note in response.data]}
+        notifications = response.data["notifications"]
+        data = {'notifications': [note['pk'] for note in notifications]}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.data,
                          {'notes': ['Notifications acknowledged.']})
 
         url = "/v1/notifications"
-        response = self.client.get(url, headers=headers)
-        self.assertEqual(response.data, [])
+        params = {
+            "filters": json.dumps({
+                "acknowledged": {"exact": False}
+            })
+        }
+        response = self.client.get(
+            url, params, format='json', headers=headers
+        )
+        self.assertEqual(response.data, {'notifications': []})
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
@@ -1184,3 +1226,259 @@ class APITests(APITestCase):
         response = self.client.delete(url, format='json',
                                       headers=headers)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager', FakeManager)
+    def test_task_list(self):
+        """
+        """
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
+
+        url = "/v1/actions/InviteUser"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_owner,Member,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        data = {'email': "test@example.com", 'roles': ["Member"],
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = {'email': "test2@example.com", 'roles': ["Member"],
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = {'email': "test3@example.com", 'roles': ["Member"],
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,Member",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        url = "/v1/tasks"
+        response = self.client.get(url, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['tasks']), 3)
+
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager', FakeManager)
+    def test_task_list_filter(self):
+        """
+        """
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
+
+        url = "/v1/actions/InviteUser"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_owner,Member,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        data = {'email': "test@example.com", 'roles': ["Member"],
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = {'email': "test2@example.com", 'roles': ["Member"],
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        url = "/v1/actions/CreateProject"
+        data = {'project_name': "test_project2", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,Member",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        params = {
+            "filters": json.dumps({
+                "task_type": {"exact": "create_project"}
+            })
+        }
+
+        url = "/v1/tasks"
+        response = self.client.get(
+            url, params, format='json', headers=headers
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['tasks']), 1)
+
+        params = {
+            "filters": json.dumps({
+                "task_type": {"exact": "invite_user"}
+            })
+        }
+        response = self.client.get(
+            url, params, format='json', headers=headers
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['tasks']), 2)
+
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager', FakeManager)
+    def test_task_list_filter_cross_project(self):
+        """
+        Ensure you can't override the initial project_id filter if
+        you are not admin.
+        """
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        project2 = mock.Mock()
+        project2.id = 'test_project_id_2'
+        project2.name = 'test_project_2'
+        project2.roles = {}
+
+        setup_temp_cache(
+            {'test_project': project, 'test_project_2': project2}, {})
+
+        url = "/v1/actions/InviteUser"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_owner,Member,project_mod",
+            'username': "owner@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        data = {'email': "test@example.com", 'roles': ["Member"],
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id_2",
+            'roles': "project_owner,Member,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        params = {
+            "filters": json.dumps({
+                "project_id": {"exact": "test_project_id"},
+                "task_type": {"exact": "invite_user"}
+            })
+        }
+        url = "/v1/tasks"
+        response = self.client.get(
+            url, params, format='json', headers=headers
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['tasks']), 0)
+
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager', FakeManager)
+    def test_task_list_filter_formating(self):
+        """
+        """
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
+
+        url = "/v1/actions/InviteUser"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_owner,Member,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        data = {'email': "test@example.com", 'roles': ["Member"],
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,Member",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        # not proper json
+        params = {
+            "filters": {
+                "task_type": {"exact": "create_project"}
+            }
+        }
+        url = "/v1/tasks"
+        response = self.client.get(
+            url, params, format='json', headers=headers
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # inncorrect format
+        params = {
+            "filters": json.dumps("gibbberish")
+        }
+        response = self.client.get(
+            url, params, format='json', headers=headers
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # inncorrect format
+        params = {
+            "filters": json.dumps({
+                "task_type": ["exact", "value"]
+            })
+        }
+        response = self.client.get(
+            url, params, format='json', headers=headers
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # invalid operation
+        params = {
+            "filters": json.dumps({
+                "task_type": {"dont_find": "value"}
+            })
+        }
+        response = self.client.get(
+            url, params, format='json', headers=headers
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        # invalid field
+        params = {
+            "filters": json.dumps({
+                "fake": {"exact": "value"}
+            })
+        }
+        response = self.client.get(
+            url, params, format='json', headers=headers
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

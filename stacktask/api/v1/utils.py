@@ -7,6 +7,10 @@ from smtplib import SMTPException
 from django.conf import settings
 from django.template import loader
 import hashlib
+from rest_framework.response import Response
+from decorator import decorator
+from django.core.exceptions import FieldError
+import json
 
 
 def create_token(task):
@@ -111,3 +115,42 @@ def create_task_hash(task_type, action_list):
                     raise
 
     return hashlib.sha256(str(hashable_list)).hexdigest()
+
+
+# "{'filters': {'fieldname': { 'operation': 'value'}}
+@decorator
+def parse_filters(func, *args, **kwargs):
+    """
+    Parses incoming filters paramters and converts them to
+    Django usable operations if valid.
+
+    BE AWARE! WILL NOT WORK UNLESS POSITIONAL ARGUMENT 3 IS FILTERS!
+    """
+    request = args[1]
+    filters = request.query_params.get('filters', None)
+
+    if not filters:
+        return func(*args, **kwargs)
+    cleaned_filters = {}
+    try:
+        filters = json.loads(filters)
+        for field, operations in filters.iteritems():
+            for operation, value in operations.iteritems():
+                cleaned_filters['%s__%s' % (field, operation)] = value
+    except (ValueError, AttributeError):
+        return Response(
+            {'errors': [
+                ("Filters incorrectly formatted. Required format: " +
+                 "{'filters': {'fieldname': { 'operation': 'value'}}")
+            ]},
+            status=400
+        )
+
+    try:
+        # NOTE(adriant): This feels dirty and unclear, but it works.
+        # Positional argument 3 is filters, so we just replace it.
+        args = list(args)
+        args[2] = cleaned_filters
+        return func(*args, **kwargs)
+    except FieldError as e:
+            return Response({'errors': [str(e)]}, status=400)

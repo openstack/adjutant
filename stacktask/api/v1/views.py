@@ -19,7 +19,7 @@ from django.utils import timezone
 from logging import getLogger
 from stacktask.api import utils
 from stacktask.api.v1.utils import (
-    send_email, create_notification, create_token)
+    send_email, create_notification, create_token, parse_filters)
 
 from django.conf import settings
 
@@ -36,15 +36,19 @@ class APIViewWithLogger(APIView):
 class NotificationList(APIViewWithLogger):
 
     @utils.admin
-    def get(self, request, format=None):
+    @parse_filters
+    def get(self, request, filters=None, format=None):
         """
         A list of unacknowledged Notification objects as dicts.
         """
-        notifications = Notification.objects.filter(acknowledged__exact=False)
+        if filters:
+            notifications = Notification.objects.filter(**filters)
+        else:
+            notifications = Notification.objects.all()
         note_list = []
         for notification in notifications:
             note_list.append(notification.to_dict())
-        return Response(note_list, status=200)
+        return Response({"notifications": note_list}, status=200)
 
     @utils.admin
     def post(self, request, format=None):
@@ -106,25 +110,39 @@ class NotificationDetail(APIViewWithLogger):
 class TaskList(APIViewWithLogger):
 
     @utils.mod_or_owner
-    def get(self, request, format=None):
+    @parse_filters
+    def get(self, request, filters=None, format=None):
         """
         A list of dict representations of Task objects
         and their related actions.
         """
 
         if 'admin' in request.keystone_user['roles']:
-            tasks = Task.objects.all()
-            reg_list = []
+            if filters:
+                tasks = Task.objects.filter(**filters)
+            else:
+                tasks = Task.objects.all()
+            task_list = []
             for task in tasks:
-                reg_list.append(task.to_dict())
-            return Response(reg_list, status=200)
+                task_list.append(task.to_dict())
+            return Response({'tasks': task_list}, status=200)
         else:
-            tasks = Task.objects.filter(
-                project_id__exact=request.keystone_user['project_id'])
-            reg_list = []
+            if filters:
+                # Ignore any filters with project_id in them
+                for field_filter in filters.keys():
+                    if "project_id" in field_filter:
+                        filters.pop(field_filter)
+
+                tasks = Task.objects.filter(
+                    project_id__exact=request.keystone_user['project_id'],
+                    **filters)
+            else:
+                tasks = Task.objects.filter(
+                    project_id__exact=request.keystone_user['project_id'])
+            task_list = []
             for task in tasks:
-                reg_list.append(task.to_dict())
-            return Response(reg_list, status=200)
+                task_list.append(task.to_dict())
+            return Response({'tasks': task_list}, status=200)
 
 
 class TaskDetail(APIViewWithLogger):
@@ -426,15 +444,19 @@ class TokenList(APIViewWithLogger):
     """
 
     @utils.admin
-    def get(self, request, format=None):
+    @parse_filters
+    def get(self, request, filters=None, format=None):
         """
         A list of dict representations of Token objects.
         """
-        tokens = Token.objects.all()
+        if filters:
+            tokens = Token.objects.filter(**filters)
+        else:
+            tokens = Token.objects.all()
         token_list = []
         for token in tokens:
             token_list.append(token.to_dict())
-        return Response(token_list)
+        return Response({"tokens": token_list})
 
     @utils.admin
     def post(self, request, format=None):
