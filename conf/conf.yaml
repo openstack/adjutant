@@ -8,7 +8,8 @@ ALLOWED_HOSTS:
 
 ADDITIONAL_APPS:
     - stacktask.api.v1
-    - stacktask.tenant_setup
+    - stacktask.actions.tenant_setup
+    - stacktask.notifications.request_tracker
 
 DATABASES:
     default:
@@ -80,6 +81,19 @@ TASK_SETTINGS:
                 reply: no-reply@example.com
                 template: completed.txt
                 html_template: completed.txt
+        notifications:
+            EmailNotification:
+                emails:
+                    - example@example.com
+                reply: no-reply@example.com
+                template: notification.txt
+                html_template: completed.txt
+            RTNotification:
+                url: http://localhost/rt/REST/1.0/
+                queue: helpdesk
+                username: example@example.com
+                password: password
+                template: notification.txt
     invite_user:
         emails:
             # To not send this email, set the value to null,

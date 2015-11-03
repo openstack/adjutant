@@ -16,7 +16,7 @@ SECRET_KEY = '+er!!4olta#17a=n%uotcazg2ncpl==yjog%1*o-(cr%zys-)!'
 
 ADDITIONAL_APPS = [
     'stacktask.api.v1',
-    'stacktask.tenant_setup'
+    'stacktask.actions.tenant_setup'
 ]
 
 DATABASES = {

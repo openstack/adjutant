@@ -11,6 +11,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+
 from django.utils import timezone
 from django.conf import settings
 from rest_framework.response import Response
@@ -18,7 +19,7 @@ from rest_framework.response import Response
 from stacktask.api.v1 import tasks
 from stacktask.api import utils
 from stacktask.api import models
-from stacktask.base import user_store
+from stacktask.actions import user_store
 
 
 class UserList(tasks.InviteUser):

@@ -1,4 +1,4 @@
-from base.models import BaseAction
+from actions.models import BaseAction
 from serializers import NewClientSerializer
 from django.conf import settings
 

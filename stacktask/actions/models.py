@@ -14,8 +14,8 @@
 
 from django.db import models
 from django.utils import timezone
-from stacktask.base import user_store
-from stacktask.base import serializers
+from stacktask.actions import user_store
+from stacktask.actions import serializers
 from django.conf import settings
 from jsonfield import JSONField
 from logging import getLogger
@@ -389,7 +389,11 @@ class NewProject(UserNameAction):
         'email'
     ]
 
-    default_roles = {"Member", "project_owner", "project_mod", "_member_", "heat_stack_owner"}
+    # NOTE(adriant): move these to a config somewhere?
+    default_roles = {
+        "Member", "project_owner", "project_mod", "_member_",
+        "heat_stack_owner"
+    }
 
     def _validate(self):
         project_valid = self._validate_project()

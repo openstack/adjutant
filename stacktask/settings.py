@@ -46,8 +46,9 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_swagger',
-    'stacktask.base',
+    'stacktask.actions',
     'stacktask.api',
+    'stacktask.notifications',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -152,3 +153,5 @@ ACTION_SETTINGS = CONFIG['ACTION_SETTINGS']
 # Dict of actions and their serializers.
 # - This is populated from the various model modules at startup:
 ACTION_CLASSES = {}
+
+NOTIFICATION_ENGINES = {}

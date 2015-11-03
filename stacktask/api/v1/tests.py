@@ -139,7 +139,8 @@ class APITests(APITestCase):
        These tests also focus on authentication status
        and role prermissions."""
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_new_user(self):
         """
         Ensure the new user workflow goes as expected.
@@ -173,7 +174,8 @@ class APITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_new_user_no_project(self):
         """
         Can't create a user for a non-existent project.
@@ -195,7 +197,8 @@ class APITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {'errors': ['actions invalid']})
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_new_user_not_my_project(self):
         """
         Can't create a user for project that isn't mine.
@@ -216,7 +219,8 @@ class APITests(APITestCase):
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_new_user_not_authenticated(self):
         """
         Can't create a user if unauthenticated.
@@ -235,7 +239,8 @@ class APITests(APITestCase):
             {'errors': ["Credentials incorrect or none given."]}
         )
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_add_user_existing(self):
         """
         Adding existing user to project.
@@ -273,7 +278,8 @@ class APITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_add_user_existing_with_role(self):
         """
         Adding existing user to project.
@@ -309,8 +315,10 @@ class APITests(APITestCase):
             response.data,
             {'notes': 'Task completed successfully.'})
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
-    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
     def test_new_project(self):
         """
         Ensure the new project workflow goes as expected.
@@ -343,8 +351,10 @@ class APITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
-    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
     def test_new_project_existing(self):
         """
         Test to ensure validation marks actions as invalid
@@ -387,8 +397,10 @@ class APITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data, {'errors': ['actions invalid']})
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
-    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
     def test_new_project_existing_user(self):
         """
         Project created if not present, existing user attached.
@@ -434,7 +446,8 @@ class APITests(APITestCase):
             {'notes': 'Task completed successfully.'}
         )
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_reset_user(self):
         """
         Ensure the reset user workflow goes as expected.
@@ -462,7 +475,8 @@ class APITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(user.password, 'new_test_password')
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_reset_user_no_existing(self):
         """
         Actions should be invalid.
@@ -534,7 +548,8 @@ class APITests(APITestCase):
         self.assertEqual(
             response.data, {'errors': ['No task with this id.']})
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_token_expired_post(self):
         """
         Expired token should do nothing, then delete itself.
@@ -566,7 +581,8 @@ class APITests(APITestCase):
             {'errors': ['This token does not exist or has expired.']})
         self.assertEqual(0, Token.objects.count())
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_token_expired_get(self):
         """
         Expired token should do nothing, then delete itself.
@@ -597,8 +613,10 @@ class APITests(APITestCase):
             {'errors': ['This token does not exist or has expired.']})
         self.assertEqual(0, Token.objects.count())
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
-    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
     def test_task_complete(self):
         """
         Can't approve a completed task.
@@ -629,8 +647,10 @@ class APITests(APITestCase):
             response.data,
             {'errors': ['This task has already been completed.']})
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
-    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
     def test_task_update(self):
         """
         Creates a invalid task.
@@ -680,8 +700,10 @@ class APITests(APITestCase):
             response.data,
             {'notes': ['created token']})
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
-    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
     def test_notification_createproject(self):
         """
         CreateProject should create a notification.
@@ -712,8 +734,10 @@ class APITests(APITestCase):
             response.data[0]['task'],
             new_task.uuid)
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
-    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
     def test_notification_acknowledge(self):
         """
         Test that you can acknowledge a notification.
@@ -753,8 +777,10 @@ class APITests(APITestCase):
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.data, [])
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
-    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
     def test_notification_acknowledge_list(self):
         """
         Test that you can acknowledge a list of notifications.
@@ -792,7 +818,8 @@ class APITests(APITestCase):
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.data, [])
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_token_expired_delete(self):
         """
         test deleting of expired tokens.
@@ -847,7 +874,8 @@ class APITests(APITestCase):
                          {'notes': ['Deleted all expired tokens.']})
         self.assertEqual(Token.objects.count(), 1)
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_token_reissue(self):
         """
         test for reissue of tokens
@@ -891,8 +919,10 @@ class APITests(APITestCase):
         new_token = Token.objects.all()[0]
         self.assertNotEquals(new_token.token, uuid)
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
-    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
     def test_cancel_task(self):
         """
         Ensure the ability to cancel a task.
@@ -927,8 +957,10 @@ class APITests(APITestCase):
                                    headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
-    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
     def test_cancel_task_sent_token(self):
         """
         Ensure the ability to cancel a task after the token is sent.
@@ -965,8 +997,10 @@ class APITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
-    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
     def test_task_update_unapprove(self):
         """
         Ensure task update doesn't work for approved actions.

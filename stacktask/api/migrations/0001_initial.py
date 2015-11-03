@@ -18,6 +18,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
                 ('notes', jsonfield.fields.JSONField(default={})),
+                ('error', models.BooleanField(default=False, db_index=True)),
                 ('created_on', models.DateTimeField(default=django.utils.timezone.now)),
                 ('acknowledged', models.BooleanField(default=False, db_index=True)),
             ],
@@ -29,7 +30,7 @@ class Migration(migrations.Migration):
                 ('ip_address', models.GenericIPAddressField()),
                 ('keystone_user', jsonfield.fields.JSONField(default={})),
                 ('project_id', models.CharField(max_length=200, null=True, db_index=True)),
-                ('task_view', models.CharField(max_length=200, db_index=True)),
+                ('task_type', models.CharField(max_length=200, db_index=True)),
                 ('action_notes', jsonfield.fields.JSONField(default={})),
                 ('cancelled', models.BooleanField(default=False, db_index=True)),
                 ('approved', models.BooleanField(default=False, db_index=True)),

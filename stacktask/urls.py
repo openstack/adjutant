@@ -12,13 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.conf.urls import patterns, include, url
+from django.conf.urls import include, url
 from django.conf import settings
 
-urlpatterns = patterns(
-    '',
+urlpatterns = [
     url(r'^', include('stacktask.api.urls')),
-)
+]
 
 if settings.DEBUG:
     urlpatterns.append(url(r'^docs/', include('rest_framework_swagger.urls')))

@@ -5,7 +5,7 @@ from uuid import uuid4
 from django.core.mail import send_mail
 from smtplib import SMTPException
 from django.conf import settings
-from django.template import loader, Context
+from django.template import loader
 
 
 def create_token(task):
@@ -61,8 +61,8 @@ def send_email(registration, email_conf, token=None):
         context = {'registration': registration, 'actions': actions}
 
     try:
-        message = template.render(Context(context))
-        html_message = html_template.render(Context(context))
+        message = template.render(context)
+        html_message = html_template.render(context)
         send_mail(
             email_conf['subject'], message, email_conf['reply'],
             [emails.pop()], fail_silently=False, html_message=html_message)
@@ -72,14 +72,22 @@ def send_email(registration, email_conf, token=None):
                 ("Error: '%s' while emailing token for registration: %s" %
                  (e, registration.uuid))
         }
-        create_notification(registration, notes)
+        create_notification(registration, notes, error=True)
         # TODO(adriant): raise some error?
         # and surround calls to this function with try/except
 
 
-def create_notification(task, notes):
+def create_notification(task, notes, error=False):
     notification = Notification.objects.create(
         task=task,
-        notes=notes
+        notes=notes,
+        error=error
     )
     notification.save()
+
+    class_conf = settings.TASK_SETTINGS[task.task_type]
+
+    # NOTE(adriant): some form of error handling is probably needed:
+    for note_engine, conf in class_conf.get('notifications', {}).iteritems():
+        engine = settings.NOTIFICATION_ENGINES[note_engine](conf)
+        engine.notify(task, notes, error)

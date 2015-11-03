@@ -16,7 +16,8 @@ from django.test import TestCase
 from stacktask.api.models import Task
 from stacktask.api.v1.tests import FakeManager, setup_temp_cache
 from stacktask.api.v1 import tests
-from stacktask.tenant_setup.models import DefaultProjectResources, AddAdminToProject
+from stacktask.actions.tenant_setup.models import (
+    DefaultProjectResources, AddAdminToProject)
 import mock
 
 
@@ -72,8 +73,9 @@ def get_fake_neutron():
 
 class TenantSetupActionTests(TestCase):
 
-    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
-    @mock.patch('stacktask.tenant_setup.models.openstack_clients.get_neutronclient',
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.openstack_clients.get_neutronclient',
                 get_fake_neutron)
     def test_resource_setup(self):
         """
@@ -110,8 +112,9 @@ class TenantSetupActionTests(TestCase):
         self.assertEquals(len(neutron_cache['routers']), 1)
         self.assertEquals(len(neutron_cache['subnets']), 1)
 
-    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
-    @mock.patch('stacktask.tenant_setup.models.openstack_clients.get_neutronclient',
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.openstack_clients.get_neutronclient',
                 get_fake_neutron)
     def test_resource_setup_no_id(self):
         """
@@ -141,8 +144,9 @@ class TenantSetupActionTests(TestCase):
         self.assertEquals(len(neutron_cache['routers']), 0)
         self.assertEquals(len(neutron_cache['subnets']), 0)
 
-    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
-    @mock.patch('stacktask.tenant_setup.models.openstack_clients.get_neutronclient',
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.openstack_clients.get_neutronclient',
                 get_fake_neutron)
     def test_resource_setup_no_setup(self):
         """
@@ -174,8 +178,9 @@ class TenantSetupActionTests(TestCase):
         self.assertEquals(len(neutron_cache['routers']), 0)
         self.assertEquals(len(neutron_cache['subnets']), 0)
 
-    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
-    @mock.patch('stacktask.tenant_setup.models.openstack_clients.get_neutronclient',
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.openstack_clients.get_neutronclient',
                 get_fake_neutron)
     def test_resource_setup_fail(self):
         """
@@ -231,7 +236,8 @@ class TenantSetupActionTests(TestCase):
         self.assertEquals(len(neutron_cache['routers']), 1)
         self.assertEquals(len(neutron_cache['subnets']), 1)
 
-    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
     def test_add_admin(self):
         """
         Base case, adds admin user with admin role to project.
@@ -259,7 +265,8 @@ class TenantSetupActionTests(TestCase):
         project = tests.temp_cache['projects']['test_project']
         self.assertEquals(project.roles['admin'], ['admin'])
 
-    @mock.patch('stacktask.tenant_setup.models.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
     def test_add_admin_reapprove(self):
         """
         Ensure nothing happens or changes if rerun of approve.

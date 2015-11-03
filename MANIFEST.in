@@ -1,3 +1,5 @@
 include README.md
 
 graft stacktask/api/v*/templates
+graft stacktask/notifications/templates
+graft stacktask/notifications/*/templates

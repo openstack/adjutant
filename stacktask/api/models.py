@@ -121,6 +121,7 @@ class Notification(models.Model):
 
     notes = JSONField(default={})
     task = models.ForeignKey(Task)
+    error = models.BooleanField(default=False, db_index=True)
     created_on = models.DateTimeField(default=timezone.now)
     acknowledged = models.BooleanField(default=False, db_index=True)
 

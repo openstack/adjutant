@@ -13,7 +13,7 @@
 #    under the License.
 
 from rest_framework.response import Response
-from stacktask.base.user_store import IdentityManager
+from stacktask.actions.user_store import IdentityManager
 from stacktask.api.models import Task
 from django.utils import timezone
 from stacktask.api import utils
@@ -343,7 +343,8 @@ class InviteUser(TaskView):
         self.logger.info("(%s) - New AttachUser request." % timezone.now())
 
         # Default project_id to the keystone user's project
-        if 'project_id' not in request.data or request.data['project_id'] is None:
+        if ('project_id' not in request.data or
+                request.data['project_id'] is None):
             request.data['project_id'] = request.keystone_user['project_id']
 
         # TODO: First check if the user already exists or is pending

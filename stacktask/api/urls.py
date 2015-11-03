@@ -12,9 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.conf.urls import patterns, url, include
+from django.conf.urls import url, include
 
-urlpatterns = patterns(
-    '',
+urlpatterns = [
     url(r'^v1/', include('stacktask.api.v1.urls')),
-)
+]

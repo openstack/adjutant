@@ -12,14 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 from stacktask.api.v1 import views
 from stacktask.api.v1 import tasks
 from stacktask.api.v1 import openstack
 
 
-urlpatterns = patterns(
-    '',
+urlpatterns = [
     url(r'^tasks/(?P<uuid>\w+)/?$', views.TaskDetail.as_view()),
     url(r'^tasks/?$', views.TaskList.as_view()),
     url(r'^tokens/(?P<id>\w+)', views.TokenDetail.as_view()),
@@ -37,4 +36,4 @@ urlpatterns = patterns(
     url(r'^openstack/users/(?P<user_id>\w+)/?$', openstack.UserDetail.as_view()),
     url(r'^openstack/users/?$', openstack.UserList.as_view()),
     url(r'^openstack/roles/?$', openstack.RoleList.as_view()),
-)
+]

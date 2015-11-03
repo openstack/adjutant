@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 setup(
     name='stacktask',
 
-    version='0.1.1a1',
+    version='0.1.1a2',
     description='A user task service for openstack.',
     long_description=(
         'A task service to sit alongside keystone and ' +
@@ -23,7 +23,11 @@ setup(
     keywords='openstack keystone users tasks registration workflow',
 
     packages=find_packages(),
-    package_data={'stacktask': ['api/v*/templates/*.txt']},
+    package_data={
+        'stacktask': [
+            'api/v*/templates/*.txt',
+            'notifications/templates/*.txt',
+            'notifications/*/templates/*.txt']},
 
     install_requires=[
         'Django>=1.7.3',
@@ -34,7 +38,8 @@ setup(
         'python-keystoneclient>=1.0.0',
         'python-neutronclient>=2.3.10',
         'pyyaml>=3.11',
-        'django-rest-swagger>=0.3.3'
+        'django-rest-swagger>=0.3.3',
+        'rt>=1.0.8',
     ],
     entry_points={
         'console_scripts': [

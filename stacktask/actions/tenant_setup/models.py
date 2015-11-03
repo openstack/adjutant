@@ -12,11 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from stacktask.base.models import BaseAction
-from stacktask.tenant_setup.serializers import DefaultProjectResourcesSerializer
+from stacktask.actions.models import BaseAction
+from stacktask.actions.tenant_setup.serializers import DefaultProjectResourcesSerializer
 from django.conf import settings
-from stacktask.base.user_store import IdentityManager
-from stacktask.base import openstack_clients
+from stacktask.actions.user_store import IdentityManager
+from stacktask.actions import openstack_clients
 
 
 class DefaultProjectResources(BaseAction):

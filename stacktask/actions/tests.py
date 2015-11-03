@@ -16,16 +16,18 @@ from django.test import TestCase
 from stacktask.api.models import Task
 from stacktask.api.v1.tests import FakeManager, setup_temp_cache
 from stacktask.api.v1 import tests
-from stacktask.base.models import NewUser, NewProject, ResetUser, EditUserRoles
+from stacktask.actions.models import (
+    NewUser, NewProject, ResetUser, EditUserRoles)
 import mock
 
 
-class BaseActionTests(TestCase):
+class ActionTests(TestCase):
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_new_user(self):
         """
-        Test the base case, all valid.
+        Test the default case, all valid.
         No existing user, valid tenant.
         """
         project = mock.Mock()
@@ -67,7 +69,8 @@ class BaseActionTests(TestCase):
 
         self.assertEquals(project.roles['test@example.com'], ['Member'])
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_new_user_existing(self):
         """
         Existing user, valid tenant, no role.
@@ -85,9 +88,9 @@ class BaseActionTests(TestCase):
         setup_temp_cache({'test_project': project}, {user.name: user})
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
-                                                       'project_mod'],
-                                             'project_id': 'test_project_id'})
+            ip_address="0.0.0.0", keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id'})
 
         data = {
             'email': 'test@example.com',
@@ -109,7 +112,8 @@ class BaseActionTests(TestCase):
 
         self.assertEquals(project.roles[user.name], ['Member'])
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_new_user_existing_role(self):
         """
         Existing user, valid tenant, has role.
@@ -131,9 +135,9 @@ class BaseActionTests(TestCase):
         setup_temp_cache({'test_project': project}, {user.name: user})
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
-                                                       'project_mod'],
-                                             'project_id': 'test_project_id'})
+            ip_address="0.0.0.0", keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id'})
 
         data = {
             'email': 'test@example.com',
@@ -156,7 +160,8 @@ class BaseActionTests(TestCase):
 
         self.assertEquals(project.roles[user.name], ['Member'])
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_new_user_no_tenant(self):
         """
         No user, no tenant.
@@ -165,9 +170,9 @@ class BaseActionTests(TestCase):
         setup_temp_cache({}, {})
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
-                                                       'project_mod'],
-                                             'project_id': 'test_project_id'})
+            ip_address="0.0.0.0", keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id'})
 
         data = {
             'email': 'test@example.com',
@@ -189,7 +194,8 @@ class BaseActionTests(TestCase):
 
         self.assertEquals('admin' in tests.temp_cache['users'], True)
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_new_project(self):
         """
         Base case, no project, no user.
@@ -201,9 +207,9 @@ class BaseActionTests(TestCase):
         setup_temp_cache({}, {})
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
-                                                       'project_mod'],
-                                             'project_id': 'test_project_id'})
+            ip_address="0.0.0.0", keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id'})
 
         data = {
             'email': 'test@example.com',
@@ -233,9 +239,11 @@ class BaseActionTests(TestCase):
         project = tests.temp_cache['projects']['test_project']
         self.assertEquals(
             sorted(project.roles['test@example.com']),
-            sorted(['Member', '_member_', 'project_owner', 'project_mod', 'heat_stack_owner']))
+            sorted(['Member', '_member_', 'project_owner',
+                    'project_mod', 'heat_stack_owner']))
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_new_project_reapprove(self):
         """
         Project created at post_approve step,
@@ -245,9 +253,9 @@ class BaseActionTests(TestCase):
         setup_temp_cache({}, {})
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
-                                                       'project_mod'],
-                                             'project_id': 'test_project_id'})
+            ip_address="0.0.0.0", keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id'})
 
         data = {
             'email': 'test@example.com',
@@ -285,9 +293,11 @@ class BaseActionTests(TestCase):
         project = tests.temp_cache['projects']['test_project']
         self.assertEquals(
             sorted(project.roles['test@example.com']),
-            sorted(['Member', '_member_', 'project_owner', 'project_mod', 'heat_stack_owner']))
+            sorted(['Member', '_member_', 'project_owner',
+                    'project_mod', 'heat_stack_owner']))
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_new_project_existing_user(self):
         """
         no project, existing user.
@@ -301,9 +311,9 @@ class BaseActionTests(TestCase):
         setup_temp_cache({}, {user.name: user})
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
-                                                       'project_mod'],
-                                             'project_id': 'test_project_id'})
+            ip_address="0.0.0.0", keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id'})
 
         data = {
             'email': 'test@example.com',
@@ -332,9 +342,11 @@ class BaseActionTests(TestCase):
         project = tests.temp_cache['projects']['test_project']
         self.assertEquals(
             sorted(project.roles['test@example.com']),
-            sorted(['Member', '_member_', 'project_owner', 'project_mod', 'heat_stack_owner']))
+            sorted(['Member', '_member_', 'project_owner',
+                    'project_mod', 'heat_stack_owner']))
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_new_project_existing(self):
         """
         Existing project.
@@ -348,9 +360,9 @@ class BaseActionTests(TestCase):
         setup_temp_cache({project.name: project}, {})
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
-                                                       'project_mod'],
-                                             'project_id': 'test_project_id'})
+            ip_address="0.0.0.0", keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id'})
 
         data = {
             'email': 'test@example.com',
@@ -365,7 +377,8 @@ class BaseActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, False)
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_reset_user(self):
         """
         Base case, existing user.
@@ -380,9 +393,9 @@ class BaseActionTests(TestCase):
         setup_temp_cache({}, {user.name: user})
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
-                                                       'project_mod'],
-                                             'project_id': 'test_project_id'})
+            ip_address="0.0.0.0", keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id'})
 
         data = {
             'email': 'test@example.com',
@@ -405,7 +418,8 @@ class BaseActionTests(TestCase):
             tests.temp_cache['users']['test@example.com'].password,
             '123456')
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_reset_user_no_user(self):
         """
         No user.
@@ -414,9 +428,9 @@ class BaseActionTests(TestCase):
         setup_temp_cache({}, {})
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin',
-                                                       'project_mod'],
-                                             'project_id': 'test_project_id'})
+            ip_address="0.0.0.0", keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id'})
 
         data = {
             'email': 'test@example.com',
@@ -435,7 +449,8 @@ class BaseActionTests(TestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, False)
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_edit_user_add(self):
         """
         Add roles to existing user.
@@ -480,7 +495,8 @@ class BaseActionTests(TestCase):
         self.assertEquals(set(project.roles[user.name]),
                           set(['Member', 'project_mod']))
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_edit_user_add_complete(self):
         """
         Add roles to existing user.
@@ -526,7 +542,8 @@ class BaseActionTests(TestCase):
         self.assertEquals(set(project.roles[user.name]),
                           set(['Member', 'project_mod']))
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_edit_user_remove(self):
         """
         Remove roles from existing user.
@@ -570,7 +587,8 @@ class BaseActionTests(TestCase):
 
         self.assertEquals(project.roles[user.name], ['Member'])
 
-    @mock.patch('stacktask.base.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_edit_user_remove_complete(self):
         """
         Remove roles from existing user.
