@@ -1039,3 +1039,68 @@ class APITests(APITestCase):
         response = self.client.put(url, data, format='json',
                                    headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @mock.patch(
+        'stacktask.actions.models.user_store.IdentityManager', FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.IdentityManager', FakeManager)
+    def test_duplicate_tasks_new_project(self):
+        """
+        Ensure we can't submit duplicate tasks
+        """
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        setup_temp_cache({}, {})
+
+        url = "/v1/actions/CreateProject"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        data = {'project_name': "test_project_2", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @mock.patch(
+        'stacktask.actions.models.user_store.IdentityManager', FakeManager)
+    def test_duplicate_tasks_new_user(self):
+        """
+        Ensure we can't submit duplicate tasks
+        """
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
+
+        url = "/v1/actions/InviteUser"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_owner,Member,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        data = {'email': "test@example.com", 'roles': ["Member"],
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        data = {'email': "test2@example.com", 'roles': ["Member"],
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

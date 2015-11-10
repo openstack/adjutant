@@ -27,6 +27,7 @@ class Migration(migrations.Migration):
             name='Task',
             fields=[
                 ('uuid', models.CharField(default=stacktask.api.models.hex_uuid, max_length=200, serialize=False, primary_key=True)),
+                ('hash_key', models.CharField(max_length=64, db_index=True)),
                 ('ip_address', models.GenericIPAddressField()),
                 ('keystone_user', jsonfield.fields.JSONField(default={})),
                 ('project_id', models.CharField(max_length=200, null=True, db_index=True)),

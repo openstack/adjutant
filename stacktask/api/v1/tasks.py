@@ -19,7 +19,7 @@ from django.utils import timezone
 from stacktask.api import utils
 from stacktask.api.v1.views import APIViewWithLogger
 from stacktask.api.v1.utils import (
-    send_email, create_notification, create_token)
+    send_email, create_notification, create_token, create_task_hash)
 
 
 from django.conf import settings
@@ -101,6 +101,16 @@ class TaskView(APIViewWithLogger):
                     errors.update(action['serializer'].errors)
             return {'errors': errors}
 
+        hash_key = create_task_hash(self.task_type, action_list)
+
+        tasks = Task.objects.filter(
+            hash_key=hash_key,
+            completed=0,
+            cancelled=0)
+
+        if len(tasks) > 0:
+            return {'errors': ['Task is a duplicate of an existing one']}
+
         ip_address = request.META['REMOTE_ADDR']
         keystone_user = request.keystone_user
 
@@ -108,11 +118,13 @@ class TaskView(APIViewWithLogger):
             task = Task.objects.create(
                 ip_address=ip_address, keystone_user=keystone_user,
                 project_id=keystone_user['project_id'],
-                task_type=self.task_type)
+                task_type=self.task_type,
+                hash_key=hash_key)
         except KeyError:
             task = Task.objects.create(
                 ip_address=ip_address, keystone_user=keystone_user,
-                task_type=self.task_type)
+                task_type=self.task_type,
+                hash_key=hash_key)
         task.save()
 
         for i, action in enumerate(action_list):

@@ -6,6 +6,7 @@ from django.core.mail import send_mail
 from smtplib import SMTPException
 from django.conf import settings
 from django.template import loader
+import hashlib
 
 
 def create_token(task):
@@ -91,3 +92,22 @@ def create_notification(task, notes, error=False):
     for note_engine, conf in class_conf.get('notifications', {}).iteritems():
         engine = settings.NOTIFICATION_ENGINES[note_engine](conf)
         engine.notify(task, notes, error)
+
+
+def create_task_hash(task_type, action_list):
+    hashable_list = [task_type, ]
+
+    for action in action_list:
+        hashable_list.append(action['name'])
+        # iterate like this to maintain consistent order for hash
+        for field in action['action'].required:
+            try:
+                hashable_list.append(
+                    action['serializer'].validated_data[field])
+            except KeyError:
+                if field is "username" and settings.USERNAME_IS_EMAIL:
+                    continue
+                else:
+                    raise
+
+    return hashlib.sha256(str(hashable_list)).hexdigest()
