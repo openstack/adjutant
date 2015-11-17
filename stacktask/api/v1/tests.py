@@ -1104,3 +1104,83 @@ class APITests(APITestCase):
         self.assertEqual(response.data, {'notes': ['created token']})
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager', FakeManager)
+    def test_cancel_task_own(self):
+        """
+        Ensure the ability to cancel your own task.
+        """
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
+
+        url = "/v1/actions/InviteUser"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_owner,Member,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        data = {'email': "test@example.com", 'roles': ["Member"],
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        new_task = Task.objects.all()[0]
+        url = "/v1/tasks/" + new_task.uuid
+        response = self.client.delete(url, format='json',
+                                      headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        headers['roles'] = "admin"
+        response = self.client.post(url, {'approved': True}, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        response = self.client.put(url, format='json',
+                                   headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager', FakeManager)
+    def test_cancel_task_own_fail(self):
+        """
+        Ensure the ability to cancel ONLY your own task.
+        """
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
+
+        url = "/v1/actions/InviteUser"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_owner,Member,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        data = {'email': "test@example.com", 'roles': ["Member"],
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        new_task = Task.objects.all()[0]
+        url = "/v1/tasks/" + new_task.uuid
+        headers['project_id'] = "fake_project_id"
+        response = self.client.delete(url, format='json',
+                                      headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
