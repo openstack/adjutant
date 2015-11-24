@@ -385,6 +385,25 @@ class ResetPassword(TaskView):
     def post(self, request, format=None):
         """
         Unauthenticated endpoint bound to the password reset action.
+        This will submit and approve a password reset request.
+         ---
+        parameters:
+            - name: email
+              required: true
+              type: string
+              description: The email of the user to reset
+            - name: username
+              required: false
+              type: string
+              description: The username of the user, not required if using
+                           USERNAME_IS_PASSWORD
+
+        responseMessages:
+            - code: 400
+              message: Validation Errors
+            - code: 200
+              message: Success. Does not indicate user exists.
+
         """
         self.logger.info("(%s) - New ResetUser request." % timezone.now())
         processed = self.process_actions(request)
@@ -398,7 +417,8 @@ class ResetPassword(TaskView):
         task = processed['task']
         self.logger.info("(%s) - AutoApproving Resetuser request."
                          % timezone.now())
-        return self.approve(task)
+        self.approve(task)
+        return Response(status=200)
 
 
 class EditUser(TaskView):

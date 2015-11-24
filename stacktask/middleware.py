@@ -75,7 +75,7 @@ class RequestLoggingMiddleware(object):
         request.timer = time()
 
     def process_response(self, request, response):
-        if getattr(request, 'timer'):
+        if hasattr(request, 'timer'):
             time_delta = time() - request.timer
         else:
             time_delta = -1
