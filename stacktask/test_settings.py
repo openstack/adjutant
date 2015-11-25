@@ -70,6 +70,8 @@ DEFAULT_REGION = 'RegionOne'
 
 TOKEN_SUBMISSION_URL = 'http://localhost:8080/token/'
 
+TOKEN_EXPIRE_TIME = 24
+
 # Additonal actions for views:
 # - The order of the actions matters. These will run after the default action,
 #   in the given order.
@@ -162,5 +164,6 @@ conf_dict = {
     "DEFAULT_REGION": DEFAULT_REGION,
     "TASK_SETTINGS": TASK_SETTINGS,
     "ACTION_SETTINGS": ACTION_SETTINGS,
-    "TOKEN_SUBMISSION_URL": TOKEN_SUBMISSION_URL
+    "TOKEN_SUBMISSION_URL": TOKEN_SUBMISSION_URL,
+    "TOKEN_EXPIRE_TIME": TOKEN_EXPIRE_TIME
 }

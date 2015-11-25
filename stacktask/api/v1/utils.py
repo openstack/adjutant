@@ -11,7 +11,7 @@ import hashlib
 
 def create_token(task):
     # expire needs to be made configurable.
-    expire = timezone.now() + timedelta(hours=24)
+    expire = timezone.now() + timedelta(hours=settings.TOKEN_EXPIRE_TIME)
 
     # is this a good way to create tokens?
     uuid = uuid4().hex

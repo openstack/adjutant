@@ -143,6 +143,8 @@ DEFAULT_REGION = CONFIG['DEFAULT_REGION']
 
 TOKEN_SUBMISSION_URL = CONFIG['TOKEN_SUBMISSION_URL']
 
+TOKEN_EXPIRE_TIME = CONFIG['TOKEN_EXPIRE_TIME']
+
 # Additonal actions for views:
 # - The order of the actions matters. These will run after the default action,
 #   in the given order.
