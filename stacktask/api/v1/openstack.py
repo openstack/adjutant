@@ -26,7 +26,7 @@ class UserList(tasks.InviteUser):
 
     @utils.mod_or_owner
     def get(self, request):
-        """Get a list of all users who have been added to a tenant"""
+        """Get a list of all users who have been added to a project"""
         class_conf = settings.TASK_SETTINGS.get('edit_user', {})
         filters = class_conf.get('filters', [])
         user_list = []
@@ -112,18 +112,19 @@ class UserDetail(tasks.TaskView):
     @utils.mod_or_owner
     def delete(self, request, user_id):
         """
-        Remove this user from the tenant.
+        Remove this user from the project.
         This may cancel a pending user invite, or simply revoke roles.
         """
         id_manager = user_store.IdentityManager()
         user = id_manager.get_user(user_id)
-        project_id = request.data['project_id'] or request.keystone_user['project_id']
+        project_id = request.keystone_user['project_id']
         # NOTE(dale): For now, we only support cancelling pending invites.
         if user:
-            return Response({'errors':
-                            ['Revoking keystone users not implemented. ' +
-                            'Try removing all roles instead.']},
-                            status=501)
+            return Response(
+                {'errors': [
+                    'Revoking keystone users not implemented. ' +
+                    'Try removing all roles instead.']},
+                status=501)
         project_tasks = models.Task.objects.filter(
             project_id=project_id,
             task_type="invite_user",
@@ -160,7 +161,7 @@ class UserRoles(tasks.TaskView):
     @utils.mod_or_owner
     def put(self, request, user_id, format=None):
         """
-        Add user roles to the current tenant.
+        Add user roles to the current project.
         """
         request.data['remove'] = False
         if 'project_id' not in request.data:
@@ -184,7 +185,7 @@ class UserRoles(tasks.TaskView):
     @utils.mod_or_owner
     def delete(self, request, user_id, format=None):
         """
-        Revoke user roles to the current tenant.
+        Revoke user roles to the current project.
         This only supports Active users.
         """
         request.data['remove'] = True
@@ -212,7 +213,7 @@ class RoleList(tasks.TaskView):
 
     @utils.mod_or_owner
     def get(self, request):
-        """Returns a list of roles that may be managed for this tenant"""
+        """Returns a list of roles that may be managed for this project"""
 
         # get roles for this user on the project
         user_roles = request.keystone_user['roles']
