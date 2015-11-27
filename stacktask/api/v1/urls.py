@@ -36,4 +36,5 @@ urlpatterns = [
     url(r'^openstack/users/(?P<user_id>\w+)/?$', openstack.UserDetail.as_view()),
     url(r'^openstack/users/?$', openstack.UserList.as_view()),
     url(r'^openstack/roles/?$', openstack.RoleList.as_view()),
+    url(r'^openstack/forgotpassword/?$', openstack.ResetPassword.as_view()),
 ]

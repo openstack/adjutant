@@ -228,3 +228,17 @@ class RoleList(tasks.TaskView):
                 managable_roles.append(role.to_dict())
 
         return Response({'roles': managable_roles})
+
+
+class ResetPassword(tasks.ResetPassword):
+    """
+    The openstack forgot password endpoint.
+    ---
+    """
+
+    def get(self, request):
+        """
+        The ResetPassword endpoint does not support GET.
+        This returns a 404.
+        """
+        return Response(status=404)

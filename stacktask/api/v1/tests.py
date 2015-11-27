@@ -466,7 +466,7 @@ class APITests(APITestCase):
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'notes': ['created token']})
+        self.assertEqual(response.data, None)
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -479,16 +479,16 @@ class APITests(APITestCase):
                 FakeManager)
     def test_reset_user_no_existing(self):
         """
-        Actions should be invalid.
+        Actions should be successful, so usernames are not exposed.
         """
 
         setup_temp_cache({}, {})
 
         url = "/v1/actions/ResetPassword"
-        data = {'email': "test@example.com"}
+        data = {'email': "test@exampleinvalid.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {'errors': ['actions invalid']})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, None)
 
     def test_no_token_get(self):
         """
@@ -567,7 +567,7 @@ class APITests(APITestCase):
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'notes': ['created token']})
+        self.assertEqual(response.data, None)
 
         new_token = Token.objects.all()[0]
         new_token.expires = timezone.now() - timedelta(hours=24)
@@ -600,7 +600,7 @@ class APITests(APITestCase):
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'notes': ['created token']})
+        self.assertEqual(response.data, None)
 
         new_token = Token.objects.all()[0]
         new_token.expires = timezone.now() - timedelta(hours=24)
@@ -843,13 +843,13 @@ class APITests(APITestCase):
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'notes': ['created token']})
+        self.assertEqual(response.data, None)
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test2@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'notes': ['created token']})
+        self.assertEqual(response.data, None)
 
         tokens = Token.objects.all()
 
@@ -893,7 +893,7 @@ class APITests(APITestCase):
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'notes': ['created token']})
+        self.assertEqual(response.data, None)
 
         task = Task.objects.all()[0]
         new_token = Token.objects.all()[0]
