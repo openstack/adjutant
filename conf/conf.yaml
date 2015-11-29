@@ -131,7 +131,7 @@ TASK_SETTINGS:
                 reply: no-reply@example.com
                 template: completed.txt
                 html_template: completed.txt
-        filter:
+        role_blacklist:
             - admin
             - Admin
 

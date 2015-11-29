@@ -434,7 +434,7 @@ class EditUser(TaskView):
         actions = [self.default_action, ]
 
         actions += class_conf.get('actions', [])
-        filters = class_conf.get('filters', [])
+        role_blacklist = class_conf.get('role_blacklist', [])
 
         required_fields = []
 
@@ -454,7 +454,7 @@ class EditUser(TaskView):
             self.logger.info(user)
             roles = []
             for role in id_manager.get_roles(user, project):
-                if role.name in filters:
+                if role.name in role_blacklist:
                     skip = True
                     continue
                 roles.append(role.name)

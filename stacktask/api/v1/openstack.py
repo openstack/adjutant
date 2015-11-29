@@ -28,7 +28,7 @@ class UserList(tasks.InviteUser):
     def get(self, request):
         """Get a list of all users who have been added to a project"""
         class_conf = settings.TASK_SETTINGS.get('edit_user', {})
-        filters = class_conf.get('filters', [])
+        role_blacklist = class_conf.get('role_blacklist', [])
         user_list = []
         id_manager = user_store.IdentityManager()
         project_id = request.keystone_user['project_id']
@@ -40,7 +40,7 @@ class UserList(tasks.InviteUser):
             self.logger.info(user)
             roles = []
             for role in id_manager.get_roles(user, project):
-                if role.name in filters:
+                if role.name in role_blacklist:
                     skip = True
                     continue
                 roles.append(role.name)
@@ -93,17 +93,26 @@ class UserDetail(tasks.TaskView):
     def get(self, request, user_id):
         """
         Get user info based on the user id.
+
+        Will only find users in your project.
         """
         id_manager = user_store.IdentityManager()
         user = id_manager.get_user(user_id)
+
+        no_user = {'errors': ['No user with this id.']}
         if not user:
-            return Response({'errors': ['No user with this id.']},
-                            status=404)
+            return Response(no_user, status=404)
+
+        class_conf = settings.TASK_SETTINGS.get(self.task_type, {})
+        role_blacklist = class_conf.get('role_blacklist', [])
         project_id = request.keystone_user['project_id']
         project = id_manager.get_project(project_id)
-        roles = []
-        for role in id_manager.get_roles(user, project):
-            roles.append(role.name)
+
+        roles = [role.name for role in id_manager.get_roles(user, project)]
+        roles_blacklisted = set(role_blacklist) & set(roles)
+
+        if not roles or roles_blacklisted:
+            return Response(no_user, status=404)
         return Response({'id': user.id,
                          "username": user.username,
                          "email": getattr(user, 'email', ''),
