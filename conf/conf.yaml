@@ -113,6 +113,7 @@ TASK_SETTINGS:
                 template: completed.txt
                 html_template: completed.txt
     reset_password:
+        handle_duplicates: cancel
         emails:
             token:
                 subject: Your Token

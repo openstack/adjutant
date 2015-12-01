@@ -120,6 +120,7 @@ TASK_SETTINGS = {
         ]
     },
     'reset_password': {
+        'handle_duplicates': 'cancel',
         'emails': {
             'token': {
                 'reply': 'no-reply@example.com',

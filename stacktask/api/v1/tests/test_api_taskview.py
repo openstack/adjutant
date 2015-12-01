@@ -365,6 +365,51 @@ class TaskViewTests(APITestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
+    def test_reset_user_duplicate(self):
+        """
+        Request password reset twice in a row
+        The first token should become invalid, with the second replacing it.
+
+        """
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.password = "test_password"
+
+        setup_temp_cache({}, {user.name: user})
+
+        # Submit password reset
+        url = "/v1/actions/ResetPassword"
+        data = {'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, None)
+
+        # Submit password reset again
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, None)
+
+        # Verify the first token doesn't work
+        first_token = Token.objects.all()[0]
+        url = "/v1/tokens/" + first_token.token
+        data = {'password': 'new_test_password1'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(user.password, 'test_password')
+
+        # Now reset with the second token
+        second_token = Token.objects.all()[1]
+        url = "/v1/tokens/" + second_token.token
+        data = {'password': 'new_test_password2'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(user.password, 'new_test_password2')
+
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_reset_user_no_existing(self):
         """
         Actions should be successful, so usernames are not exposed.

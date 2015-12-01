@@ -102,14 +102,25 @@ class TaskView(APIViewWithLogger):
             return {'errors': errors}
 
         hash_key = create_task_hash(self.task_type, action_list)
-
-        tasks = Task.objects.filter(
+        duplicate_tasks = Task.objects.filter(
             hash_key=hash_key,
             completed=0,
             cancelled=0)
 
-        if len(tasks) > 0:
-            return {'errors': ['Task is a duplicate of an existing one']}
+        if duplicate_tasks:
+            duplicate_policy = class_conf.get("handle_duplicates", "")
+            if duplicate_policy == "cancel":
+                self.logger.info(
+                    "(%s) - Task is a duplicate - Cancelling old tasks." %
+                    timezone.now())
+                for task in duplicate_tasks:
+                    task.cancelled = True
+                    task.save()
+            else:
+                self.logger.info(
+                    "(%s) - Task is a duplicate - Ignoring new task." %
+                    timezone.now())
+                return {'errors': ['Task is a duplicate of an existing task']}
 
         ip_address = request.META['REMOTE_ADDR']
         keystone_user = request.keystone_user
