@@ -20,6 +20,7 @@ from django.conf import settings
 
 
 urlpatterns = [
+    url(r'^status/?$', views.StatusView.as_view()),
     url(r'^tasks/(?P<uuid>\w+)/?$', views.TaskDetail.as_view()),
     url(r'^tasks/?$', views.TaskList.as_view()),
     url(r'^tokens/(?P<id>\w+)', views.TokenDetail.as_view()),

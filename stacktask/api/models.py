@@ -140,6 +140,7 @@ class Notification(models.Model):
             "pk": self.pk,
             "notes": self.notes,
             "task": self.task.uuid,
+            "error": self.error,
             "acknowledged": self.acknowledged,
             "created_on": self.created_on
         }

@@ -33,6 +33,43 @@ class APIViewWithLogger(APIView):
         self.logger = getLogger('django.request')
 
 
+class StatusView(APIViewWithLogger):
+
+    @utils.admin
+    def get(self, request, filters=None, format=None):
+        """
+        Simple status endpoint.
+
+        Returns a list of unacknowledged error notifications,
+        and both the last created and last completed tasks.
+
+        Can returns None, if there are no tasks.
+        """
+        notifications = Notification.objects.filter(
+            error=1,
+            acknowledged=0
+        )
+
+        try:
+            last_created_task = Task.objects.filter(
+                completed=0).order_by("-created_on")[0].to_dict()
+        except KeyError:
+            last_created_task = None
+        try:
+            last_completed_task = Task.objects.filter(
+                completed=1).order_by("-completed_on")[0].to_dict()
+        except KeyError:
+            last_completed_task = None
+
+        status = {
+            "error_notifications": [note.to_dict() for note in notifications],
+            "last_created_task": last_created_task,
+            "last_completed_task": last_completed_task
+        }
+
+        return Response(status, status=200)
+
+
 class NotificationList(APIViewWithLogger):
 
     @utils.admin
