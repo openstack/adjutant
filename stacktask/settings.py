@@ -152,6 +152,8 @@ TASK_SETTINGS = CONFIG['TASK_SETTINGS']
 
 ACTION_SETTINGS = CONFIG['ACTION_SETTINGS']
 
+ROLES_MAPPING = CONFIG['ROLES_MAPPING']
+
 # Dict of actions and their serializers.
 # - This is populated from the various model modules at startup:
 ACTION_CLASSES = {}

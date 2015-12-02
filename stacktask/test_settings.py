@@ -154,6 +154,19 @@ ACTION_SETTINGS = {
     }
 }
 
+ROLES_MAPPING = {
+    'admin': [
+        'project_owner', 'project_mod', 'Member', 'heat_stack_owner',
+        '_member_'
+    ],
+    'project_owner': [
+        'project_mod', 'Member', 'heat_stack_owner', '_member_'
+    ],
+    'project_mod': [
+        'Member', 'heat_stack_owner', '_member_'
+    ],
+}
+
 conf_dict = {
     "SECRET_KEY": SECRET_KEY,
     "ADDITIONAL_APPS": ADDITIONAL_APPS,
@@ -166,5 +179,6 @@ conf_dict = {
     "TASK_SETTINGS": TASK_SETTINGS,
     "ACTION_SETTINGS": ACTION_SETTINGS,
     "TOKEN_SUBMISSION_URL": TOKEN_SUBMISSION_URL,
-    "TOKEN_EXPIRE_TIME": TOKEN_EXPIRE_TIME
+    "TOKEN_EXPIRE_TIME": TOKEN_EXPIRE_TIME,
+    "ROLES_MAPPING": ROLES_MAPPING
 }

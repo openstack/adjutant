@@ -16,6 +16,7 @@ from openstack_clients import get_keystoneclient
 from keystoneclient.openstack.common.apiclient import (
     exceptions as ks_exceptions
 )
+from django.conf import settings
 
 
 def get_managable_roles(user_roles):
@@ -23,20 +24,7 @@ def get_managable_roles(user_roles):
     Given a list of user role names, returns a list of names
     that the user is allowed to manage.
     """
-    # hardcoded mapping between roles and managable roles
-    # Todo: relocate to settings file.
-    manage_mapping = {
-        'admin': [
-            'project_owner', 'project_mod', 'Member', 'heat_stack_owner',
-            '_member_'
-        ],
-        'project_owner': [
-            'project_mod', 'Member', 'heat_stack_owner', '_member_'
-        ],
-        'project_mod': [
-            'Member', 'heat_stack_owner', '_member_'
-        ],
-    }
+    manage_mapping = settings.ROLES_MAPPING
     # merge mapping lists to form a flat permitted roles list
     managable_role_names = [mrole for role_name in user_roles
                             if role_name in manage_mapping

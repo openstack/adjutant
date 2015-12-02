@@ -155,3 +155,20 @@ ACTION_SETTINGS:
                 - 193.168.1.2
                 - 193.168.1.3
             SUBNET_CIDR: 192.168.1.0/24
+
+# mapping between roles and managable roles
+ROLES_MAPPING:
+    admin:
+        - project_owner
+        - project_mod
+        - heat_stack_owner
+        - _member_
+    project_owner:
+        - project_owner
+        - project_mod
+        - heat_stack_owner
+        - _member_
+    project_mod:
+        - project_mod
+        - heat_stack_owner
+        - _member_
