@@ -75,7 +75,7 @@ def send_email(registration, email_conf, token=None):
         notes = {
             'notes':
                 ("Error: '%s' while emailing token for registration: %s" %
-                 (e, registration.uuid))
+                    (e, registration.uuid))
         }
         create_notification(registration, notes, error=True)
         # TODO(adriant): raise some error?
@@ -90,7 +90,7 @@ def create_notification(task, notes, error=False):
     )
     notification.save()
 
-    class_conf = settings.TASK_SETTINGS[task.task_type]
+    class_conf = settings.TASK_SETTINGS.get(task.task_type, {})
 
     # NOTE(adriant): some form of error handling is probably needed:
     for note_engine, conf in class_conf.get('notifications', {}).iteritems():
