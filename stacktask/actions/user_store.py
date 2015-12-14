@@ -78,7 +78,11 @@ class IdentityManager(object):
         return self.ks_client.roles.roles_for_user(user, tenant=project)
 
     def add_user_role(self, user, role, project_id):
-        self.ks_client.roles.add_user_role(user, role, project_id)
+        try:
+            self.ks_client.roles.add_user_role(user, role, project_id)
+        except ks_exceptions.Conflict:
+            # Conflict is ok, it means the user already has this role.
+            pass
 
     def remove_user_role(self, user, role, project_id):
         self.ks_client.roles.remove_user_role(user, role, project_id)
