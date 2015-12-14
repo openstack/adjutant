@@ -89,7 +89,7 @@ https://docs.djangoproject.com/en/1.8/ref/models/querysets/#id4
 
 #### Default TaskView Endpoints:
 
-Basic default endpoints for the TaskViews. 
+Basic default endpoints for the TaskViews.
 
 * ../v1/actions/CreateProject - GET
   * return a json describing the actions and required fields for the endpoint.
@@ -131,7 +131,7 @@ For ease of integration with OpenStack, these endpoints are setup to work and pa
   * Returns a list of users on your project, and their roles.
   * Also returns a list of pending user invites.
 * ../v1/openstack/users - POST
-  * See above, same as ../v1/actions/InviteUser - POST 
+  * See above, same as ../v1/actions/InviteUser - POST
 * ../v1/openstack/users/<user_id> - GET
   * Get details on the given user, including their roles on your project.
 * ../v1/openstack/users/<user_id> - DELETE
@@ -214,6 +214,7 @@ See **api.v1.tasks** and look at the TaskView class to get a better idea.
 
 For a more complex variant, look at **api.v1.openstack** to see some more unique TaskViews specific to certain endpoints we needed to mimic OpenStack functionality.
 
+
 ## Development:
 
 ### Packaging and Installing:
@@ -264,18 +265,30 @@ Ideally this will be made pluggable in future, but for now requires updating and
 
 For examples see the classes CreateProject, InviteUser, and ResetPassword in the **api.v1.tasks** module, and **api.v1.openstack**.
 
+
 ## Setup/Deployment:
 
-This section is still a work in progress.
+### Debian packaging
+Debian packaging is done with dh-virtualenv (https://github.com/spotify/dh-virtualenv).
+When a package is built, a new virtualenv is created and populated using the contents of requirements.txt.
 
-Work is being done on packaging which will install the service into a virtualenv with all it's requirements coming from pip, then wrap that into a deb.
+Package building setup:
+  apt-get install build-essential devscripts dh-virtualenv
 
+Build the package:
+  dpkg-buildpackage -us -uc
+
+Now a debian package has been built that will unpack a virtualenv containing stacktask and all dependencies in a self-contained package, so they do not conflict with other python packages on the system.
+Upload the package to repo-private: https://wiki.wgtn.cat-it.co.nz/wiki/Repo-private#APT
+
+### Puppet module
 Then a puppet module will be able to install the debian package, setup a database, and run the service via nginx and uwsgi in the virtualenv.
 
-## Current Work:
 
-* 
-* Basic admin panel in horizon, and example public forms for task and token submission.
+## Current Work:
+* Basic admin panel in horizon to manage user roles and invite new users.
+* Horizon forms for token submission and password reset.
+
 
 ## Future Plans:
 

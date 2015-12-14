@@ -11,7 +11,7 @@ setup(
     long_description=(
         'A task service to sit alongside keystone and ' +
         'add some missing functionality.'),
-    url='https://github.com/catalyst/stack-task',
+    url='https://github.com/catalyst/stacktask',
     author='Adrian Turjak',
     author_email='adriant@catalyst.net.nz',
     license='Apache 2.0',
