@@ -145,6 +145,8 @@ TOKEN_SUBMISSION_URL = CONFIG['TOKEN_SUBMISSION_URL']
 
 TOKEN_EXPIRE_TIME = CONFIG['TOKEN_EXPIRE_TIME']
 
+SHOW_ACTION_ENDPOINTS = CONFIG['SHOW_ACTION_ENDPOINTS']
+
 # Additonal actions for views:
 # - The order of the actions matters. These will run after the default action,
 #   in the given order.
