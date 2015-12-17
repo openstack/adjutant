@@ -109,6 +109,20 @@ TASK_SETTINGS:
         handle_duplicates: cancel
         emails:
             initial: null
+            token:
+                subject: Password Reset for OpenStack
+                reply: no-reply@example.com
+                template: password_reset.txt
+                html_template: password_reset.txt
+    force_password:
+        handle_duplicates: cancel
+        emails:
+            initial: null
+            token:
+                subject: Setup Your OpenStack Password
+                reply: no-reply@example.com
+                template: initial_password.txt
+                html_template: initial_password.txt
     edit_user:
         emails:
             initial: null

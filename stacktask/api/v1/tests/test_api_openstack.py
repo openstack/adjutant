@@ -83,6 +83,7 @@ class OpenstackAPITests(APITestCase):
             'user_id': "test_user_id",
             'authenticated': True
         }
+
         data = {'email': "test@example.com", 'roles': ["Member"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
@@ -104,3 +105,48 @@ class OpenstackAPITests(APITestCase):
 
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @mock.patch(
+        'stacktask.actions.models.user_store.IdentityManager', FakeManager)
+    def test_force_reset_password(self):
+        """
+        Ensure the force password endpoint works as expected,
+        and only for admin.
+
+        Should also check if template can be rendered.
+        """
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.username = "test@example.com"
+        user.email = "test@example.com"
+        user.password = "test_password"
+
+        setup_temp_cache({}, {user.username: user})
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "Member",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        url = "/v1/openstack/users/password-set"
+        data = {'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        headers["roles"] = "admin,Member"
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, None)
+
+        new_token = Token.objects.all()[0]
+        url = "/v1/tokens/" + new_token.token
+        data = {'password': 'new_test_password'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(user.password, 'new_test_password')

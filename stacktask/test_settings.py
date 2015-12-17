@@ -108,7 +108,26 @@ TASK_SETTINGS = {
         ]
     },
     'reset_password': {
-        'handle_duplicates': 'cancel'
+        'handle_duplicates': 'cancel',
+        'emails': {
+            'token': {
+                'reply': 'no-reply@example.com',
+                'html_template': 'password_reset.txt',
+                'template': 'password_reset.txt',
+                'subject': 'Password Reset for OpenStack'
+            }
+        }
+    },
+    'force_password': {
+        'handle_duplicates': 'cancel',
+        'emails': {
+            'token': {
+                'reply': 'no-reply@example.com',
+                'html_template': 'initial_password.txt',
+                'template': 'initial_password.txt',
+                'subject': 'Setup Your OpenStack Password'
+            }
+        }
     }
 }
 

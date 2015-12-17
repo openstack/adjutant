@@ -246,7 +246,7 @@ class RoleList(tasks.TaskView):
         return Response({'roles': managable_roles})
 
 
-class ResetPassword(tasks.ResetPassword):
+class UserResetPassword(tasks.ResetPassword):
     """
     The openstack forgot password endpoint.
     ---
@@ -258,3 +258,23 @@ class ResetPassword(tasks.ResetPassword):
         This returns a 404.
         """
         return Response(status=404)
+
+
+class UserSetPassword(tasks.ResetPassword):
+    """
+    The openstack endpoint to force a password reset.
+    ---
+    """
+
+    task_type = "force_password"
+
+    def get(self, request):
+        """
+        The ForcePassword endpoint does not support GET.
+        This returns a 404.
+        """
+        return Response(status=404)
+
+    @utils.admin
+    def post(self, request, format=None):
+        return super(UserSetPassword, self).post(request)
