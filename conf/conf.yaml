@@ -40,6 +40,7 @@ EMAIL_SETTINGS:
     EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
 
 # Application settings:
+SHOW_ACTION_ENDPOINTS: False
 
 # setting to control if user name and email are allowed
 # to have different values.
