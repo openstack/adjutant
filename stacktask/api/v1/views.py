@@ -458,7 +458,7 @@ class TokenList(APIViewWithLogger):
             token_list.append(token.to_dict())
         return Response({"tokens": token_list})
 
-    @utils.admin
+    @utils.mod_or_owner
     def post(self, request, format=None):
         """
         Reissue a token for an approved task.
@@ -471,7 +471,11 @@ class TokenList(APIViewWithLogger):
                 {'task': ["This field is required.", ]},
                 status=400)
         try:
-            task = Task.objects.get(uuid=uuid)
+            if 'admin' in request.keystone_user['roles']:
+                task = Task.objects.get(uuid=uuid)
+            else:
+                task = Task.objects.get(
+                    uuid=uuid, project_id=request.keystone_user['project_id'])
         except Task.DoesNotExist:
             return Response(
                 {'errors': ['No task with this id.']},

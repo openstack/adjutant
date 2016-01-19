@@ -466,6 +466,59 @@ class AdminAPITests(APITestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
+    def test_token_reissue_non_admin(self):
+        """
+        test for reissue of tokens for non-admin
+        """
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
+
+        url = "/v1/actions/InviteUser"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_owner,Member,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        data = {'email': "test@example.com", 'roles': ["Member"],
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        task = Task.objects.all()[0]
+        new_token = Token.objects.all()[0]
+
+        uuid = new_token.token
+
+        url = "/v1/tokens/"
+        data = {"task": task.uuid}
+        response = self.client.post(url, data, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data,
+                         {'notes': ['Token reissued.']})
+        self.assertEqual(Token.objects.count(), 1)
+        new_token = Token.objects.all()[0]
+        self.assertNotEquals(new_token.token, uuid)
+
+        # Now confirm it is limited by project id properly.
+        headers['project_id'] = "test_project_id2"
+        response = self.client.post(url, data, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data,
+                         {'errors': ['No task with this id.']})
+
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
                 FakeManager)
     def test_cancel_task(self):
