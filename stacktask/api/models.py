@@ -64,6 +64,10 @@ class Task(models.Model):
     def tokens(self):
         return self.token_set.all()
 
+    @property
+    def notifications(self):
+        return self.notification_set.all()
+
     def to_dict(self):
         actions = []
         for action in self.actions:
@@ -114,6 +118,10 @@ class Token(models.Model):
             "created_on": self.created_on,
             "expires": self.expires
         }
+
+    @property
+    def expired(self):
+        return self.expires < timezone.now()
 
 
 class Notification(models.Model):

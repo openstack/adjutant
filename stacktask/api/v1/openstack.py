@@ -63,25 +63,31 @@ class UserList(tasks.InviteUser):
             completed=0,
             cancelled=0)
 
-        # get the actions for the related tasks
-        # NOTE(adriant): We should later check for the correct action type
-        # if this task_type ends up having more than one.
         registrations = []
         for task in project_tasks:
-            registrations.extend(task.actions)
+            status = "Unconfirmed"
+            for token in task.tokens:
+                if token.expired:
+                    status = "Expired"
 
-        unconfirmed = set()
-        for action in registrations:
-            # NOTE(flwang): If there are duplicated registrations, we need to
-            # make sure it's filtered.
-            if (action.action_data['email'] not in unconfirmed and
-                    action.action_data['email'] not in active_emails):
-                unconfirmed.add(action.action_data['email'])
-                user_list.append({'id': action.task.uuid,
-                                  'name': action.action_data['email'],
-                                  'email': action.action_data['email'],
-                                  'roles': action.action_data['roles'],
-                                  'status': 'Unconfirmed'})
+            for notification in task.notifications:
+                if notification.error:
+                    status = "Failed"
+
+            task_data = {}
+            for action in task.actions:
+                task_data.update(action.action_data)
+
+            registrations.append(
+                {'uuid': task.uuid, 'task_data': task_data, 'status': status})
+
+        for task in registrations:
+            if task['task_data']['email'] not in active_emails:
+                user_list.append({'id': task['uuid'],
+                                  'name': task['task_data']['email'],
+                                  'email': task['task_data']['email'],
+                                  'roles': task['task_data']['roles'],
+                                  'status': task['status']})
 
         return Response({'users': user_list})
 

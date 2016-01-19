@@ -61,3 +61,46 @@ class OpenstackAPITests(APITestCase):
         data = {'password': 'testpassword'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
+    def test_user_list(self):
+        """
+        """
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
+
+        url = "/v1/openstack/users"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_owner,Member,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        data = {'email': "test@example.com", 'roles': ["Member"],
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        new_token = Token.objects.all()[0]
+        url = "/v1/tokens/" + new_token.token
+        data = {'password': 'testpassword'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        url = "/v1/openstack/users"
+        data = {'email': "test2@example.com", 'roles': ["Member"],
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
