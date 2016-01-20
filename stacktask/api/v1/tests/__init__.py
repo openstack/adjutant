@@ -21,11 +21,11 @@ temp_cache = {}
 def setup_temp_cache(projects, users):
     admin_user = mock.Mock()
     admin_user.id = 0
-    admin_user.name = 'admin'
+    admin_user.username = 'admin'
     admin_user.password = 'password'
     admin_user.email = 'admin@example.com'
 
-    users.update({admin_user.name: admin_user})
+    users.update({admin_user.username: admin_user})
 
     global temp_cache
 
@@ -44,6 +44,26 @@ def setup_temp_cache(projects, users):
     }
 
 
+class FakeProject():
+
+    def __init__(self, project):
+        self.id = project.id
+        self.name = project.name
+        self.roles = project.roles
+
+    def list_users(self):
+        global temp_cache
+        usernames = []
+        for username, roles in self.roles.iteritems():
+            if roles:
+                usernames.append(username)
+        users = []
+        for user in temp_cache['users'].values():
+            if user.username in usernames:
+                users.append(user)
+        return users
+
+
 class FakeManager(object):
 
     def find_user(self, name):
@@ -59,7 +79,7 @@ class FakeManager(object):
         user = mock.Mock()
         temp_cache['i'] += 1
         user.id = temp_cache['i']
-        user.name = name
+        user.username = name
         user.password = password
         user.email = email
         user.default_project = project_id
@@ -68,7 +88,7 @@ class FakeManager(object):
 
     def update_user_password(self, user, password):
         global temp_cache
-        user = temp_cache['users'][user.name]
+        user = temp_cache['users'][user.username]
         user.password = password
 
     def find_role(self, name):
@@ -79,7 +99,7 @@ class FakeManager(object):
         global temp_cache
         try:
             roles = []
-            for role in project.roles[user.name]:
+            for role in project.roles[user.username]:
                 r = mock.Mock()
                 r.name = role
                 roles.append(r)
@@ -90,14 +110,14 @@ class FakeManager(object):
     def add_user_role(self, user, role, project_id):
         project = self.get_project(project_id)
         try:
-            project.roles[user.name].append(role)
+            project.roles[user.username].append(role)
         except KeyError:
-            project.roles[user.name] = [role]
+            project.roles[user.username] = [role]
 
     def remove_user_role(self, user, role, project_id):
         project = self.get_project(project_id)
         try:
-            project.roles[user.name].remove(role)
+            project.roles[user.username].remove(role)
         except KeyError:
             pass
 
@@ -109,7 +129,7 @@ class FakeManager(object):
         global temp_cache
         for project in temp_cache['projects'].values():
             if project.id == project_id:
-                return project
+                return FakeProject(project)
 
     def create_project(self, project_name, created_on, p_id=None):
         global temp_cache
