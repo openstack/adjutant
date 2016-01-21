@@ -26,12 +26,12 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Task',
             fields=[
-                ('uuid', models.CharField(default=stacktask.api.models.hex_uuid, max_length=200, serialize=False, primary_key=True)),
-                ('hash_key', models.CharField(max_length=64, db_index=True)),
+                ('uuid', models.CharField(default=stacktask.api.models.hex_uuid, max_length=32, serialize=False, primary_key=True)),
+                ('hash_key', models.CharField(max_length=32, db_index=True)),
                 ('ip_address', models.GenericIPAddressField()),
                 ('keystone_user', jsonfield.fields.JSONField(default={})),
-                ('project_id', models.CharField(max_length=200, null=True, db_index=True)),
-                ('task_type', models.CharField(max_length=200, db_index=True)),
+                ('project_id', models.CharField(max_length=32, null=True, db_index=True)),
+                ('task_type', models.CharField(max_length=100, db_index=True)),
                 ('action_notes', jsonfield.fields.JSONField(default={})),
                 ('cancelled', models.BooleanField(default=False, db_index=True)),
                 ('approved', models.BooleanField(default=False, db_index=True)),
@@ -44,7 +44,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Token',
             fields=[
-                ('token', models.CharField(max_length=200, serialize=False, primary_key=True)),
+                ('token', models.CharField(max_length=32, serialize=False, primary_key=True)),
                 ('created_on', models.DateTimeField(default=django.utils.timezone.now)),
                 ('expires', models.DateTimeField(db_index=True)),
                 ('task', models.ForeignKey(to='api.Task')),
