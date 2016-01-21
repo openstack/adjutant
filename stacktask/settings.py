@@ -26,6 +26,7 @@ https://docs.djangoproject.com/en/1.7/ref/settings/
 import os
 import sys
 import yaml
+from stacktask.utils import setup_task_settings
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 
@@ -147,10 +148,9 @@ TOKEN_EXPIRE_TIME = CONFIG['TOKEN_EXPIRE_TIME']
 
 SHOW_ACTION_ENDPOINTS = CONFIG['SHOW_ACTION_ENDPOINTS']
 
-# Additonal actions for views:
-# - The order of the actions matters. These will run after the default action,
-#   in the given order.
-TASK_SETTINGS = CONFIG['TASK_SETTINGS']
+TASK_SETTINGS = setup_task_settings(
+    CONFIG['DEFAULT_TASK_SETTINGS'],
+    CONFIG['TASK_SETTINGS'])
 
 ACTION_SETTINGS = CONFIG['ACTION_SETTINGS']
 

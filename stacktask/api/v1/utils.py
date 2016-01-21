@@ -94,6 +94,8 @@ def create_notification(task, notes, error=False):
 
     # NOTE(adriant): some form of error handling is probably needed:
     for note_engine, conf in class_conf.get('notifications', {}).iteritems():
+        if not conf:
+            continue
         engine = settings.NOTIFICATION_ENGINES[note_engine](conf)
         engine.notify(task, notes, error)
 

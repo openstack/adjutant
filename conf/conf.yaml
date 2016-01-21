@@ -59,80 +59,60 @@ TOKEN_SUBMISSION_URL: http://192.168.122.160:8080/token/
 # time for the token to expire in hours
 TOKEN_EXPIRE_TIME: 24
 
-# Additonal actions for views:
-# - The order of the actions matters. These will run after the default action,
-#   in the given order.
+DEFAULT_TASK_SETTINGS:
+    emails:
+        initial:
+            subject: Initial Confirmation
+            reply: no-reply@example.com
+            template: initial.txt
+            html_template: initial.txt
+        # If the related actions 'can' send a token,
+        # this field should here.
+        token:
+            subject: Your Token
+            reply: no-reply@example.com
+            template: token.txt
+            html_template: token.txt
+        completed:
+            subject: Task completed
+            reply: no-reply@example.com
+            template: completed.txt
+            html_template: completed.txt
+    notifications:
+        EmailNotification:
+            emails:
+                - example@example.com
+            reply: no-reply@example.com
+            template: notification.txt
+            html_template: completed.txt
+        RTNotification:
+            url: http://localhost/rt/REST/1.0/
+            queue: helpdesk
+            username: example@example.com
+            password: password
+            template: notification.txt
+
+# These are cascading overrides for the default settings:
 TASK_SETTINGS:
     create_project:
+        # Additonal actions for views:
+        # - The order of the actions matters. These will run after the 
+        #   default action, in the given order.
         actions:
             - AddAdminToProject
             - DefaultProjectResources
-        emails:
-            initial:
-                subject: Initial Confirmation
-                reply: no-reply@example.com
-                template: initial.txt
-                html_template: initial.txt
-            # If the related actions 'can' send a token,
-            # this field should here.
-            token:
-                subject: Your Token
-                reply: no-reply@example.com
-                template: token.txt
-                html_template: token.txt
-            completed:
-                subject: Task completed
-                reply: no-reply@example.com
-                template: completed.txt
-                html_template: completed.txt
-        notifications:
-            EmailNotification:
-                emails:
-                    - example@example.com
-                reply: no-reply@example.com
-                template: notification.txt
-                html_template: completed.txt
-            RTNotification:
-                url: http://localhost/rt/REST/1.0/
-                queue: helpdesk
-                username: example@example.com
-                password: password
-                template: notification.txt
     invite_user:
         emails:
-            # To not send this email, set the value to null,
-            # or don't have the field there at all.
+            # To not send this email, set the value to null
             initial: null
-            token:
-                subject: Your Token
-                reply: no-reply@example.com
-                template: token.txt
-                html_template: token.txt
-            completed:
-                subject: Task completed
-                reply: no-reply@example.com
-                template: completed.txt
-                html_template: completed.txt
     reset_password:
         handle_duplicates: cancel
         emails:
-            token:
-                subject: Your Token
-                reply: no-reply@example.com
-                template: token.txt
-                html_template: token.txt
-            completed:
-                subject: Task completed
-                reply: no-reply@example.com
-                template: completed.txt
-                html_template: completed.txt
+            initial: null
     edit_user:
         emails:
-            completed:
-                subject: Task completed
-                reply: no-reply@example.com
-                template: completed.txt
-                html_template: completed.txt
+            initial: null
+            token: null
         role_blacklist:
             - admin
             - Admin

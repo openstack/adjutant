@@ -72,69 +72,43 @@ TOKEN_SUBMISSION_URL = 'http://localhost:8080/token/'
 
 TOKEN_EXPIRE_TIME = 24
 
-# Additonal actions for views:
-# - The order of the actions matters. These will run after the default action,
-#   in the given order.
+DEFAULT_TASK_SETTINGS = {
+    'emails': {
+        'token': {
+            'reply': 'no-reply@example.com',
+            'html_template': 'token.txt',
+            'template': 'token.txt',
+            'subject': 'Your Token'
+        },
+        'initial': {
+            'reply': 'no-reply@example.com',
+            'html_template': 'initial.txt',
+            'template': 'initial.txt',
+            'subject': 'Initial Confirmation'
+        },
+        'completed': {
+            'reply': 'no-reply@example.com',
+            'html_template': 'completed.txt',
+            'template': 'completed.txt',
+            'subject': 'Task completed'
+        }
+    }
+}
+
 TASK_SETTINGS = {
     'invite_user': {
         'emails': {
-            'token': {
-                'reply': 'no-reply@example.com',
-                'html_template': 'token.txt',
-                'template': 'token.txt',
-                'subject': 'Your Token'
-            },
-            'initial': None,
-            'completed': {
-                'reply': 'no-reply@example.com',
-                'html_template': 'completed.txt',
-                'template': 'completed.txt',
-                'subject': 'Task completed'
-            }
+            'initial': None
         }
     },
     'create_project': {
-        'emails': {
-            'token': {
-                'reply': 'no-reply@example.com',
-                'html_template': 'token.txt',
-                'template': 'token.txt',
-                'subject': 'Your Token'
-            },
-            'initial': {
-                'reply': 'no-reply@example.com',
-                'html_template': 'initial.txt',
-                'template': 'initial.txt',
-                'subject': 'Initial Confirmation'
-            },
-            'completed': {
-                'reply': 'no-reply@example.com',
-                'html_template': 'completed.txt',
-                'template': 'completed.txt',
-                'subject': 'Task completed'
-            }
-        },
         'actions': [
             'AddAdminToProject',
             'DefaultProjectResources'
         ]
     },
     'reset_password': {
-        'handle_duplicates': 'cancel',
-        'emails': {
-            'token': {
-                'reply': 'no-reply@example.com',
-                'html_template': 'token.txt',
-                'template': 'token.txt',
-                'subject': 'Your Token'
-            },
-            'completed': {
-                'reply': 'no-reply@example.com',
-                'html_template': 'completed.txt',
-                'template': 'completed.txt',
-                'subject': 'Task completed'
-            }
-        }
+        'handle_duplicates': 'cancel'
     }
 }
 
@@ -178,6 +152,7 @@ conf_dict = {
     "USERNAME_IS_EMAIL": USERNAME_IS_EMAIL,
     "KEYSTONE": KEYSTONE,
     "DEFAULT_REGION": DEFAULT_REGION,
+    "DEFAULT_TASK_SETTINGS": DEFAULT_TASK_SETTINGS,
     "TASK_SETTINGS": TASK_SETTINGS,
     "ACTION_SETTINGS": ACTION_SETTINGS,
     "TOKEN_SUBMISSION_URL": TOKEN_SUBMISSION_URL,
