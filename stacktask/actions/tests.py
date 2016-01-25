@@ -82,10 +82,10 @@ class ActionTests(TestCase):
 
         user = mock.Mock()
         user.id = 'user_id'
-        user.name = "test@example.com"
+        user.username = "test@example.com"
         user.email = "test@example.com"
 
-        setup_temp_cache({'test_project': project}, {user.name: user})
+        setup_temp_cache({'test_project': project}, {user.username: user})
 
         task = Task.objects.create(
             ip_address="0.0.0.0", keystone_user={
@@ -110,7 +110,7 @@ class ActionTests(TestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
 
-        self.assertEquals(project.roles[user.name], ['Member'])
+        self.assertEquals(project.roles[user.username], ['Member'])
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
@@ -124,15 +124,15 @@ class ActionTests(TestCase):
 
         user = mock.Mock()
         user.id = 'user_id'
-        user.name = "test@example.com"
+        user.username = "test@example.com"
         user.email = "test@example.com"
 
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
-        project.roles = {user.name: ['Member']}
+        project.roles = {user.username: ['Member']}
 
-        setup_temp_cache({'test_project': project}, {user.name: user})
+        setup_temp_cache({'test_project': project}, {user.username: user})
 
         task = Task.objects.create(
             ip_address="0.0.0.0", keystone_user={
@@ -158,7 +158,7 @@ class ActionTests(TestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
 
-        self.assertEquals(project.roles[user.name], ['Member'])
+        self.assertEquals(project.roles[user.username], ['Member'])
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
@@ -305,10 +305,10 @@ class ActionTests(TestCase):
 
         user = mock.Mock()
         user.id = 'user_id'
-        user.name = "test@example.com"
+        user.username = "test@example.com"
         user.email = "test@example.com"
 
-        setup_temp_cache({}, {user.name: user})
+        setup_temp_cache({}, {user.username: user})
 
         task = Task.objects.create(
             ip_address="0.0.0.0", keystone_user={
@@ -386,11 +386,11 @@ class ActionTests(TestCase):
 
         user = mock.Mock()
         user.id = 'user_id'
-        user.name = "test@example.com"
+        user.username = "test@example.com"
         user.email = "test@example.com"
         user.password = "gibberish"
 
-        setup_temp_cache({}, {user.name: user})
+        setup_temp_cache({}, {user.username: user})
 
         task = Task.objects.create(
             ip_address="0.0.0.0", keystone_user={
@@ -462,7 +462,7 @@ class ActionTests(TestCase):
 
         user = mock.Mock()
         user.id = 'user_id'
-        user.name = "test@example.com"
+        user.username = "test@example.com"
         user.email = "test@example.com"
 
         setup_temp_cache({'test_project': project}, {user.id: user})
@@ -491,8 +491,8 @@ class ActionTests(TestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
 
-        self.assertEquals(len(project.roles[user.name]), 2)
-        self.assertEquals(set(project.roles[user.name]),
+        self.assertEquals(len(project.roles[user.username]), 2)
+        self.assertEquals(set(project.roles[user.username]),
                           set(['Member', 'project_mod']))
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
@@ -503,13 +503,13 @@ class ActionTests(TestCase):
         """
         user = mock.Mock()
         user.id = 'user_id'
-        user.name = "test@example.com"
+        user.username = "test@example.com"
         user.email = "test@example.com"
 
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
-        project.roles = {user.name: ['Member', 'project_mod']}
+        project.roles = {user.username: ['Member', 'project_mod']}
 
         setup_temp_cache({'test_project': project}, {user.id: user})
 
@@ -538,8 +538,8 @@ class ActionTests(TestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
 
-        self.assertEquals(len(project.roles[user.name]), 2)
-        self.assertEquals(set(project.roles[user.name]),
+        self.assertEquals(len(project.roles[user.username]), 2)
+        self.assertEquals(set(project.roles[user.username]),
                           set(['Member', 'project_mod']))
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
@@ -551,13 +551,13 @@ class ActionTests(TestCase):
 
         user = mock.Mock()
         user.id = 'user_id'
-        user.name = "test@example.com"
+        user.username = "test@example.com"
         user.email = "test@example.com"
 
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
-        project.roles = {user.name: ['Member', 'project_mod']}
+        project.roles = {user.username: ['Member', 'project_mod']}
 
         setup_temp_cache({'test_project': project}, {user.id: user})
 
@@ -585,7 +585,7 @@ class ActionTests(TestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
 
-        self.assertEquals(project.roles[user.name], ['Member'])
+        self.assertEquals(project.roles[user.username], ['Member'])
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
@@ -596,13 +596,13 @@ class ActionTests(TestCase):
 
         user = mock.Mock()
         user.id = 'user_id'
-        user.name = "test@example.com"
+        user.username = "test@example.com"
         user.email = "test@example.com"
 
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
-        project.roles = {user.name: ['Member']}
+        project.roles = {user.username: ['Member']}
 
         setup_temp_cache({'test_project': project}, {user.id: user})
 
@@ -631,4 +631,4 @@ class ActionTests(TestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
 
-        self.assertEquals(project.roles[user.name], ['Member'])
+        self.assertEquals(project.roles[user.username], ['Member'])

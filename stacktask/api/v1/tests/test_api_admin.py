@@ -121,11 +121,11 @@ class AdminAPITests(APITestCase):
 
         user = mock.Mock()
         user.id = 'user_id'
-        user.name = "test@example.com"
+        user.username = "test@example.com"
         user.email = "test@example.com"
         user.password = "test_password"
 
-        setup_temp_cache({}, {user.name: user})
+        setup_temp_cache({}, {user.username: user})
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
@@ -154,11 +154,11 @@ class AdminAPITests(APITestCase):
 
         user = mock.Mock()
         user.id = 'user_id'
-        user.name = "test@example.com"
+        user.username = "test@example.com"
         user.email = "test@example.com"
         user.password = "test_password"
 
-        setup_temp_cache({}, {user.name: user})
+        setup_temp_cache({}, {user.username: user})
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
@@ -372,7 +372,7 @@ class AdminAPITests(APITestCase):
 
         user = mock.Mock()
         user.id = 'user_id'
-        user.name = "test@example.com"
+        user.username = "test@example.com"
         user.email = "test@example.com"
         user.password = "test_password"
 
@@ -382,7 +382,7 @@ class AdminAPITests(APITestCase):
         user2.email = "test2@example.com"
         user2.password = "test_password"
 
-        setup_temp_cache({}, {user.name: user, user2.name: user2})
+        setup_temp_cache({}, {user.username: user, user2.name: user2})
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
@@ -428,11 +428,11 @@ class AdminAPITests(APITestCase):
 
         user = mock.Mock()
         user.id = 'user_id'
-        user.name = "test@example.com"
+        user.username = "test@example.com"
         user.email = "test@example.com"
         user.password = "test_password"
 
-        setup_temp_cache({}, {user.name: user})
+        setup_temp_cache({}, {user.username: user})
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}

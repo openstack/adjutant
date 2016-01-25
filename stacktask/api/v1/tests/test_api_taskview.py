@@ -140,10 +140,10 @@ class TaskViewTests(APITestCase):
 
         user = mock.Mock()
         user.id = 'user_id'
-        user.name = "test@example.com"
+        user.username = "test@example.com"
         user.email = "test@example.com"
 
-        setup_temp_cache({'test_project': project}, {user.name: user})
+        setup_temp_cache({'test_project': project}, {user.username: user})
 
         url = "/v1/actions/InviteUser"
         headers = {
@@ -176,15 +176,15 @@ class TaskViewTests(APITestCase):
         """
         user = mock.Mock()
         user.id = 'user_id'
-        user.name = "test@example.com"
+        user.username = "test@example.com"
         user.email = "test@example.com"
 
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
-        project.roles = {user.name: ['Member']}
+        project.roles = {user.username: ['Member']}
 
-        setup_temp_cache({'test_project': project}, {user.name: user})
+        setup_temp_cache({'test_project': project}, {user.username: user})
 
         url = "/v1/actions/InviteUser"
         headers = {
@@ -297,10 +297,10 @@ class TaskViewTests(APITestCase):
 
         user = mock.Mock()
         user.id = 'user_id'
-        user.name = "test@example.com"
+        user.username = "test@example.com"
         user.email = "test@example.com"
 
-        setup_temp_cache({}, {user.name: user})
+        setup_temp_cache({}, {user.username: user})
 
         url = "/v1/actions/InviteUser"
         headers = {
@@ -344,11 +344,11 @@ class TaskViewTests(APITestCase):
 
         user = mock.Mock()
         user.id = 'user_id'
-        user.name = "test@example.com"
+        user.username = "test@example.com"
         user.email = "test@example.com"
         user.password = "test_password"
 
-        setup_temp_cache({}, {user.name: user})
+        setup_temp_cache({}, {user.username: user})
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
@@ -374,11 +374,11 @@ class TaskViewTests(APITestCase):
 
         user = mock.Mock()
         user.id = 'user_id'
-        user.name = "test@example.com"
+        user.username = "test@example.com"
         user.email = "test@example.com"
         user.password = "test_password"
 
-        setup_temp_cache({}, {user.name: user})
+        setup_temp_cache({}, {user.username: user})
 
         # Submit password reset
         url = "/v1/actions/ResetPassword"
