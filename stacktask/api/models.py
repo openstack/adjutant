@@ -28,17 +28,17 @@ class Task(models.Model):
     Stores the state of the Task and a log for the
     action.
     """
-    uuid = models.CharField(max_length=200, default=hex_uuid,
+    uuid = models.CharField(max_length=32, default=hex_uuid,
                             primary_key=True)
-    hash_key = models.CharField(max_length=64, db_index=True)
+    hash_key = models.CharField(max_length=32, db_index=True)
 
     # who is this:
     ip_address = models.GenericIPAddressField()
     keystone_user = JSONField(default={})
-    project_id = models.CharField(max_length=200, db_index=True, null=True)
+    project_id = models.CharField(max_length=32, db_index=True, null=True)
 
     # type of the task, for easy grouping
-    task_type = models.CharField(max_length=200, db_index=True)
+    task_type = models.CharField(max_length=100, db_index=True)
 
     # Effectively a log of what the actions are doing.
     action_notes = JSONField(default={})
@@ -107,7 +107,7 @@ class Token(models.Model):
     """
 
     task = models.ForeignKey(Task)
-    token = models.CharField(max_length=200, primary_key=True)
+    token = models.CharField(max_length=32, primary_key=True)
     created_on = models.DateTimeField(default=timezone.now)
     expires = models.DateTimeField(db_index=True)
 
