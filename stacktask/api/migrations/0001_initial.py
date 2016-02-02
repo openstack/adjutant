@@ -16,7 +16,7 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Notification',
             fields=[
-                ('id', models.AutoField(verbose_name='ID', serialize=False, auto_created=True, primary_key=True)),
+                ('uuid', models.CharField(default=stacktask.api.models.hex_uuid, max_length=32, serialize=False, primary_key=True)),
                 ('notes', jsonfield.fields.JSONField(default={})),
                 ('error', models.BooleanField(default=False, db_index=True)),
                 ('created_on', models.DateTimeField(default=django.utils.timezone.now)),

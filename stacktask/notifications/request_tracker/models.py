@@ -15,7 +15,10 @@
 from django.conf import settings
 from django.template import loader
 from stacktask.notifications.models import NotificationEngine
-import rt
+from stacktask.api.models import Notification
+from rtkit.resource import RTResource
+from rtkit.authenticators import CookieAuthenticator
+from rtkit.errors import RTResourceError
 
 
 class RTNotification(NotificationEngine):
@@ -38,33 +41,50 @@ class RTNotification(NotificationEngine):
 
     def __init__(self, conf):
         super(RTNotification, self).__init__(conf)
-        # in memory dict to be used for passing data between actions:
-        tracker = rt.Rt(
-            self.conf['url'], self.conf['username'], self.conf['password'])
+        tracker = RTResource(
+            self.conf['url'], self.conf['username'], self.conf['password'],
+            CookieAuthenticator)
         tracker.login()
         self.tracker = tracker
 
-    def notify(self, task, notes, error):
-        return self._notify(task, notes, error)
-
-    def _notify(self, task, notes, error):
+    def _notify(self, task, notification):
         template = loader.get_template(self.conf['template'])
 
-        context = {'task': task, 'notes': notes}
+        context = {'task': task, 'notification': notification}
 
         # NOTE(adriant): Error handling?
         message = template.render(context)
 
-        if error:
+        if notification.error:
             subject = "Error - %s notification" % task.task_type
         else:
             subject = "%s notification" % task.task_type
 
-        self.tracker.create_ticket(
-            Queue=self.conf['queue'], Subject=subject,
-            # newline + space tells the RT api to actually treat it like a
-            # newline.
-            Text=message.replace('\n', '\n '))
+        content = {
+            'content': {
+                'Queue': self.conf['queue'],
+                'Subject': subject,
+                'Text': message,
+            }
+        }
+
+        try:
+            self.tracker.post(path='ticket/new', payload=content)
+            if not notification.error:
+                    notification.acknowledged = True
+                    notification.save()
+        except RTResourceError as e:
+            notes = {
+                'errors':
+                    [("Error: '%s' while sending notification to " +
+                      "RT.") % e]
+            }
+            error_notification = Notification.objects.create(
+                task=notification.task,
+                notes=notes,
+                error=True
+            )
+            error_notification.save()
 
 
 notification_engines = {

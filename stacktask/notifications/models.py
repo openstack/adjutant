@@ -15,6 +15,8 @@
 from django.conf import settings
 from django.core.mail import send_mail
 from django.template import loader
+from smtplib import SMTPException
+from stacktask.api.models import Notification
 
 
 class NotificationEngine(object):
@@ -23,10 +25,10 @@ class NotificationEngine(object):
     def __init__(self, conf):
         self.conf = conf
 
-    def notify(self, task, notes, error):
-        return self._notify(task, notes, error)
+    def notify(self, task, notification):
+        return self._notify(task, notification)
 
-    def _notify(self, task, notes, error):
+    def _notify(self, task, notification):
         raise NotImplementedError
 
 
@@ -48,26 +50,39 @@ class EmailNotification(NotificationEngine):
                     ...
     """
 
-    def notify(self, task, notes, error):
-        return self._notify(task, notes, error)
-
-    def _notify(self, task, notes, error):
+    def _notify(self, task, notification):
         template = loader.get_template(self.conf['template'])
         html_template = loader.get_template(self.conf['html_template'])
 
-        context = {'task': task, 'notes': notes}
+        context = {
+            'task': task, 'notification': notification}
 
         # NOTE(adriant): Error handling?
         message = template.render(context)
         html_message = html_template.render(context)
-        if error:
+        if notification.error:
             subject = "Error - %s notification" % task.task_type
         else:
             subject = "%s notification" % task.task_type
-        send_mail(
-            subject, message, self.conf['reply'],
-            self.conf['emails'], fail_silently=False,
-            html_message=html_message)
+        try:
+            send_mail(
+                subject, message, self.conf['reply'],
+                self.conf['emails'], fail_silently=False,
+                html_message=html_message)
+            if not notification.error:
+                notification.acknowledge = True
+                notification.save()
+        except SMTPException as e:
+            notes = {
+                'errors':
+                    [("Error: '%s' while sending email notification") % e]
+            }
+            error_notification = Notification.objects.create(
+                task=notification.task,
+                notes=notes,
+                error=True
+            )
+            error_notification.save()
 
 
 notification_engines = {

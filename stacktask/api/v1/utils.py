@@ -46,14 +46,12 @@ def send_email(registration, email_conf, token=None):
 
     if len(emails) > 1:
         notes = {
-            'notes':
+            'errors':
             (("Error: Unable to send token, More than one email for" +
               " registration: %s") % registration.uuid)
         }
-        create_notification(registration, notes)
+        create_notification(registration, notes, error=True)
         return
-        # TODO(adriant): raise some error?
-        # and surround calls to this function with try/except
 
     if token:
         context = {
@@ -73,13 +71,11 @@ def send_email(registration, email_conf, token=None):
             [emails.pop()], fail_silently=False, html_message=html_message)
     except SMTPException as e:
         notes = {
-            'notes':
+            'errors':
                 ("Error: '%s' while emailing token for registration: %s" %
                     (e, registration.uuid))
         }
         create_notification(registration, notes, error=True)
-        # TODO(adriant): raise some error?
-        # and surround calls to this function with try/except
 
 
 def create_notification(task, notes, error=False):
@@ -97,7 +93,7 @@ def create_notification(task, notes, error=False):
         if not conf:
             continue
         engine = settings.NOTIFICATION_ENGINES[note_engine](conf)
-        engine.notify(task, notes, error)
+        engine.notify(task, notification)
 
 
 def create_task_hash(task_type, action_list):

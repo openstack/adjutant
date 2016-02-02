@@ -25,7 +25,8 @@ urlpatterns = [
     url(r'^tasks/?$', views.TaskList.as_view()),
     url(r'^tokens/(?P<id>\w+)', views.TokenDetail.as_view()),
     url(r'^tokens/?$', views.TokenList.as_view()),
-    url(r'^notifications/(?P<pk>\w+)/?$', views.NotificationDetail.as_view()),
+    url(r'^notifications/(?P<uuid>\w+)/?$',
+        views.NotificationDetail.as_view()),
     url(r'^notifications/?$', views.NotificationList.as_view()),
 
     url(r'^openstack/users/(?P<user_id>\w+)/roles/?$',

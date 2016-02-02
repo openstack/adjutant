@@ -297,7 +297,8 @@ class AdminAPITests(APITestCase):
             response.data["notifications"][0]['task'],
             new_task.uuid)
 
-        url = "/v1/notifications/%s/" % response.data["notifications"][0]['pk']
+        url = ("/v1/notifications/%s/" %
+               response.data["notifications"][0]['uuid'])
         data = {'acknowledged': True}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.data,
@@ -347,7 +348,7 @@ class AdminAPITests(APITestCase):
 
         url = "/v1/notifications"
         notifications = response.data["notifications"]
-        data = {'notifications': [note['pk'] for note in notifications]}
+        data = {'notifications': [note['uuid'] for note in notifications]}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.data,
                          {'notes': ['Notifications acknowledged.']})

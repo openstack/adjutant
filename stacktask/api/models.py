@@ -129,6 +129,8 @@ class Notification(models.Model):
     Notification linked to a task with some notes.
     """
 
+    uuid = models.CharField(max_length=32, default=hex_uuid,
+                            primary_key=True)
     notes = JSONField(default={})
     task = models.ForeignKey(Task)
     error = models.BooleanField(default=False, db_index=True)
@@ -137,7 +139,7 @@ class Notification(models.Model):
 
     def to_dict(self):
         return {
-            "pk": self.pk,
+            "uuid": self.uuid,
             "notes": self.notes,
             "task": self.task.uuid,
             "error": self.error,

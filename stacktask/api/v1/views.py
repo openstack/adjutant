@@ -76,7 +76,7 @@ class NotificationList(APIViewWithLogger):
     @parse_filters
     def get(self, request, filters=None, format=None):
         """
-        A list of unacknowledged Notification objects as dicts.
+        A list of Notification objects as dicts.
         """
         if filters:
             notifications = Notification.objects.filter(**filters)
@@ -94,7 +94,7 @@ class NotificationList(APIViewWithLogger):
         """
         note_list = request.data.get('notifications', None)
         if note_list and isinstance(note_list, list):
-            notifications = Notification.objects.filter(pk__in=note_list)
+            notifications = Notification.objects.filter(uuid__in=note_list)
             for notification in notifications:
                 notification.acknowledged = True
                 notification.save()
@@ -109,13 +109,13 @@ class NotificationList(APIViewWithLogger):
 class NotificationDetail(APIViewWithLogger):
 
     @utils.admin
-    def get(self, request, pk, format=None):
+    def get(self, request, uuid, format=None):
         """
         Dict notification of a Notification object
         and its related actions.
         """
         try:
-            notification = Notification.objects.get(pk=pk)
+            notification = Notification.objects.get(uuid=uuid)
         except Notification.DoesNotExist:
             return Response(
                 {'errors': ['No notification with this id.']},
@@ -123,17 +123,20 @@ class NotificationDetail(APIViewWithLogger):
         return Response(notification.to_dict())
 
     @utils.admin
-    def post(self, request, pk, format=None):
+    def post(self, request, uuid, format=None):
         """
         Acknowledge notification.
         """
         try:
-            notification = Notification.objects.get(pk=pk)
+            notification = Notification.objects.get(uuid=uuid)
         except Notification.DoesNotExist:
             return Response(
                 {'errors': ['No notification with this id.']},
                 status=404)
 
+        if notification.acknowledged:
+            return Response({'notes': ['Notification already acknowledged.']},
+                            status=200)
         if request.data.get('acknowledged', False) is True:
             notification.acknowledged = True
             notification.save()

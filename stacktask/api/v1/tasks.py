@@ -156,10 +156,9 @@ class TaskView(APIViewWithLogger):
                 notes = {
                     'errors':
                         [("Error: '%s' while setting up task. " +
-                          "See task itself for details.") % e],
-                    'task': task.uuid
+                          "See task itself for details.") % e]
                 }
-                create_notification(task, notes)
+                create_notification(task, notes, error=True)
 
                 import traceback
                 trace = traceback.format_exc()
@@ -210,10 +209,9 @@ class TaskView(APIViewWithLogger):
                     notes = {
                         'errors':
                             [("Error: '%s' while approving task. " +
-                              "See task itself for details.") % e],
-                        'task': task.uuid
+                              "See task itself for details.") % e]
                     }
-                    create_notification(task, notes)
+                    create_notification(task, notes, error=True)
 
                     import traceback
                     trace = traceback.format_exc()
@@ -250,10 +248,9 @@ class TaskView(APIViewWithLogger):
                             'errors':
                                 [("Error: '%s' while sending " +
                                   "token. See task " +
-                                  "itself for details.") % e],
-                            'task': task.uuid
+                                  "itself for details.") % e]
                         }
-                        create_notification(task, notes)
+                        create_notification(task, notes, error=True)
 
                         import traceback
                         trace = traceback.format_exc()
@@ -276,10 +273,9 @@ class TaskView(APIViewWithLogger):
                                 'errors':
                                     [("Error: '%s' while submitting " +
                                       "task. See task " +
-                                      "itself for details.") % e],
-                                'task': task.uuid
+                                      "itself for details.") % e]
                             }
-                            create_notification(task, notes)
+                            create_notification(task, notes, error=True)
 
                             import traceback
                             trace = traceback.format_exc()
