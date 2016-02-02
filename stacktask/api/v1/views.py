@@ -164,7 +164,7 @@ class TaskList(APIViewWithLogger):
                 tasks = Task.objects.all()
             task_list = []
             for task in tasks:
-                task_list.append(task.to_dict())
+                task_list.append(task._to_dict())
             return Response({'tasks': task_list}, status=200)
         else:
             if filters:
@@ -196,14 +196,15 @@ class TaskDetail(APIViewWithLogger):
         try:
             if 'admin' in request.keystone_user['roles']:
                 task = Task.objects.get(uuid=uuid)
+                return Response(task._to_dict())
             else:
                 task = Task.objects.get(
                     uuid=uuid, project_id=request.keystone_user['project_id'])
+                return Response(task.to_dict())
         except Task.DoesNotExist:
             return Response(
                 {'errors': ['No task with this id.']},
                 status=404)
-        return Response(task.to_dict())
 
     @utils.admin
     def put(self, request, uuid, format=None):

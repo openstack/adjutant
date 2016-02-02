@@ -68,7 +68,7 @@ class Task(models.Model):
     def notifications(self):
         return self.notification_set.all()
 
-    def to_dict(self):
+    def _to_dict(self):
         actions = []
         for action in self.actions:
             actions.append({
@@ -92,6 +92,14 @@ class Task(models.Model):
             "approved_on": self.approved_on,
             "completed_on": self.completed_on,
         }
+
+    def to_dict(self):
+        """
+        Slightly safer variant of the above for non-admin.
+        """
+        task_dict = self._to_dict()
+        task_dict.pop("ip_address")
+        return task_dict
 
     def add_action_note(self, action, note):
         if action in self.action_notes:
