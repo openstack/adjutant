@@ -29,12 +29,20 @@ class RTNotification(NotificationEngine):
     Example conf:
         <TaskView>:
             notifications:
-                RTNotification:
-                    url: http://localhost/rt/REST/1.0/
-                    queue: helpdesk
-                    username: example@example.com
-                    password: password
-                    template: notification.txt
+                standard:
+                    RTNotification:
+                        url: http://localhost/rt/REST/1.0/
+                        queue: helpdesk
+                        username: example@example.com
+                        password: password
+                        template: notification.txt
+                error:
+                    RTNotification:
+                        url: http://localhost/rt/REST/1.0/
+                        queue: errors
+                        username: example@example.com
+                        password: password
+                        template: notification.txt
                 <other notification>:
                     ...
     """

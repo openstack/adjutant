@@ -79,18 +79,32 @@ DEFAULT_TASK_SETTINGS:
             template: completed.txt
             html_template: completed.txt
     notifications:
-        EmailNotification:
-            emails:
-                - example@example.com
-            reply: no-reply@example.com
-            template: notification.txt
-            html_template: completed.txt
-        RTNotification:
-            url: http://localhost/rt/REST/1.0/
-            queue: helpdesk
-            username: example@example.com
-            password: password
-            template: notification.txt
+        standard:
+            EmailNotification:
+                emails:
+                    - example@example.com
+                reply: no-reply@example.com
+                template: notification.txt
+                html_template: completed.txt
+            RTNotification:
+                url: http://localhost/rt/REST/1.0/
+                queue: helpdesk
+                username: example@example.com
+                password: password
+                template: notification.txt
+        error:
+            EmailNotification:
+                emails:
+                    - example@example.com
+                reply: no-reply@example.com
+                template: notification.txt
+                html_template: completed.txt
+            RTNotification:
+                url: http://localhost/rt/REST/1.0/
+                queue: errors
+                username: example@example.com
+                password: password
+                template: notification.txt
 
 # These are cascading overrides for the default settings:
 TASK_SETTINGS:
@@ -101,10 +115,27 @@ TASK_SETTINGS:
         actions:
             - AddAdminToProject
             - DefaultProjectResources
+        notifications:
+            standard:
+                EmailNotification:
+                    emails:
+                        - signups@example.com
+                RTNotification:
+                    queue: signups
+            error:
+                EmailNotification:
+                    emails:
+                        - signups@example.com
+                RTNotification:
+                    queue: signups
     invite_user:
         emails:
             # To not send this email, set the value to null
             initial: null
+        errors:
+            SMTPException:
+                notification: acknowledge
+                engines: False
     reset_password:
         handle_duplicates: cancel
         emails:
@@ -114,6 +145,10 @@ TASK_SETTINGS:
                 reply: no-reply@example.com
                 template: password_reset.txt
                 html_template: password_reset.txt
+        errors:
+            SMTPException:
+                notification: acknowledge
+                engines: False
     force_password:
         handle_duplicates: cancel
         emails:
@@ -123,6 +158,10 @@ TASK_SETTINGS:
                 reply: no-reply@example.com
                 template: initial_password.txt
                 html_template: initial_password.txt
+        errors:
+            SMTPException:
+                notification: acknowledge
+                engines: False
     edit_user:
         emails:
             initial: null
@@ -167,3 +206,4 @@ ROLES_MAPPING:
         - project_mod
         - heat_stack_owner
         - _member_
+

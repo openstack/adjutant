@@ -40,12 +40,20 @@ class EmailNotification(NotificationEngine):
     Example conf:
         <TaskView>:
             notifications:
-                EmailNotification:
-                    emails:
-                        - example@example.com
-                    reply: no-reply@example.com
-                    template: notification.txt
-                    html_template: completed.txt
+                standard:
+                    EmailNotification:
+                        emails:
+                            - example@example.com
+                        reply: no-reply@example.com
+                        template: notification.txt
+                        html_template: completed.txt
+                error:
+                    EmailNotification:
+                        emails:
+                            - errors@example.com
+                        reply: no-reply@example.com
+                        template: notification.txt
+                        html_template: completed.txt
                 <other notification>:
                     ...
     """

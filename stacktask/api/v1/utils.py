@@ -28,7 +28,7 @@ def create_token(task):
     return token
 
 
-def send_email(registration, email_conf, token=None):
+def send_email(task, email_conf, token=None):
     if not email_conf:
         return
 
@@ -37,7 +37,7 @@ def send_email(registration, email_conf, token=None):
 
     emails = set()
     actions = []
-    for action in registration.actions:
+    for action in task.actions:
         act = action.get_action()
         email = act.get_email()
         if email:
@@ -48,20 +48,20 @@ def send_email(registration, email_conf, token=None):
         notes = {
             'errors':
             (("Error: Unable to send token, More than one email for" +
-              " registration: %s") % registration.uuid)
+              " task: %s") % task.uuid)
         }
-        create_notification(registration, notes, error=True)
+        create_notification(task, notes, error=True)
         return
 
     if token:
         context = {
-            'registration': registration,
+            'task': task,
             'actions': actions,
             'tokenurl': settings.TOKEN_SUBMISSION_URL,
             'token': token.token,
         }
     else:
-        context = {'registration': registration, 'actions': actions}
+        context = {'task': task, 'actions': actions}
 
     try:
         message = template.render(context)
@@ -72,13 +72,27 @@ def send_email(registration, email_conf, token=None):
     except SMTPException as e:
         notes = {
             'errors':
-                ("Error: '%s' while emailing token for registration: %s" %
-                    (e, registration.uuid))
+                ("Error: '%s' while emailing token for task: %s" %
+                    (e, task.uuid))
         }
-        create_notification(registration, notes, error=True)
+
+        errors_conf = settings.TASK_SETTINGS.get(
+            task.task_type, {}).get('errors', {}).get(
+            "SMTPException", {})
+
+        if errors_conf:
+            notification = create_notification(
+                task, notes, error=True,
+                engines=errors_conf.get('engines', True))
+
+            if errors_conf.get('notification') == "acknowledge":
+                notification.acknowledged = True
+                notification.save()
+        else:
+            create_notification(task, notes, error=True)
 
 
-def create_notification(task, notes, error=False):
+def create_notification(task, notes, error=False, engines=True):
     notification = Notification.objects.create(
         task=task,
         notes=notes,
@@ -86,14 +100,22 @@ def create_notification(task, notes, error=False):
     )
     notification.save()
 
+    if not engines:
+        return notification
+
     class_conf = settings.TASK_SETTINGS.get(task.task_type, {})
 
-    # NOTE(adriant): some form of error handling is probably needed:
     for note_engine, conf in class_conf.get('notifications', {}).iteritems():
+        if error:
+            conf = conf.get('error', {})
+        else:
+            conf = conf.get('standard', {})
         if not conf:
             continue
         engine = settings.NOTIFICATION_ENGINES[note_engine](conf)
         engine.notify(task, notification)
+
+    return notification
 
 
 def create_task_hash(task_type, action_list):
