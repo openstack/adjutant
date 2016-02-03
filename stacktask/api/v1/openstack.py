@@ -48,12 +48,15 @@ class UserList(tasks.InviteUser):
                 continue
 
             email = getattr(user, 'email', '')
+            enabled = getattr(user, 'enabled')
+            user_status = 'Active' if enabled else 'Account Disabled'
             active_emails.add(email)
             user_list.append({'id': user.id,
                               'name': user.username,
                               'email': email,
                               'roles': roles,
-                              'status': 'Active'
+                              'cohort': 'Member',
+                              'status': user_status
                               })
 
         # Get my active tasks for this project:
@@ -65,7 +68,7 @@ class UserList(tasks.InviteUser):
 
         registrations = []
         for task in project_tasks:
-            status = "Unconfirmed"
+            status = "Invited"
             for token in task.tokens:
                 if token.expired:
                     status = "Expired"
@@ -87,6 +90,7 @@ class UserList(tasks.InviteUser):
                                   'name': task['task_data']['email'],
                                   'email': task['task_data']['email'],
                                   'roles': task['task_data']['roles'],
+                                  'cohort': 'Invited',
                                   'status': task['status']})
 
         return Response({'users': user_list})
