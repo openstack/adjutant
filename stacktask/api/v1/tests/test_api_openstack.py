@@ -12,10 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
+
 from rest_framework import status
 from rest_framework.test import APITestCase
+
 from stacktask.api.models import Token
-import mock
 from stacktask.api.v1.tests import FakeManager, setup_temp_cache
 
 
@@ -118,11 +120,11 @@ class OpenstackAPITests(APITestCase):
 
         user = mock.Mock()
         user.id = 'user_id'
-        user.username = "test@example.com"
+        user.name = "test@example.com"
         user.email = "test@example.com"
         user.password = "test_password"
 
-        setup_temp_cache({}, {user.username: user})
+        setup_temp_cache({}, {user.id: user})
 
         headers = {
             'project_name': "test_project",

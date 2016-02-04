@@ -12,19 +12,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from keystoneclient.v2_0 import client
-from neutronclient.v2_0 import client as neutron_client
 
 from django.conf import settings
 
+from keystoneclient.v3 import client as client_v3
+
+from neutronclient.v2_0 import client as neutron_client
+
 
 def get_keystoneclient():
-    # TODO(Adriant): Add region support.
-    auth = client.Client(
+    auth = client_v3.Client(
         username=settings.KEYSTONE['username'],
         password=settings.KEYSTONE['password'],
-        tenant_name=settings.KEYSTONE['project_name'],
-        auth_url=settings.KEYSTONE['auth_url'],
+        project_name=settings.KEYSTONE['project_name'],
+        auth_url=settings.KEYSTONE['auth_url_v3'],
         region_name=settings.DEFAULT_REGION
     )
     return auth

@@ -12,14 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.utils import timezone
 from django.conf import settings
+from django.utils import timezone
+
 from rest_framework.response import Response
 
-from stacktask.api.v1 import tasks
-from stacktask.api import utils
-from stacktask.api import models
 from stacktask.actions import user_store
+from stacktask.api import models
+from stacktask.api import utils
+from stacktask.api.v1 import tasks
 
 
 class UserList(tasks.InviteUser):
@@ -35,11 +36,10 @@ class UserList(tasks.InviteUser):
         project = id_manager.get_project(project_id)
 
         active_emails = set()
-        for user in project.list_users():
+        for user in id_manager.list_users(project):
             skip = False
-            self.logger.info(user)
             roles = []
-            for role in id_manager.get_roles(user, project):
+            for role in user.roles:
                 if role.name in role_blacklist:
                     skip = True
                     continue
@@ -52,7 +52,7 @@ class UserList(tasks.InviteUser):
             user_status = 'Active' if enabled else 'Account Disabled'
             active_emails.add(email)
             user_list.append({'id': user.id,
-                              'name': user.username,
+                              'name': user.name,
                               'email': email,
                               'roles': roles,
                               'cohort': 'Member',
@@ -124,7 +124,7 @@ class UserDetail(tasks.TaskView):
         if not roles or roles_blacklisted:
             return Response(no_user, status=404)
         return Response({'id': user.id,
-                         "username": user.username,
+                         "username": user.name,
                          "email": getattr(user, 'email', ''),
                          'roles': roles})
 

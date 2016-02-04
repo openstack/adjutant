@@ -51,7 +51,8 @@ KEYSTONE:
     username: admin
     password: openstack
     project_name: admin
-    auth_url: http://localhost:5000/v2.0
+    # MUST BE V3 API:
+    auth_url: http://localhost:5000/v3
 DEFAULT_REGION: RegionOne
 
 TOKEN_SUBMISSION_URL: http://192.168.122.160:8080/token/
@@ -174,11 +175,14 @@ TASK_SETTINGS:
 ACTION_SETTINGS:
     NewUser:
         allowed_roles:
-            - Member
             - project_owner
             - project_mod
             - heat_stack_owner
             - _member_
+    ResetUser:
+        blacklisted_roles:
+            - Admin
+            - admin
     DefaultProjectResources:
         RegionOne:
             network_name: somenetwork

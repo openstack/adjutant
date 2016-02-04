@@ -12,13 +12,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from logging import getLogger
+
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
-from stacktask.actions import user_store
-from stacktask.actions import serializers
-from django.conf import settings
+
 from jsonfield import JSONField
-from logging import getLogger
+
+from stacktask.actions import serializers
+from stacktask.actions import user_store
 
 
 class Action(models.Model):
@@ -475,8 +478,8 @@ class NewProject(UserNameAction):
     def _submit(self, token_data):
         """
         The submit action is prformed when a token is submitted.
-        This is done for a user account only, and so should now only set up the user,
-        not the project, which was done in approve.
+        This is done for a user account only, and so should now only
+        set up the user, not the project, which was done in approve.
         """
 
         id_manager = user_store.IdentityManager()
@@ -552,13 +555,25 @@ class ResetUser(UserNameAction):
         'email'
     ]
 
+    blacklist = settings.ACTION_SETTINGS.get(
+        'ResetUser', {}).get("blacklisted_roles", {})
+
     def _validate(self):
         id_manager = user_store.IdentityManager()
 
         user = id_manager.find_user(self.username)
 
         if user:
-            if user.email == self.email:
+            roles = id_manager.get_all_roles(user)
+
+            user_roles = []
+            for project, roles in roles.iteritems():
+                user_roles.extend(role.name for role in roles)
+
+            if set(self.blacklist) & set(user_roles):
+                valid = False
+                self.add_note('Cannot reset users with blacklisted roles.')
+            elif user.email == self.email:
                 valid = True
                 self.action.need_token = True
                 self.set_token_fields(["password"])
@@ -693,7 +708,6 @@ class EditUserRoles(UserIdAction):
 
         if self.action.state == "default":
             try:
-                #user = id_manager.find_user(self.username)
                 user = self._get_target_user()
 
                 roles = []
@@ -738,7 +752,8 @@ class EditUserRoles(UserIdAction):
                     % (self.user_id, self.roles, self.project_id))
 
 
-# Update settings dict with tuples in the format: (<ActionClass>, <ActionSerializer>)
+# Update settings dict with tuples in the format:
+#   (<ActionClass>, <ActionSerializer>)
 def register_action_class(action_class, serializer_class):
     data = {}
     data[action_class.__name__] = (action_class, serializer_class)

@@ -13,12 +13,14 @@
 #    under the License.
 
 from django.test import TestCase
-from stacktask.api.models import Task
-from stacktask.api.v1.tests import FakeManager, setup_temp_cache
-from stacktask.api.v1 import tests
-from stacktask.actions.tenant_setup.models import (
-    DefaultProjectResources, AddAdminToProject)
+
 import mock
+
+from stacktask.actions.tenant_setup.models import (
+    AddAdminToProject, DefaultProjectResources)
+from stacktask.api.models import Task
+from stacktask.api.v1 import tests
+from stacktask.api.v1.tests import FakeManager, setup_temp_cache
 
 
 neutron_cache = {}
@@ -263,7 +265,7 @@ class TenantSetupActionTests(TestCase):
         self.assertEquals(action.valid, True)
 
         project = tests.temp_cache['projects']['test_project']
-        self.assertEquals(project.roles['admin'], ['admin'])
+        self.assertEquals(project.roles['user_id_0'], ['admin'])
 
     @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
                 FakeManager)
@@ -292,10 +294,10 @@ class TenantSetupActionTests(TestCase):
         self.assertEquals(action.valid, True)
 
         project = tests.temp_cache['projects']['test_project']
-        self.assertEquals(project.roles['admin'], ['admin'])
+        self.assertEquals(project.roles['user_id_0'], ['admin'])
 
         action.post_approve()
         self.assertEquals(action.valid, True)
 
         project = tests.temp_cache['projects']['test_project']
-        self.assertEquals(project.roles['admin'], ['admin'])
+        self.assertEquals(project.roles['user_id_0'], ['admin'])

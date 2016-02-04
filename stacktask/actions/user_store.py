@@ -12,11 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from openstack_clients import get_keystoneclient
+from collections import defaultdict
+
+from django.conf import settings
+
 from keystoneclient.openstack.common.apiclient import (
     exceptions as ks_exceptions
 )
-from django.conf import settings
+
+from openstack_clients import get_keystoneclient
 
 
 def get_managable_roles(user_roles):
@@ -58,14 +62,38 @@ class IdentityManager(object):
             user = None
         return user
 
+    def list_users(self, project):
+        try:
+            roles = self.ks_client.roles.list()
+            role_dict = {role.id: role for role in roles}
+
+            users = {}
+            user_assignments = self.ks_client.role_assignments.list(
+                project=project)
+            for assignment in user_assignments:
+                try:
+                    user = users.get(assignment.user['id'], None)
+                    if user:
+                        user.roles.append(role_dict[assignment.role['id']])
+                    else:
+                        user = self.ks_client.users.get(assignment.user['id'])
+                        user.roles = [role_dict[assignment.role['id']], ]
+                        users[user.id] = user
+                except AttributeError:
+                    # Just means the assignment is a group, so ignore it.
+                    pass
+        except ks_exceptions.NotFound:
+            users = []
+        return users.values()
+
     def create_user(self, name, password, email, project_id):
         user = self.ks_client.users.create(
             name=name, password=password,
-            email=email, tenant_id=project_id)
+            email=email, project_id=project_id)
         return user
 
     def update_user_password(self, user, password):
-        self.ks_client.users.update_password(user, password)
+        self.ks_client.users.update(user, password=password)
 
     def find_role(self, name):
         try:
@@ -75,33 +103,48 @@ class IdentityManager(object):
         return role
 
     def get_roles(self, user, project):
-        return self.ks_client.roles.roles_for_user(user, tenant=project)
+        return self.ks_client.roles.list(user=user, project=project)
+
+    def get_all_roles(self, user):
+        """
+        Returns roles for a given user across all projects.
+        """
+        roles = self.ks_client.roles.list()
+        role_dict = {role.id: role for role in roles}
+
+        user_assignments = self.ks_client.role_assignments.list(user=user)
+        projects = defaultdict([])
+        for assignment in user_assignments:
+            project = assignment.scope['project']['id']
+            projects[project].append(role_dict[assignment.role['id']])
+
+        return projects
 
     def add_user_role(self, user, role, project_id):
         try:
-            self.ks_client.roles.add_user_role(user, role, project_id)
+            self.ks_client.roles.grant(role, user=user, project=project_id)
         except ks_exceptions.Conflict:
             # Conflict is ok, it means the user already has this role.
             pass
 
     def remove_user_role(self, user, role, project_id):
-        self.ks_client.roles.remove_user_role(user, role, project_id)
+        self.ks_client.roles.revoke(role, user=user, project=project_id)
 
     def find_project(self, project_name):
         try:
-            project = self.ks_client.tenants.find(name=project_name)
+            project = self.ks_client.projects.find(name=project_name)
         except ks_exceptions.NotFound:
             project = None
         return project
 
     def get_project(self, project_id):
         try:
-            project = self.ks_client.tenants.get(project_id)
+            project = self.ks_client.projects.get(project_id)
         except ks_exceptions.NotFound:
             project = None
         return project
 
     def create_project(self, project_name, created_on):
-        project = self.ks_client.tenants.create(project_name,
-                                                created_on=created_on)
+        project = self.ks_client.projects.create(project_name,
+                                                 created_on=created_on)
         return project

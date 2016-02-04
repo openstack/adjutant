@@ -12,13 +12,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import json
+
+from datetime import timedelta
+
+from django.utils import timezone
+
+import mock
+
 from rest_framework import status
 from rest_framework.test import APITestCase
+
 from stacktask.api.models import Task, Token
-import mock
-from django.utils import timezone
-from datetime import timedelta
-import json
+
 from stacktask.api.v1.tests import FakeManager, setup_temp_cache
 
 
@@ -121,11 +127,11 @@ class AdminAPITests(APITestCase):
 
         user = mock.Mock()
         user.id = 'user_id'
-        user.username = "test@example.com"
+        user.name = "test@example.com"
         user.email = "test@example.com"
         user.password = "test_password"
 
-        setup_temp_cache({}, {user.username: user})
+        setup_temp_cache({}, {user.id: user})
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
@@ -154,11 +160,11 @@ class AdminAPITests(APITestCase):
 
         user = mock.Mock()
         user.id = 'user_id'
-        user.username = "test@example.com"
+        user.name = "test@example.com"
         user.email = "test@example.com"
         user.password = "test_password"
 
-        setup_temp_cache({}, {user.username: user})
+        setup_temp_cache({}, {user.id: user})
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
@@ -373,7 +379,7 @@ class AdminAPITests(APITestCase):
 
         user = mock.Mock()
         user.id = 'user_id'
-        user.username = "test@example.com"
+        user.name = "test@example.com"
         user.email = "test@example.com"
         user.password = "test_password"
 
@@ -383,7 +389,7 @@ class AdminAPITests(APITestCase):
         user2.email = "test2@example.com"
         user2.password = "test_password"
 
-        setup_temp_cache({}, {user.username: user, user2.name: user2})
+        setup_temp_cache({}, {user.id: user, user2.name: user2})
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
@@ -429,11 +435,11 @@ class AdminAPITests(APITestCase):
 
         user = mock.Mock()
         user.id = 'user_id'
-        user.username = "test@example.com"
+        user.name = "test@example.com"
         user.email = "test@example.com"
         user.password = "test_password"
 
-        setup_temp_cache({}, {user.username: user})
+        setup_temp_cache({}, {user.id: user})
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
@@ -982,3 +988,33 @@ class AdminAPITests(APITestCase):
             url, params, format='json', headers=headers
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @mock.patch(
+        'stacktask.actions.models.user_store.IdentityManager', FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.IdentityManager', FakeManager)
+    def test_reset_admin(self):
+        """
+        Ensure that you cannot issue a password reset for an
+        admin user.
+        """
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.password = "test_password"
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {user.id: ['admin']}
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+
+        url = "/v1/actions/ResetPassword"
+        data = {'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, None)
+        self.assertEqual(0, Token.objects.count())

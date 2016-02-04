@@ -20,12 +20,12 @@ temp_cache = {}
 
 def setup_temp_cache(projects, users):
     admin_user = mock.Mock()
-    admin_user.id = 0
-    admin_user.username = 'admin'
+    admin_user.id = 'user_id_0'
+    admin_user.name = 'admin'
     admin_user.password = 'password'
     admin_user.email = 'admin@example.com'
 
-    users.update({admin_user.username: admin_user})
+    users.update({admin_user.id: admin_user})
 
     global temp_cache
 
@@ -59,7 +59,7 @@ class FakeProject():
                 usernames.append(username)
         users = []
         for user in temp_cache['users'].values():
-            if user.username in usernames:
+            if user.name in usernames:
                 users.append(user)
         return users
 
@@ -68,38 +68,61 @@ class FakeManager(object):
 
     def find_user(self, name):
         global temp_cache
-        return temp_cache['users'].get(name, None)
+        for user in temp_cache['users'].values():
+            if user.name == name:
+                return user
+        return None
 
     def get_user(self, user_id):
         global temp_cache
         return temp_cache['users'].get(user_id, None)
 
+    def list_users(self, project):
+        global temp_cache
+        roles = temp_cache['projects'][project.name].roles
+        users = []
+
+        for user_id, roles in roles.iteritems():
+            user = self.get_user(user_id)
+            user.roles = []
+
+            for role in roles:
+                r = mock.Mock()
+                r.name = role
+                user.roles.append(r)
+        return users
+
     def create_user(self, name, password, email, project_id):
         global temp_cache
         user = mock.Mock()
-        temp_cache['i'] += 1
-        user.id = temp_cache['i']
-        user.username = name
+        user.id = "user_id_%s" % int(temp_cache['i'])
+        user.name = name
         user.password = password
         user.email = email
         user.default_project = project_id
-        temp_cache['users'][name] = user
+        temp_cache['users'][user.id] = user
+
+        temp_cache['i'] += 0.5
         return user
 
     def update_user_password(self, user, password):
         global temp_cache
-        user = temp_cache['users'][user.username]
+        user = temp_cache['users'][user.id]
         user.password = password
 
     def find_role(self, name):
         global temp_cache
-        return temp_cache['roles'].get(name, None)
+        if temp_cache['roles'].get(name, None):
+            role = mock.Mock()
+            role.name = name
+            return role
+        return None
 
     def get_roles(self, user, project):
         global temp_cache
         try:
             roles = []
-            for role in project.roles[user.username]:
+            for role in project.roles[user.id]:
                 r = mock.Mock()
                 r.name = role
                 roles.append(r)
@@ -107,17 +130,29 @@ class FakeManager(object):
         except KeyError:
             return []
 
+    def get_all_roles(self, user):
+        global temp_cache
+        projects = {}
+        for project in temp_cache['projects'].values():
+            projects[project.id] = []
+            for role in project.roles[user.id]:
+                r = mock.Mock()
+                r.name = role
+                projects[project.id].append(r)
+
+        return projects
+
     def add_user_role(self, user, role, project_id):
         project = self.get_project(project_id)
         try:
-            project.roles[user.username].append(role)
+            project.roles[user.id].append(role.name)
         except KeyError:
-            project.roles[user.username] = [role]
+            project.roles[user.id] = [role.name]
 
     def remove_user_role(self, user, role, project_id):
         project = self.get_project(project_id)
         try:
-            project.roles[user.username].remove(role)
+            project.roles[user.id].remove(role.name)
         except KeyError:
             pass
 
@@ -137,8 +172,8 @@ class FakeManager(object):
         if p_id:
             project.id = p_id
         else:
-            temp_cache['i'] += 1
-            project.id = temp_cache['i']
+            temp_cache['i'] += 0.5
+            project.id = "project_id_%s" % int(temp_cache['i'])
         project.name = project_name
         project.roles = {}
         temp_cache['projects'][project_name] = project
