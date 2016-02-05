@@ -563,27 +563,28 @@ class ResetUser(UserNameAction):
 
         user = id_manager.find_user(self.username)
 
-        if user:
-            roles = id_manager.get_all_roles(user)
-
-            user_roles = []
-            for project, roles in roles.iteritems():
-                user_roles.extend(role.name for role in roles)
-
-            if set(self.blacklist) & set(user_roles):
-                valid = False
-                self.add_note('Cannot reset users with blacklisted roles.')
-            elif user.email == self.email:
-                valid = True
-                self.action.need_token = True
-                self.set_token_fields(["password"])
-                self.add_note('Existing user with matching email.')
-            else:
-                valid = False
-                self.add_note('Existing user with non-matching email.')
-        else:
+        if not user:
             valid = False
             self.add_note('No user present with username')
+            return valid
+
+        roles = id_manager.get_all_roles(user)
+
+        user_roles = []
+        for project, roles in roles.iteritems():
+            user_roles.extend(role.name for role in roles)
+
+        if set(self.blacklist) & set(user_roles):
+            valid = False
+            self.add_note('Cannot reset users with blacklisted roles.')
+        elif user.email == self.email:
+            valid = True
+            self.action.need_token = True
+            self.set_token_fields(["password"])
+            self.add_note('Existing user with matching email.')
+        else:
+            valid = False
+            self.add_note('Existing user with non-matching email.')
 
         return valid
 
