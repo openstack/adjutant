@@ -16,6 +16,8 @@ import json
 
 from datetime import timedelta
 
+from unittest import skip
+
 from django.utils import timezone
 
 import mock
@@ -24,7 +26,6 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from stacktask.api.models import Task, Token
-
 from stacktask.api.v1.tests import FakeManager, setup_temp_cache
 
 
@@ -843,6 +844,9 @@ class AdminAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['tasks']), 2)
 
+    # TODO(adriant): enable this test again when filters are properly
+    # blacklisted.
+    @skip("Does not apply yet.")
     @mock.patch(
         'stacktask.actions.models.user_store.IdentityManager', FakeManager)
     def test_task_list_filter_cross_project(self):

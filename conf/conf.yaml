@@ -169,7 +169,6 @@ TASK_SETTINGS:
             token: null
         role_blacklist:
             - admin
-            - Admin
 
 # Action settings:
 ACTION_SETTINGS:
@@ -181,7 +180,6 @@ ACTION_SETTINGS:
             - _member_
     ResetUser:
         blacklisted_roles:
-            - Admin
             - admin
     DefaultProjectResources:
         RegionOne:

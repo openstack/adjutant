@@ -12,16 +12,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from stacktask.api.models import Task, Token, Notification
-from django.utils import timezone
 from logging import getLogger
-from stacktask.api import utils
-from stacktask.api.v1.utils import (
-    send_email, create_notification, create_token, parse_filters)
 
 from django.conf import settings
+from django.utils import timezone
+
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from stacktask.api import utils
+from stacktask.api.models import Notification, Task, Token
+from stacktask.api.v1.utils import (
+    create_notification, create_token, parse_filters, send_email)
 
 
 class APIViewWithLogger(APIView):
@@ -149,7 +151,7 @@ class NotificationDetail(APIViewWithLogger):
 
 class TaskList(APIViewWithLogger):
 
-    @utils.mod_or_owner
+    @utils.admin
     @parse_filters
     def get(self, request, filters=None, format=None):
         """
