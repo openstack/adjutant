@@ -1,13 +1,13 @@
 Hello,
 
-Your registration with our service is almost done.
+Your task with StackTask is almost complete.
 
-The action you have requested is:
+The actions in your task are:
 {% for action in actions %}
 - {{ action }}
 {% endfor %}
 
-Your token to complete this action is:
+Your token to complete these actions is:
 {{ tokenurl }}{{ token }}/
 
 

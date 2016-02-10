@@ -133,6 +133,16 @@ TASK_SETTINGS:
         emails:
             # To not send this email, set the value to null
             initial: null
+            token:
+                subject: Invitation to an OpenStack Project
+                reply: no-reply@example.com
+                template: invite_user_token.txt
+                html_template: invite_user_token.txt
+            completed:
+                subject: Invitation Completed
+                reply: no-reply@example.com
+                template: invite_user_completed.txt
+                html_template: invite_user_completed.txt
         errors:
             SMTPException:
                 notification: acknowledge
@@ -144,8 +154,13 @@ TASK_SETTINGS:
             token:
                 subject: Password Reset for OpenStack
                 reply: no-reply@example.com
-                template: password_reset.txt
-                html_template: password_reset.txt
+                template: password_reset_token.txt
+                html_template: password_reset_token.txt
+            completed:
+                subject: Password Reset Completed
+                reply: no-reply@example.com
+                template: password_reset_completed.txt
+                html_template: password_reset_completed.txt
         errors:
             SMTPException:
                 notification: acknowledge
@@ -157,8 +172,13 @@ TASK_SETTINGS:
             token:
                 subject: Setup Your OpenStack Password
                 reply: no-reply@example.com
-                template: initial_password.txt
-                html_template: initial_password.txt
+                template: initial_password_token.txt
+                html_template: initial_password_token.txt
+            completed:
+                subject: New User Setup Completed
+                reply: no-reply@example.com
+                template: initial_password_completed.txt
+                html_template: initial_password_completed.txt
         errors:
             SMTPException:
                 notification: acknowledge

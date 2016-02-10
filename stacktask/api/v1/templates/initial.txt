@@ -2,7 +2,7 @@ Hello,
 
 Your task is in our system and now waiting approval.
 
-The actions you had requested are:
+The actions you have requested are:
 {% for action in actions %}
 - {{ action }}
 {% endfor %}
