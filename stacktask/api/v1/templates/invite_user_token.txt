@@ -1,0 +1,12 @@
+Hello,
+
+Someone has invited you to join their OpenStack project.
+
+To complete this invitation just follow this link:
+{{ tokenurl }}{{ token }}/
+
+If you are a new user you will just have to setup your password for a user with this email address, but if you already have a user, you simply have to confirm your invitation. 
+
+This link will expire in 24 hours at which point you will need to request another one from the person who invited you.
+
+Thank you for using our service.

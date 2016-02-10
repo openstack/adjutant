@@ -98,7 +98,19 @@ DEFAULT_TASK_SETTINGS = {
 TASK_SETTINGS = {
     'invite_user': {
         'emails': {
-            'initial': None
+            'initial': None,
+            'token': {
+                'reply': 'no-reply@example.com',
+                'html_template': 'invite_user_token.txt',
+                'template': 'invite_user_token.txt',
+                'subject': 'invite_user'
+            },
+            'completed': {
+                'reply': 'no-reply@example.com',
+                'html_template': 'invite_user_completed.txt',
+                'template': 'invite_user_completed.txt',
+                'subject': 'invite_user'
+            }
         }
     },
     'create_project': {
@@ -112,8 +124,14 @@ TASK_SETTINGS = {
         'emails': {
             'token': {
                 'reply': 'no-reply@example.com',
-                'html_template': 'password_reset.txt',
-                'template': 'password_reset.txt',
+                'html_template': 'password_reset_token.txt',
+                'template': 'password_reset_token.txt',
+                'subject': 'Password Reset for OpenStack'
+            },
+            'completed': {
+                'reply': 'no-reply@example.com',
+                'html_template': 'password_reset_completed.txt',
+                'template': 'password_reset_completed.txt',
                 'subject': 'Password Reset for OpenStack'
             }
         }
@@ -123,8 +141,14 @@ TASK_SETTINGS = {
         'emails': {
             'token': {
                 'reply': 'no-reply@example.com',
-                'html_template': 'initial_password.txt',
-                'template': 'initial_password.txt',
+                'html_template': 'initial_password_token.txt',
+                'template': 'initial_password_token.txt',
+                'subject': 'Setup Your OpenStack Password'
+            },
+            'completed': {
+                'reply': 'no-reply@example.com',
+                'html_template': 'initial_password_completed.txt',
+                'template': 'initial_password_completed.txt',
                 'subject': 'Setup Your OpenStack Password'
             }
         }

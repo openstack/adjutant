@@ -1,0 +1,7 @@
+Hello,
+
+You have successfully completed your OpenStack project invitation.
+
+You should now have access to your new project via the dashboard and APIs.
+
+Thank you for using our service.
