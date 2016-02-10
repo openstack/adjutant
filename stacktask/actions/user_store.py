@@ -113,7 +113,7 @@ class IdentityManager(object):
         role_dict = {role.id: role for role in roles}
 
         user_assignments = self.ks_client.role_assignments.list(user=user)
-        projects = defaultdict([])
+        projects = defaultdict(list)
         for assignment in user_assignments:
             project = assignment.scope['project']['id']
             projects[project].append(role_dict[assignment.role['id']])
