@@ -47,7 +47,7 @@ class TaskViewTests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,_member_,project_mod",
+            'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -76,7 +76,7 @@ class TaskViewTests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,_member_,project_mod",
+            'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -151,7 +151,7 @@ class TaskViewTests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,_member_,project_mod",
+            'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -192,7 +192,7 @@ class TaskViewTests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,_member_,project_mod",
+            'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -262,7 +262,7 @@ class TaskViewTests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,_member_,project_mod",
+            'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -308,7 +308,7 @@ class TaskViewTests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,_member_,project_mod",
+            'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -503,7 +503,7 @@ class TaskViewTests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,_member_,project_mod",
+            'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True

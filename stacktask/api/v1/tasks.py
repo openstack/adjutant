@@ -346,17 +346,17 @@ class InviteUser(TaskView):
 
     default_action = 'NewUser'
 
-    @utils.mod_or_owner
+    @utils.mod_or_admin
     def get(self, request):
         return super(InviteUser, self).get(request)
 
-    @utils.mod_or_owner
+    @utils.mod_or_admin
     def post(self, request, format=None):
         """
         Invites a user to the current tenant.
 
         This endpoint requires either Admin access or the
-        request to come from a project_owner|project_mod.
+        request to come from a project_admin|project_mod.
         As such this Task is considered pre-approved.
         """
         self.logger.info("(%s) - New AttachUser request." % timezone.now())
@@ -434,7 +434,7 @@ class EditUser(TaskView):
 
     default_action = 'EditUser'
 
-    @utils.mod_or_owner
+    @utils.mod_or_admin
     def get(self, request):
         class_conf = settings.TASK_SETTINGS.get(self.task_type, {})
 
@@ -475,11 +475,11 @@ class EditUser(TaskView):
                          'required_fields': required_fields,
                          'users': user_list})
 
-    @utils.mod_or_owner
+    @utils.mod_or_admin
     def post(self, request, format=None):
         """
         This endpoint requires either mod access or the
-        request to come from a project_owner.
+        request to come from a project_admin.
         As such this Task is considered pre-approved.
         Runs process_actions, then does the approve step and
         post_approve validation, and creates a Token if valid.

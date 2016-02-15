@@ -37,13 +37,13 @@ def require_roles(roles, func, *args, **kwargs):
 
 
 @decorator
-def mod_or_owner(func, *args, **kwargs):
+def mod_or_admin(func, *args, **kwargs):
     """
-    Require project mod or owner.
+    Require project_mod or project_admin.
     Admin is allowed everything, so is also included.
     """
     return require_roles(
-        {'project_owner', 'project_mod', 'admin'}, func, *args, **kwargs)
+        {'project_admin', 'project_mod', 'admin'}, func, *args, **kwargs)
 
 
 @decorator

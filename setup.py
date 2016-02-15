@@ -6,7 +6,7 @@ with open('requirements.txt') as f:
 setup(
     name='stacktask',
 
-    version='0.1.1a3',
+    version='0.1.1a4',
     description='A user task service for openstack.',
     long_description=(
         'A task service to sit alongside keystone and ' +

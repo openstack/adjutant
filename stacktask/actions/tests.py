@@ -232,14 +232,13 @@ class ActionTests(TestCase):
         token_data = {'password': '123456'}
         action.submit(token_data)
         self.assertEquals(action.valid, True)
-        print tests.temp_cache['users']
         self.assertEquals(
             tests.temp_cache['users']["user_id_1"].email,
             'test@example.com')
         project = tests.temp_cache['projects']['test_project']
         self.assertEquals(
             sorted(project.roles["user_id_1"]),
-            sorted(['_member_', 'project_owner',
+            sorted(['_member_', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
@@ -291,7 +290,7 @@ class ActionTests(TestCase):
         project = tests.temp_cache['projects']['test_project']
         self.assertEquals(
             sorted(project.roles["user_id_1"]),
-            sorted(['_member_', 'project_owner',
+            sorted(['_member_', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
@@ -340,7 +339,7 @@ class ActionTests(TestCase):
         project = tests.temp_cache['projects']['test_project']
         self.assertEquals(
             sorted(project.roles[user.id]),
-            sorted(['_member_', 'project_owner',
+            sorted(['_member_', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',

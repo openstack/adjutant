@@ -25,7 +25,7 @@ from stacktask.api.v1 import tasks
 
 class UserList(tasks.InviteUser):
 
-    @utils.mod_or_owner
+    @utils.mod_or_admin
     def get(self, request):
         """Get a list of all users who have been added to a project"""
         class_conf = settings.TASK_SETTINGS.get('edit_user', {})
@@ -99,7 +99,7 @@ class UserList(tasks.InviteUser):
 class UserDetail(tasks.TaskView):
     task_type = 'edit_user'
 
-    @utils.mod_or_owner
+    @utils.mod_or_admin
     def get(self, request, user_id):
         """
         Get user info based on the user id.
@@ -128,7 +128,7 @@ class UserDetail(tasks.TaskView):
                          "email": getattr(user, 'email', ''),
                          'roles': roles})
 
-    @utils.mod_or_owner
+    @utils.mod_or_admin
     def delete(self, request, user_id):
         """
         Remove this user from the project.
@@ -163,7 +163,7 @@ class UserRoles(tasks.TaskView):
     default_action = 'EditUserRoles'
     task_type = 'edit_roles'
 
-    @utils.mod_or_owner
+    @utils.mod_or_admin
     def get(self, request, user_id):
         """
         Get user info based on the user id.
@@ -177,7 +177,7 @@ class UserRoles(tasks.TaskView):
             roles.append(role.to_dict())
         return Response({"roles": roles})
 
-    @utils.mod_or_owner
+    @utils.mod_or_admin
     def put(self, request, user_id, format=None):
         """
         Add user roles to the current project.
@@ -201,7 +201,7 @@ class UserRoles(tasks.TaskView):
                          % timezone.now())
         return self.approve(task)
 
-    @utils.mod_or_owner
+    @utils.mod_or_admin
     def delete(self, request, user_id, format=None):
         """
         Revoke user roles to the current project.
@@ -230,7 +230,7 @@ class UserRoles(tasks.TaskView):
 class RoleList(tasks.TaskView):
     task_type = 'edit_roles'
 
-    @utils.mod_or_owner
+    @utils.mod_or_admin
     def get(self, request):
         """Returns a list of roles that may be managed for this project"""
 

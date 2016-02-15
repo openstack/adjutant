@@ -188,7 +188,7 @@ TASK_SETTINGS:
 ACTION_SETTINGS:
     NewUser:
         allowed_roles:
-            - project_owner
+            - project_admin
             - project_mod
             - heat_stack_owner
             - _member_
@@ -209,12 +209,12 @@ ACTION_SETTINGS:
 # mapping between roles and managable roles
 ROLES_MAPPING:
     admin:
-        - project_owner
+        - project_admin
         - project_mod
         - heat_stack_owner
         - _member_
-    project_owner:
-        - project_owner
+    project_admin:
+        - project_admin
         - project_mod
         - heat_stack_owner
         - _member_

@@ -151,7 +151,7 @@ TASK_SETTINGS = {
 
 ACTION_SETTINGS = {
     'NewUser': {
-        'allowed_roles': ['project_mod', 'project_owner', "_member_"]
+        'allowed_roles': ['project_mod', 'project_admin', "_member_"]
     },
     'ResetUser': {
         'blacklisted_roles': ['admin']
@@ -170,9 +170,9 @@ ACTION_SETTINGS = {
 
 ROLES_MAPPING = {
     'admin': [
-        'project_owner', 'project_mod', '_member_', 'heat_stack_owner'
+        'project_admin', 'project_mod', '_member_', 'heat_stack_owner'
     ],
-    'project_owner': [
+    'project_admin': [
         'project_mod', '_member_', 'heat_stack_owner'
     ],
     'project_mod': [

@@ -189,7 +189,7 @@ class TaskList(APIViewWithLogger):
 
 class TaskDetail(APIViewWithLogger):
 
-    @utils.mod_or_owner
+    @utils.mod_or_admin
     def get(self, request, uuid, format=None):
         """
         Dict representation of a Task object
@@ -442,12 +442,12 @@ class TaskDetail(APIViewWithLogger):
             return Response({'approved': ["this field is required."]},
                             status=400)
 
-    @utils.mod_or_owner
+    @utils.mod_or_admin
     def delete(self, request, uuid, format=None):
         """
         Cancel the Task.
 
-        Project Owners and Project Mods can only cancel tasks
+        Project Admins and Project Mods can only cancel tasks
         associated with their project.
         """
         try:
@@ -501,7 +501,7 @@ class TokenList(APIViewWithLogger):
             token_list.append(token.to_dict())
         return Response({"tokens": token_list})
 
-    @utils.mod_or_owner
+    @utils.mod_or_admin
     def post(self, request, format=None):
         """
         Reissue a token for an approved task.
