@@ -34,7 +34,6 @@ def setup_temp_cache(projects, users):
         'users': users,
         'projects': projects,
         'roles': {
-            'Member': 'Member',
             '_member_': '_member_',
             'admin': 'admin',
             'project_owner': 'project_owner',

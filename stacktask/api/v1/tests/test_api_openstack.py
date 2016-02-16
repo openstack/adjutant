@@ -47,12 +47,12 @@ class OpenstackAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member,project_mod",
+            'roles': "project_owner,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["Member"],
+        data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -80,13 +80,13 @@ class OpenstackAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member,project_mod",
+            'roles': "project_owner,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
 
-        data = {'email': "test@example.com", 'roles': ["Member"],
+        data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -99,7 +99,7 @@ class OpenstackAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         url = "/v1/openstack/users"
-        data = {'email': "test2@example.com", 'roles': ["Member"],
+        data = {'email': "test2@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -129,7 +129,7 @@ class OpenstackAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "Member",
+            'roles': "_member_",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -141,7 +141,7 @@ class OpenstackAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        headers["roles"] = "admin,Member"
+        headers["roles"] = "admin,_member_"
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, None)
