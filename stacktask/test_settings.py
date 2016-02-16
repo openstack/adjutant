@@ -155,7 +155,7 @@ ACTION_SETTINGS = {
         'allowed_roles': ['project_mod', 'project_owner', "Member"]
     },
     'ResetUser': {
-        'blacklisted_roles': ['admin', "Admin"]
+        'blacklisted_roles': ['admin']
     },
     'DefaultProjectResources': {
         'RegionOne': {
