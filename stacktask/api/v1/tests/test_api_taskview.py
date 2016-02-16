@@ -47,12 +47,12 @@ class TaskViewTests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member,project_mod",
+            'roles': "project_owner,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["Member"],
+        data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -76,12 +76,12 @@ class TaskViewTests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member,project_mod",
+            'roles': "project_owner,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["Member"],
+        data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -99,12 +99,12 @@ class TaskViewTests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "Member",
+            'roles': "_member_",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["Member"],
+        data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -120,7 +120,7 @@ class TaskViewTests(APITestCase):
 
         url = "/v1/actions/InviteUser"
         headers = {}
-        data = {'email': "test@example.com", 'roles': ["Member"],
+        data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -151,12 +151,12 @@ class TaskViewTests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member,project_mod",
+            'roles': "project_owner,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["Member"],
+        data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -184,7 +184,7 @@ class TaskViewTests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
-        project.roles = {user.id: ['Member']}
+        project.roles = {user.id: ['_member_']}
 
         setup_temp_cache({'test_project': project}, {user.id: user})
 
@@ -192,12 +192,12 @@ class TaskViewTests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member,project_mod",
+            'roles': "project_owner,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["Member"],
+        data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -224,7 +224,7 @@ class TaskViewTests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,Member",
+            'roles': "admin,_member_",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -262,7 +262,7 @@ class TaskViewTests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member,project_mod",
+            'roles': "project_owner,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -275,7 +275,7 @@ class TaskViewTests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,Member",
+            'roles': "admin,_member_",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -308,7 +308,7 @@ class TaskViewTests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member,project_mod",
+            'roles': "project_owner,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -321,7 +321,7 @@ class TaskViewTests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,Member",
+            'roles': "admin,_member_",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -446,7 +446,7 @@ class TaskViewTests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,Member",
+            'roles': "admin,_member_",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -503,12 +503,12 @@ class TaskViewTests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member,project_mod",
+            'roles': "project_owner,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["Member"],
+        data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -516,7 +516,7 @@ class TaskViewTests(APITestCase):
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-        data = {'email': "test2@example.com", 'roles': ["Member"],
+        data = {'email': "test2@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)

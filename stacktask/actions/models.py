@@ -394,8 +394,7 @@ class NewProject(UserNameAction):
 
     # NOTE(adriant): move these to a config somewhere?
     default_roles = {
-        "Member", "project_owner", "project_mod", "_member_",
-        "heat_stack_owner"
+        "project_owner", "project_mod", "_member_", "heat_stack_owner"
     }
 
     def _validate(self):

@@ -73,7 +73,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,Member",
+            'roles': "admin,_member_",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -202,7 +202,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,Member",
+            'roles': "admin,_member_",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -244,7 +244,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,Member",
+            'roles': "admin,_member_",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -291,7 +291,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,Member",
+            'roles': "admin,_member_",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -343,7 +343,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,Member",
+            'roles': "admin,_member_",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -415,7 +415,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,Member",
+            'roles': "admin,_member_",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -456,7 +456,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,Member",
+            'roles': "admin,_member_",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -490,12 +490,12 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member,project_mod",
+            'roles': "project_owner,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["Member"],
+        data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -544,7 +544,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,Member",
+            'roles': "admin,_member_",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -582,7 +582,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,Member",
+            'roles': "admin,_member_",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -627,7 +627,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,Member",
+            'roles': "admin,_member_",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -666,12 +666,12 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member,project_mod",
+            'roles': "project_owner,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["Member"],
+        data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -712,12 +712,12 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member,project_mod",
+            'roles': "project_owner,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["Member"],
+        data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -746,20 +746,20 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member,project_mod",
+            'roles': "project_owner,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["Member"],
+        data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = {'email': "test2@example.com", 'roles': ["Member"],
+        data = {'email': "test2@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = {'email': "test3@example.com", 'roles': ["Member"],
+        data = {'email': "test3@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -767,7 +767,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,Member",
+            'roles': "admin,_member_",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -793,16 +793,16 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member,project_mod",
+            'roles': "project_owner,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["Member"],
+        data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = {'email': "test2@example.com", 'roles': ["Member"],
+        data = {'email': "test2@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -815,7 +815,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,Member",
+            'roles': "admin,_member_",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -872,12 +872,12 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member,project_mod",
+            'roles': "project_owner,_member_,project_mod",
             'username': "owner@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["Member"],
+        data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -885,7 +885,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id_2",
-            'roles': "project_owner,Member,project_mod",
+            'roles': "project_owner,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -920,12 +920,12 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_owner,Member,project_mod",
+            'roles': "project_owner,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["Member"],
+        data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -933,7 +933,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,Member",
+            'roles': "admin,_member_",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
