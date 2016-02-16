@@ -63,8 +63,7 @@ KEYSTONE = {
     'username': 'admin',
     'password': 'openstack',
     'project_name': 'admin',
-    'auth_url': "http://localhost:5000/v2.0",
-    'auth_url_v3': "http://localhost:5000/v3"
+    'auth_url': "http://localhost:5000/v3"
 }
 
 DEFAULT_REGION = 'RegionOne'

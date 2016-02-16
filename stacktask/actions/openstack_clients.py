@@ -25,7 +25,7 @@ def get_keystoneclient():
         username=settings.KEYSTONE['username'],
         password=settings.KEYSTONE['password'],
         project_name=settings.KEYSTONE['project_name'],
-        auth_url=settings.KEYSTONE['auth_url_v3'],
+        auth_url=settings.KEYSTONE['auth_url'],
         region_name=settings.DEFAULT_REGION
     )
     return auth
