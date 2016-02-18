@@ -85,13 +85,16 @@ class UserList(tasks.InviteUser):
                 {'uuid': task.uuid, 'task_data': task_data, 'status': status})
 
         for task in registrations:
-            if task['task_data']['email'] not in active_emails:
-                user_list.append({'id': task['uuid'],
-                                  'name': task['task_data']['email'],
-                                  'email': task['task_data']['email'],
-                                  'roles': task['task_data']['roles'],
-                                  'cohort': 'Invited',
-                                  'status': task['status']})
+            # NOTE(adriant): commenting out for now as it causes more confusion
+            # than it helps. May uncomment once different duplication checking
+            # measures are in place.
+            # if task['task_data']['email'] not in active_emails:
+            user_list.append({'id': task['uuid'],
+                              'name': task['task_data']['email'],
+                              'email': task['task_data']['email'],
+                              'roles': task['task_data']['roles'],
+                              'cohort': 'Invited',
+                              'status': task['status']})
 
         return Response({'users': user_list})
 
