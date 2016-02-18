@@ -1,6 +1,9 @@
 Hello,
 
 Someone has invited you to join their OpenStack project.
+Project id: {{ actions.NewUser.project_id }}
+Roles:{% for role in actions.NewUser.roles %}
+- {{ role }}{% endfor %}
 
 To complete this invitation just follow this link:
 {{ tokenurl }}{{ token }}/

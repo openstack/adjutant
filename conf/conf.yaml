@@ -66,19 +66,19 @@ DEFAULT_TASK_SETTINGS:
             subject: Initial Confirmation
             reply: no-reply@example.com
             template: initial.txt
-            html_template: initial.txt
+            # html_template: initial.txt
         # If the related actions 'can' send a token,
         # this field should here.
         token:
             subject: Your Token
             reply: no-reply@example.com
             template: token.txt
-            html_template: token.txt
+            # html_template: token.txt
         completed:
             subject: Task completed
             reply: no-reply@example.com
             template: completed.txt
-            html_template: completed.txt
+            # html_template: completed.txt
     notifications:
         standard:
             EmailNotification:
@@ -86,7 +86,7 @@ DEFAULT_TASK_SETTINGS:
                     - example@example.com
                 reply: no-reply@example.com
                 template: notification.txt
-                html_template: completed.txt
+                # html_template: completed.txt
             RTNotification:
                 url: http://localhost/rt/REST/1.0/
                 queue: helpdesk
@@ -99,7 +99,7 @@ DEFAULT_TASK_SETTINGS:
                     - example@example.com
                 reply: no-reply@example.com
                 template: notification.txt
-                html_template: completed.txt
+                # html_template: completed.txt
             RTNotification:
                 url: http://localhost/rt/REST/1.0/
                 queue: errors
@@ -136,11 +136,9 @@ TASK_SETTINGS:
             token:
                 subject: Invitation to an OpenStack Project
                 template: invite_user_token.txt
-                html_template: invite_user_token.txt
             completed:
                 subject: Invitation Completed
                 template: invite_user_completed.txt
-                html_template: invite_user_completed.txt
         errors:
             SMTPException:
                 notification: acknowledge
@@ -152,11 +150,9 @@ TASK_SETTINGS:
             token:
                 subject: Password Reset for OpenStack
                 template: password_reset_token.txt
-                html_template: password_reset_token.txt
             completed:
                 subject: Password Reset Completed
                 template: password_reset_completed.txt
-                html_template: password_reset_completed.txt
         errors:
             SMTPException:
                 notification: acknowledge
@@ -168,11 +164,9 @@ TASK_SETTINGS:
             token:
                 subject: Setup Your OpenStack Password
                 template: initial_password_token.txt
-                html_template: initial_password_token.txt
             completed:
                 subject: New User Setup Completed
                 template: initial_password_completed.txt
-                html_template: initial_password_completed.txt
         errors:
             SMTPException:
                 notification: acknowledge

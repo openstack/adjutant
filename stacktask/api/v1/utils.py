@@ -49,16 +49,18 @@ def send_email(task, email_conf, token=None):
         return
 
     template = loader.get_template(email_conf['template'])
-    html_template = loader.get_template(email_conf['html_template'])
+    html_template = email_conf.get('html_template', None)
+    if html_template:
+        html_template = loader.get_template(html_template)
 
     emails = set()
-    actions = []
+    actions = {}
     for action in task.actions:
         act = action.get_action()
         email = act.get_email()
         if email:
             emails.add(email)
-            actions.append(unicode(act))
+            actions[unicode(act)] = act
 
     if len(emails) > 1:
         notes = {
@@ -81,10 +83,15 @@ def send_email(task, email_conf, token=None):
 
     try:
         message = template.render(context)
-        html_message = html_template.render(context)
-        send_mail(
-            email_conf['subject'], message, email_conf['reply'],
-            [emails.pop()], fail_silently=False, html_message=html_message)
+        if html_template:
+            html_message = html_template.render(context)
+            send_mail(
+                email_conf['subject'], message, email_conf['reply'],
+                [emails.pop()], fail_silently=False, html_message=html_message)
+        else:
+            send_mail(
+                email_conf['subject'], message, email_conf['reply'],
+                [emails.pop()], fail_silently=False)
     except SMTPException as e:
         notes = {
             'errors':

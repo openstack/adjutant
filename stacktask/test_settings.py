@@ -76,19 +76,16 @@ DEFAULT_TASK_SETTINGS = {
     'emails': {
         'token': {
             'reply': 'no-reply@example.com',
-            'html_template': 'token.txt',
             'template': 'token.txt',
             'subject': 'Your Token'
         },
         'initial': {
             'reply': 'no-reply@example.com',
-            'html_template': 'initial.txt',
             'template': 'initial.txt',
             'subject': 'Initial Confirmation'
         },
         'completed': {
             'reply': 'no-reply@example.com',
-            'html_template': 'completed.txt',
             'template': 'completed.txt',
             'subject': 'Task completed'
         }
@@ -100,12 +97,10 @@ TASK_SETTINGS = {
         'emails': {
             'initial': None,
             'token': {
-                'html_template': 'invite_user_token.txt',
                 'template': 'invite_user_token.txt',
                 'subject': 'invite_user'
             },
             'completed': {
-                'html_template': 'invite_user_completed.txt',
                 'template': 'invite_user_completed.txt',
                 'subject': 'invite_user'
             }
@@ -121,12 +116,10 @@ TASK_SETTINGS = {
         'handle_duplicates': 'cancel',
         'emails': {
             'token': {
-                'html_template': 'password_reset_token.txt',
                 'template': 'password_reset_token.txt',
                 'subject': 'Password Reset for OpenStack'
             },
             'completed': {
-                'html_template': 'password_reset_completed.txt',
                 'template': 'password_reset_completed.txt',
                 'subject': 'Password Reset for OpenStack'
             }
@@ -136,12 +129,10 @@ TASK_SETTINGS = {
         'handle_duplicates': 'cancel',
         'emails': {
             'token': {
-                'html_template': 'initial_password_token.txt',
                 'template': 'initial_password_token.txt',
                 'subject': 'Setup Your OpenStack Password'
             },
             'completed': {
-                'html_template': 'initial_password_completed.txt',
                 'template': 'initial_password_completed.txt',
                 'subject': 'Setup Your OpenStack Password'
             }
