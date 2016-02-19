@@ -13,13 +13,13 @@
 #    under the License.
 
 """
-Django settings for user_reg project.
+Django settings for StackTask.
 
 For more information on this file, see
-https://docs.djangoproject.com/en/1.7/topics/settings/
+https://docs.djangoproject.com/en/1.8/topics/settings/
 
 For the full list of settings and their values, see
-https://docs.djangoproject.com/en/1.7/ref/settings/
+https://docs.djangoproject.com/en/1.8/ref/settings/
 """
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -28,10 +28,6 @@ import sys
 import yaml
 from stacktask.utils import setup_task_settings
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/1.7/howto/deployment/checklist/
 
 
 TEMPLATE_DEBUG = True
@@ -93,7 +89,8 @@ if 'test' in sys.argv:
 else:
     config_file = "/etc/stacktask/conf.yaml"
     if not os.path.isfile(config_file):
-        print "%s does not exist. Reverting to default config file." % config_file
+        print ("%s does not exist. Reverting to default config file." %
+               config_file)
         config_file = "conf/conf.yaml"
     with open(config_file) as f:
         CONFIG = yaml.load(f)

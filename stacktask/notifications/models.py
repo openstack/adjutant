@@ -35,7 +35,7 @@ class NotificationEngine(object):
 class EmailNotification(NotificationEngine):
     """
     Basic email notification engine. Will
-    send an email in the given templates.
+    send an email with the given templates.
 
     Example conf:
         <TaskView>:

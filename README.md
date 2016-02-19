@@ -168,7 +168,7 @@ If that was the case, the system should ideally also have been modular enough to
 
 #### What is an Action?
 
-Actions are a generic database model which knows what 'type' of action it is. On pulling the actions related to a Task from the database we wrap it into the appropriate class type which handlings all the logic associated with that action type.
+Actions are a generic database model which knows what 'type' of action it is. On pulling the actions related to a Task from the database we wrap it into the appropriate class type which handles all the logic associated with that action type.
 
 An Action is both a simple database representation of itself, and a more complex in memory class that handles all the logic around it.
 
@@ -245,7 +245,7 @@ $ stacktask runserver
 
 We use tox to build a venv and run the tests. The same tests are also run for us in CI via jenkins.
 
-Provided you have tox and it's requirements installed running tests is very simple:
+Provided you have tox and its requirements installed running tests is very simple:
 
 ```
 $ tox
@@ -253,7 +253,7 @@ $ tox
 
 ### Adding Actions:
 
-Adding new actions is done by creating a new django app and defining the action models and their serializers. Action must extend the BaseAction class as defined in the **actions.models** module. They also must add themselves to the global store of actions (see the bottom of existing models modules).
+Adding new actions is done by creating a new django app in the actions module and defining the action models and their serializers. Action must extend the BaseAction class as defined in the **actions.models** module. They also must add themselves to the global store of actions (see the bottom of existing models modules).
 
 The documentation for this is mainly inline.
 
@@ -279,7 +279,6 @@ Build the package:
   dpkg-buildpackage -us -uc
 
 Now a debian package has been built that will unpack a virtualenv containing stacktask and all dependencies in a self-contained package, so they do not conflict with other python packages on the system.
-Upload the package to repo-private: https://wiki.wgtn.cat-it.co.nz/wiki/Repo-private#APT
 
 ### Puppet module
 Then a puppet module will be able to install the debian package, setup a database, and run the service via nginx and uwsgi in the virtualenv.
@@ -294,7 +293,7 @@ Then a puppet module will be able to install the debian package, setup a databas
 
 Most future plans are around adding additional Actions to the service, but there will be some features that will require some refactoring.
 
-We are presently only working with the Keystone V2 API, but we intend to update the service to also manage and handle user groups. Managing Domains isn't really doable, but having the service be able to accept Domains, and multiple Domain back-ends is being planned.
+While we are presently working with the Keystone V3 API, groups are not being used, but we intend to update the service to also manage and handle user groups. Managing Domains isn't really doable, but having the service be able to accept Domains, and multiple Domain back-ends is being planned.
 
 Additional Actions we wish to add in the near future:
 
@@ -324,6 +323,8 @@ Features that might require a slight refactor:
 
 Even less likely, and further far-future additions:
 
+* Split the system into the api, a queue, and workers. That way tasks are processed asynchronously by the workers.
+  * Will require a bunch of rethinking, but most of the core logic will be reused, with the workers simply waiting for events and executing them on the tasks/actions in much the same way as they are presently.
 * Remove concept of predefined action steps entirely, setup Actions to have any possible number of 'steps'.
   * Will require moving actions to an iterator style pattern with a "next_action" style function as the driving force.
   * Will alter how chaining actions together works, thus may require a lot of work to define a sensible pattern for chaining them together.

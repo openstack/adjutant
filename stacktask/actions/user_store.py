@@ -63,6 +63,12 @@ class IdentityManager(object):
         return user
 
     def list_users(self, project):
+        """
+        Build a list of users for a given project using
+        the v3 api. Less straightforward than the v2 api,
+        but because we have the role data already, we add it
+        to the user model so later roles fetching is not needed.
+        """
         try:
             roles = self.ks_client.roles.list()
             role_dict = {role.id: role for role in roles}
@@ -108,6 +114,8 @@ class IdentityManager(object):
     def get_all_roles(self, user):
         """
         Returns roles for a given user across all projects.
+
+        Uses the new v3 assignments api method to quickly do this.
         """
         roles = self.ks_client.roles.list()
         role_dict = {role.id: role for role in roles}

@@ -13,26 +13,27 @@
 #    under the License.
 
 """
-WSGI config for user_reg project.
+WSGI config for StackTask.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 
 For more information on this file, see
-https://docs.djangoproject.com/en/1.7/howto/deployment/wsgi/
+https://docs.djangoproject.com/en/1.8/howto/deployment/wsgi/
 """
 
 import os
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "stacktask.settings")
-
 from django.core.wsgi import get_wsgi_application
-application = get_wsgi_application()
-
-
 from django.conf import settings
-
 from urlparse import urlparse
 from keystonemiddleware.auth_token import AuthProtocol
 
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "stacktask.settings")
+
+
+application = get_wsgi_application()
+
+# Here we replace the default application with one wrapped by
+# the Keystone Auth Middleware.
 identity_url = urlparse(settings.KEYSTONE['auth_url'])
 conf = {
     'admin_user': settings.KEYSTONE['username'],
