@@ -684,9 +684,13 @@ class TokenDetail(APIViewWithLogger):
                 data[field] = request.data[field]
             except KeyError:
                 errors[field] = ["This field is required.", ]
+            except TypeError:
+                errors = ["Improperly formated json. " +
+                          "Should be a key-value object.", ]
+                break
 
         if errors:
-            return Response(errors, status=400)
+            return Response({"errors": errors}, status=400)
 
         for action in actions:
             try:

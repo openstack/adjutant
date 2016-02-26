@@ -1,4 +1,4 @@
-Django>=1.8.9
+Django>=1.8.9,<1.9
 decorator>=3.4.0
 djangorestframework>=3.0.3
 keystonemiddleware>=1.3.1
