@@ -55,12 +55,12 @@ class StatusView(APIViewWithLogger):
         try:
             last_created_task = Task.objects.filter(
                 completed=0).order_by("-created_on")[0].to_dict()
-        except KeyError:
+        except IndexError:
             last_created_task = None
         try:
             last_completed_task = Task.objects.filter(
                 completed=1).order_by("-completed_on")[0].to_dict()
-        except KeyError:
+        except IndexError:
             last_completed_task = None
 
         status = {
