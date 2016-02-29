@@ -1,3 +1,9 @@
+python-stacktask (0.1.2) unstable; urgency=medium
+
+  * Upgrading version and status to production ready.
+
+ -- Dale Smith <dale@catalyst-eu.net>  Mon, 29 Feb 2016 12:26:11 +0000
+
 python-stacktask (0.1.1a4) unstable; urgency=medium
 
   * Release with latest patches and project_admin.

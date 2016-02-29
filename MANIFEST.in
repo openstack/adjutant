@@ -1,6 +1,8 @@
 include requirements.txt
 include test-requirements.txt
 include README.md
+include package_readme.rst
+graft conf
 graft stacktask/api/v*/templates
 graft stacktask/notifications/templates
 graft stacktask/notifications/*/templates
