@@ -36,7 +36,7 @@ setup(
     install_requires=required,
     entry_points={
         'console_scripts': [
-            'stacktask = stacktask:management_command',
+            'stacktask-api = stacktask:management_command',
         ],
     }
 )
