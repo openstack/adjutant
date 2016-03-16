@@ -111,7 +111,7 @@ DEFAULT_TASK_SETTINGS:
 TASK_SETTINGS:
     create_project:
         # Additonal actions for views:
-        # - The order of the actions matters. These will run after the 
+        # - The order of the actions matters. These will run after the
         #   default action, in the given order.
         actions:
             - AddAdminToProject
@@ -134,7 +134,7 @@ TASK_SETTINGS:
             # To not send this email, set the value to null
             initial: null
             token:
-                subject: Invitation to an OpenStack Project
+                subject: Invitation to an OpenStack project
                 template: invite_user_token.txt
             completed:
                 subject: Invitation Completed
@@ -162,10 +162,10 @@ TASK_SETTINGS:
         emails:
             initial: null
             token:
-                subject: Setup Your OpenStack Password
+                subject: Set your OpenStack password
                 template: initial_password_token.txt
             completed:
-                subject: New User Setup Completed
+                subject: Welcome to OpenStack!
                 template: initial_password_completed.txt
         errors:
             SMTPException:

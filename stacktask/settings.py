@@ -29,9 +29,6 @@ import yaml
 from stacktask.utils import setup_task_settings
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
-
-TEMPLATE_DEBUG = True
-
 # Application definition
 
 INSTALLED_APPS = (
@@ -81,6 +78,20 @@ USE_L10N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
+
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'APP_DIRS': True,
+        'NAME': 'default',
+    },
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'APP_DIRS': True,
+        'DIRS': ['/etc/stacktask/templates/'],
+        'NAME': 'include_etc_templates',
+    },
+]
 
 # Setup of local settings data
 if 'test' in sys.argv:

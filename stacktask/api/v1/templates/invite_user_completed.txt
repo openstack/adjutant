@@ -1,7 +1,7 @@
-Hello,
+You have successfully joined the project '{{ task.keystone_user.project_name }}' on Openstack.
 
-You have successfully completed your OpenStack project invitation.
+You can switch projects on the dashboard via the project drop down list on the top menu.
+When using the command line tools or APIs, you can define the project name and ID you want to connect to.
 
-You should now have access to your new project via the dashboard and APIs.
-
-Thank you for using our service.
+Kind regards,
+The Openstack team

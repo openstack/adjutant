@@ -1,15 +1,10 @@
-Hello,
+You have been invited by {{ task.keystone_user.username }} to join the project '{{ task.keystone_user.project_name }}' on Openstack.
+Please click on this link to accept the invitation: {{ tokenurl }}{{ token }}
 
-Someone has invited you to join their OpenStack project.
-Project id: {{ actions.NewUser.project_id }}
-Roles:{% for role in actions.NewUser.roles %}
-- {{ role }}{% endfor %}
+New users will be asked to define a password when accepting the invitation.
+Existing users will be added to the project and do not need to provide additional information.
 
-To complete this invitation just follow this link:
-{{ tokenurl }}{{ token }}/
+This link will expire automatically in 24 hours. If expired, you will need to request another one from the person who invited you.
 
-If you are a new user you will just have to setup your password for a user with this email address, but if you already have a user, you simply have to confirm your invitation. 
-
-This link will expire in 24 hours at which point you will need to request another one from the person who invited you.
-
-Thank you for using our service.
+Kind regards,
+The Openstack team

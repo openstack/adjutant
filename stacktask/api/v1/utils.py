@@ -48,13 +48,18 @@ def send_email(task, email_conf, token=None):
     if not email_conf:
         return
 
-    template = loader.get_template(email_conf['template'])
+    text_template = loader.get_template(
+        email_conf['template'],
+        using='include_etc_templates')
     html_template = email_conf.get('html_template', None)
     if html_template:
-        html_template = loader.get_template(html_template)
+        html_template = loader.get_template(
+            html_template,
+            using='include_etc_templates')
 
     emails = set()
     actions = {}
+    # find our set of emails and actions that require email
     for action in task.actions:
         act = action.get_action()
         email = act.get_email()
@@ -71,27 +76,24 @@ def send_email(task, email_conf, token=None):
         create_notification(task, notes, error=True)
         return
 
+    context = {
+        'task': task,
+        'actions': actions
+    }
     if token:
-        context = {
-            'task': task,
-            'actions': actions,
+        context.update({
             'tokenurl': settings.TOKEN_SUBMISSION_URL,
-            'token': token.token,
-        }
-    else:
-        context = {'task': task, 'actions': actions}
+            'token': token.token
+        })
 
     try:
-        message = template.render(context)
+        message = text_template.render(context)
+        html_message = None
         if html_template:
             html_message = html_template.render(context)
-            send_mail(
-                email_conf['subject'], message, email_conf['reply'],
-                [emails.pop()], fail_silently=False, html_message=html_message)
-        else:
-            send_mail(
-                email_conf['subject'], message, email_conf['reply'],
-                [emails.pop()], fail_silently=False)
+        send_mail(
+            email_conf['subject'], message, email_conf['reply'],
+            [emails.pop()], fail_silently=False, html_message=html_message)
     except SMTPException as e:
         notes = {
             'errors':
