@@ -4,7 +4,7 @@ Please click on this link to accept the invitation: {{ tokenurl }}{{ token }}
 New users will be asked to define a password when accepting the invitation.
 Existing users will be added to the project and do not need to provide additional information.
 
-This link will expire automatically in 24 hours. If expired, you will need to request another one from the person who invited you.
+This link will expire automatically after 24 hours. If expired, you will need to request another one from the person who invited you.
 
 Kind regards,
 The Openstack team
