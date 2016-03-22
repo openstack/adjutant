@@ -275,6 +275,10 @@ When a package is built, a new virtualenv is created and populated using the con
 Package building setup:
   apt-get install build-essential devscripts dh-virtualenv
 
+Incrementing package version:
+  'vim setup.py' and increment version parameter.
+  'dch -i' and write release notes, set version.
+
 Build the package:
   dpkg-buildpackage -us -uc
 

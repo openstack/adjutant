@@ -9,7 +9,7 @@ with open('package_readme.rst') as file:
 setup(
     name='stacktask',
 
-    version='0.1.3',
+    version='0.1.4',
     description='An admin task workflow service for openstack.',
     long_description=long_description,
     url='https://github.com/catalyst/stacktask',
