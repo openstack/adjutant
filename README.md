@@ -287,6 +287,13 @@ Now a debian package has been built that will unpack a virtualenv containing sta
 ### Puppet module
 Then a puppet module will be able to install the debian package, setup a database, and run the service via nginx and uwsgi in the virtualenv.
 
+### Custom Email Templates
+
+Custom email templates are placed in:
+```
+/etc/stacktask/templates/
+```
+This is so that adding personalised or deployment specific templates is kept outside of the scope of the service itself and managed by the deployer.
 
 ## Current Work:
 * Basic admin panel in horizon to manage user roles and invite new users.
