@@ -229,16 +229,9 @@ Once installed, all the normal manage.py functions can be called directly on the
 
 Dev is mainly done within a virtualenv setup alongside a devstack deployment.
 
-This is the easiest way to deploy and run it while doing development:
-
+For more info, see:
 ```
-$ virtualenv venv
-$ source ./venv/bin/activate
-$ pip install -r requirements.txt
-$ pip install -r test-requirements.txt
-$ python setup.py develop
-$ stacktask migrate
-$ stacktask runserver
+DEVSTACK_GUIDE.md
 ```
 
 ### Running tests:
@@ -294,11 +287,6 @@ Custom email templates are placed in:
 /etc/stacktask/templates/
 ```
 This is so that adding personalised or deployment specific templates is kept outside of the scope of the service itself and managed by the deployer.
-
-## Current Work:
-* Basic admin panel in horizon to manage user roles and invite new users.
-* Horizon forms for token submission and password reset.
-
 
 ## Future Plans:
 
