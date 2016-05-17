@@ -16,9 +16,7 @@ from collections import defaultdict
 
 from django.conf import settings
 
-from keystoneclient.openstack.common.apiclient import (
-    exceptions as ks_exceptions
-)
+from keystoneclient import exceptions as ks_exceptions
 
 from openstack_clients import get_keystoneclient
 
