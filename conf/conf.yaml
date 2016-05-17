@@ -39,9 +39,6 @@ LOGGING:
 EMAIL_SETTINGS:
     EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
 
-# Application settings:
-SHOW_ACTION_ENDPOINTS: False
-
 # setting to control if user name and email are allowed
 # to have different values.
 USERNAME_IS_EMAIL: True
@@ -59,6 +56,14 @@ TOKEN_SUBMISSION_URL: http://192.168.122.160:8080/token/
 
 # time for the token to expire in hours
 TOKEN_EXPIRE_TIME: 24
+
+ACTIVE_TASKVIEWS:
+    - UserRoles
+    - UserDetail
+    - UserResetPassword
+    - UserSetPassword
+    - UserList
+    - RoleList
 
 DEFAULT_TASK_SETTINGS:
     emails:
@@ -110,10 +115,15 @@ DEFAULT_TASK_SETTINGS:
 # These are cascading overrides for the default settings:
 TASK_SETTINGS:
     create_project:
-        # Additonal actions for views:
-        # - The order of the actions matters. These will run after the
-        #   default action, in the given order.
-        actions:
+        # You can override 'default_actions' if needed for given taskviews
+        # The order of the actions is order of execution.
+        # 
+        # default_actions:
+        #     - NewProject
+        #
+        # Additonal actions for views
+        # These will run after the default actions, in the given order.
+        additional_actions:
             - AddAdminToProject
             - DefaultProjectResources
         notifications:

@@ -14,8 +14,6 @@
 
 from django.conf.urls import url
 from stacktask.api.v1 import views
-from stacktask.api.v1 import tasks
-from stacktask.api.v1 import openstack
 from django.conf import settings
 
 
@@ -28,23 +26,11 @@ urlpatterns = [
     url(r'^notifications/(?P<uuid>\w+)/?$',
         views.NotificationDetail.as_view()),
     url(r'^notifications/?$', views.NotificationList.as_view()),
-
-    url(r'^openstack/users/(?P<user_id>\w+)/roles/?$',
-        openstack.UserRoles.as_view()),
-    url(r'^openstack/users/(?P<user_id>\w+)/?$',
-        openstack.UserDetail.as_view()),
-    url(r'^openstack/users/password-reset?$',
-        openstack.UserResetPassword.as_view()),
-    url(r'^openstack/users/password-set?$',
-        openstack.UserSetPassword.as_view()),
-    url(r'^openstack/users/?$', openstack.UserList.as_view()),
-    url(r'^openstack/roles/?$', openstack.RoleList.as_view()),
 ]
 
-if settings.SHOW_ACTION_ENDPOINTS:
-    urlpatterns = urlpatterns + [
-        url(r'^actions/CreateProject/?$', tasks.CreateProject.as_view()),
-        url(r'^actions/InviteUser/?$', tasks.InviteUser.as_view()),
-        url(r'^actions/ResetPassword/?$', tasks.ResetPassword.as_view()),
-        url(r'^actions/EditUser/?$', tasks.EditUser.as_view()),
-    ]
+for active_view in settings.ACTIVE_TASKVIEWS:
+    taskview = settings.TASKVIEW_CLASSES[active_view]
+
+    urlpatterns.append(
+        url(taskview['url'], taskview['class'].as_view())
+    )

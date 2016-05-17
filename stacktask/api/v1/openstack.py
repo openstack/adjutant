@@ -163,7 +163,7 @@ class UserDetail(tasks.TaskView):
 
 class UserRoles(tasks.TaskView):
 
-    default_action = 'EditUserRoles'
+    default_actions = ['EditUserRoles', ]
     task_type = 'edit_roles'
 
     @utils.mod_or_admin

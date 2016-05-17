@@ -72,6 +72,19 @@ TOKEN_SUBMISSION_URL = 'http://localhost:8080/token/'
 
 TOKEN_EXPIRE_TIME = 24
 
+ACTIVE_TASKVIEWS = [
+    'UserRoles',
+    'UserDetail',
+    'UserResetPassword',
+    'UserSetPassword',
+    'UserList',
+    'RoleList',
+    'CreateProject',
+    'InviteUser',
+    'ResetPassword',
+    'EditUser',
+]
+
 DEFAULT_TASK_SETTINGS = {
     'emails': {
         'token': {
@@ -182,6 +195,7 @@ conf_dict = {
     "USERNAME_IS_EMAIL": USERNAME_IS_EMAIL,
     "KEYSTONE": KEYSTONE,
     "DEFAULT_REGION": DEFAULT_REGION,
+    "ACTIVE_TASKVIEWS": ACTIVE_TASKVIEWS,
     "DEFAULT_TASK_SETTINGS": DEFAULT_TASK_SETTINGS,
     "TASK_SETTINGS": TASK_SETTINGS,
     "ACTION_SETTINGS": ACTION_SETTINGS,

@@ -12,4 +12,33 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.db import models
+from django.conf import settings
+
+from stacktask.api.v1 import tasks
+from stacktask.api.v1 import openstack
+
+
+def register_taskview_class(url, taskview_class):
+    data = {}
+    data[taskview_class.__name__] = {
+        'class': taskview_class,
+        'url': url}
+    settings.TASKVIEW_CLASSES.update(data)
+
+register_taskview_class(r'^actions/CreateProject/?$', tasks.CreateProject)
+register_taskview_class(r'^actions/InviteUser/?$', tasks.InviteUser)
+register_taskview_class(r'^actions/ResetPassword/?$', tasks.ResetPassword)
+register_taskview_class(r'^actions/EditUser/?$', tasks.EditUser)
+
+register_taskview_class(
+    r'^openstack/users/?$', openstack.UserList)
+register_taskview_class(
+    r'^openstack/users/(?P<user_id>\w+)/?$', openstack.UserDetail)
+register_taskview_class(
+    r'^openstack/users/(?P<user_id>\w+)/roles/?$', openstack.UserRoles)
+register_taskview_class(
+    r'^openstack/roles/?$', openstack.RoleList)
+register_taskview_class(
+    r'^openstack/users/password-reset?$', openstack.UserResetPassword)
+register_taskview_class(
+    r'^openstack/users/password-set?$', openstack.UserSetPassword)
