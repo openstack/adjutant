@@ -779,6 +779,61 @@ class AdminAPITests(APITestCase):
 
     @mock.patch(
         'stacktask.actions.models.user_store.IdentityManager', FakeManager)
+    def test_task_list_ordering(self):
+        """
+        Test that tasks returns in the default sort.
+        The default sort is by created_on descending.
+        """
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
+
+        url = "/v1/actions/InviteUser"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        data = {'email': "test@example.com", 'roles': ["_member_"],
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = {'email': "test2@example.com", 'roles': ["_member_"],
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        data = {'email': "test3@example.com", 'roles': ["_member_"],
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        url = "/v1/tasks"
+        response = self.client.get(url, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        sorted_list = sorted(
+            response.data['tasks'],
+            key=lambda k: k['created_on'],
+            reverse=True)
+
+        for i, task in enumerate(sorted_list):
+            self.assertEqual(task, response.data['tasks'][i])
+
+    @mock.patch(
+        'stacktask.actions.models.user_store.IdentityManager', FakeManager)
     def test_task_list_filter(self):
         """
         """

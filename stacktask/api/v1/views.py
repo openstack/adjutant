@@ -81,9 +81,10 @@ class NotificationList(APIViewWithLogger):
         A list of Notification objects as dicts.
         """
         if filters:
-            notifications = Notification.objects.filter(**filters)
+            notifications = Notification.objects.filter(
+                **filters).order_by("-created_on")
         else:
-            notifications = Notification.objects.all()
+            notifications = Notification.objects.all().order_by("-created_on")
         note_list = []
         for notification in notifications:
             note_list.append(notification.to_dict())
@@ -161,9 +162,9 @@ class TaskList(APIViewWithLogger):
 
         if 'admin' in request.keystone_user['roles']:
             if filters:
-                tasks = Task.objects.filter(**filters)
+                tasks = Task.objects.filter(**filters).order_by("-created_on")
             else:
-                tasks = Task.objects.all()
+                tasks = Task.objects.all().order_by("-created_on")
             task_list = []
             for task in tasks:
                 task_list.append(task._to_dict())
@@ -177,10 +178,11 @@ class TaskList(APIViewWithLogger):
 
                 tasks = Task.objects.filter(
                     project_id__exact=request.keystone_user['project_id'],
-                    **filters)
+                    **filters).order_by("-created_on")
             else:
                 tasks = Task.objects.filter(
-                    project_id__exact=request.keystone_user['project_id'])
+                    project_id__exact=request.keystone_user['project_id']
+                ).order_by("-created_on")
             task_list = []
             for task in tasks:
                 task_list.append(task.to_dict())
@@ -493,9 +495,9 @@ class TokenList(APIViewWithLogger):
         A list of dict representations of Token objects.
         """
         if filters:
-            tokens = Token.objects.filter(**filters)
+            tokens = Token.objects.filter(**filters).order_by("-created_on")
         else:
-            tokens = Token.objects.all()
+            tokens = Token.objects.all().order_by("-created_on")
         token_list = []
         for token in tokens:
             token_list.append(token.to_dict())
