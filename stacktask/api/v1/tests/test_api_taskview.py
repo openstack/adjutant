@@ -356,7 +356,9 @@ class TaskViewTests(APITestCase):
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, None)
+        self.assertEqual(
+            response.data['notes'],
+            ['If user with email exists, reset token will be issued.'])
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -387,12 +389,16 @@ class TaskViewTests(APITestCase):
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, None)
+        self.assertEqual(
+            response.data['notes'],
+            ['If user with email exists, reset token will be issued.'])
 
         # Submit password reset again
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, None)
+        self.assertEqual(
+            response.data['notes'],
+            ['If user with email exists, reset token will be issued.'])
 
         # Verify the first token doesn't work
         first_token = Token.objects.all()[0]
@@ -423,7 +429,9 @@ class TaskViewTests(APITestCase):
         data = {'email': "test@exampleinvalid.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, None)
+        self.assertEqual(
+            response.data['notes'],
+            ['If user with email exists, reset token will be issued.'])
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
@@ -523,3 +531,66 @@ class TaskViewTests(APITestCase):
         self.assertEqual(response.data, {'notes': ['created token']})
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
+    def test_return_task_id_if_admin(self):
+        """
+        Confirm that the task id is returned when admin.
+        """
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.password = "test_password"
+
+        setup_temp_cache({}, {user.id: user})
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        url = "/v1/actions/ResetPassword"
+        data = {'email': "test@example.com"}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        new_task = Task.objects.all()[0]
+        self.assertEqual(
+            response.data['task'],
+            new_task.uuid)
+
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
+    def test_return_task_id_if_admin_fail(self):
+        """
+        Confirm that the task id is not returned unless admin.
+        """
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.password = "test_password"
+
+        setup_temp_cache({}, {user.id: user})
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "_member_",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        url = "/v1/actions/ResetPassword"
+        data = {'email': "test@example.com"}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertFalse(response.data.get('task'))

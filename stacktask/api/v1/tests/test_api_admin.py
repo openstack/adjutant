@@ -138,7 +138,9 @@ class AdminAPITests(APITestCase):
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, None)
+        self.assertEqual(
+            response.data['notes'],
+            ['If user with email exists, reset token will be issued.'])
 
         new_token = Token.objects.all()[0]
         new_token.expires = timezone.now() - timedelta(hours=24)
@@ -171,7 +173,9 @@ class AdminAPITests(APITestCase):
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, None)
+        self.assertEqual(
+            response.data['notes'],
+            ['If user with email exists, reset token will be issued.'])
 
         new_token = Token.objects.all()[0]
         new_token.expires = timezone.now() - timedelta(hours=24)
@@ -396,13 +400,17 @@ class AdminAPITests(APITestCase):
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, None)
+        self.assertEqual(
+            response.data['notes'],
+            ['If user with email exists, reset token will be issued.'])
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test2@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, None)
+        self.assertEqual(
+            response.data['notes'],
+            ['If user with email exists, reset token will be issued.'])
 
         tokens = Token.objects.all()
 
@@ -446,7 +454,9 @@ class AdminAPITests(APITestCase):
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, None)
+        self.assertEqual(
+            response.data['notes'],
+            ['If user with email exists, reset token will be issued.'])
 
         task = Task.objects.all()[0]
         new_token = Token.objects.all()[0]
@@ -1075,5 +1085,7 @@ class AdminAPITests(APITestCase):
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, None)
+        self.assertEqual(
+            response.data['notes'],
+            ['If user with email exists, reset token will be issued.'])
         self.assertEqual(0, Token.objects.count())

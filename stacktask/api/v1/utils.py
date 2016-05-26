@@ -199,3 +199,13 @@ def parse_filters(func, *args, **kwargs):
         return func(*args, **kwargs)
     except FieldError as e:
             return Response({'errors': [str(e)]}, status=400)
+
+
+def add_task_id_for_roles(request, processed, response_dict, req_roles):
+    if request.keystone_user.get('authenticated', False):
+
+        req_roles = set(req_roles)
+        roles = set(request.keystone_user.get('roles', []))
+
+        if roles & req_roles:
+            response_dict['task'] = processed['task'].uuid

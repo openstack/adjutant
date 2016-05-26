@@ -21,6 +21,7 @@ from stacktask.actions import user_store
 from stacktask.api import models
 from stacktask.api import utils
 from stacktask.api.v1 import tasks
+from stacktask.api.v1.utils import add_task_id_for_roles
 
 
 class UserList(tasks.InviteUser):
@@ -202,7 +203,11 @@ class UserRoles(tasks.TaskView):
         task = processed['task']
         self.logger.info("(%s) - AutoApproving EditUserRoles request."
                          % timezone.now())
-        return self.approve(task)
+        response_dict, status = self.approve(task)
+
+        add_task_id_for_roles(request, processed, response_dict, ['admin'])
+
+        return Response(response_dict, status=status)
 
     @utils.mod_or_admin
     def delete(self, request, user_id, format=None):
@@ -227,7 +232,11 @@ class UserRoles(tasks.TaskView):
         task = processed['task']
         self.logger.info("(%s) - AutoApproving EditUser request."
                          % timezone.now())
-        return self.approve(task)
+        response_dict, status = self.approve(task)
+
+        add_task_id_for_roles(request, processed, response_dict, ['admin'])
+
+        return Response(response_dict, status=status)
 
 
 class RoleList(tasks.TaskView):

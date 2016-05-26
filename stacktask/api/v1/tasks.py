@@ -19,7 +19,8 @@ from django.utils import timezone
 from stacktask.api import utils
 from stacktask.api.v1.views import APIViewWithLogger
 from stacktask.api.v1.utils import (
-    send_email, create_notification, create_token, create_task_hash)
+    send_email, create_notification, create_token, create_task_hash,
+    add_task_id_for_roles)
 
 
 from django.conf import settings
@@ -224,7 +225,7 @@ class TaskView(APIViewWithLogger):
                             ["Error: Something went wrong on the server. " +
                              "It will be looked into shortly."]
                     }
-                    return Response(response_dict, status=500)
+                    return response_dict, 500
 
                 if not action.valid:
                     valid = False
@@ -241,8 +242,7 @@ class TaskView(APIViewWithLogger):
                         # been specified
                         email_conf = class_conf['emails']['token']
                         send_email(task, email_conf, token)
-                        return Response({'notes': ['created token']},
-                                        status=200)
+                        return {'notes': ['created token']}, 200
                     except KeyError as e:
                         notes = {
                             'errors':
@@ -263,7 +263,7 @@ class TaskView(APIViewWithLogger):
                                 ["Error: Something went wrong on the " +
                                  "server. It will be looked into shortly."]
                         }
-                        return Response(response_dict, status=500)
+                        return response_dict, 500
                 else:
                     for action in actions:
                         try:
@@ -288,7 +288,7 @@ class TaskView(APIViewWithLogger):
                                     ["Error: Something went wrong on the " +
                                      "server. It will be looked into shortly."]
                             }
-                            return Response(response_dict, status=500)
+                            return response_dict, 500
 
                     task.completed = True
                     task.completed_on = timezone.now()
@@ -300,11 +300,9 @@ class TaskView(APIViewWithLogger):
                     email_conf = class_conf.get(
                         'emails', {}).get('completed', None)
                     send_email(task, email_conf)
-                    return Response(
-                        {'notes': "Task completed successfully."},
-                        status=200)
-            return Response({'errors': ['actions invalid']}, status=400)
-        return Response({'errors': ['actions invalid']}, status=400)
+                    return {'notes': "Task completed successfully."}, 200
+            return {'errors': ['actions invalid']}, 400
+        return {'errors': ['actions invalid']}, 400
 
 
 class CreateProject(TaskView):
@@ -337,7 +335,12 @@ class CreateProject(TaskView):
         }
         create_notification(processed['task'], notes)
         self.logger.info("(%s) - Task created." % timezone.now())
-        return Response({'notes': ['task created']}, status=200)
+
+        response_dict = {'notes': ['task created']}
+
+        add_task_id_for_roles(request, processed, response_dict, ['admin'])
+
+        return Response(response_dict, status=200)
 
 
 class InviteUser(TaskView):
@@ -380,7 +383,12 @@ class InviteUser(TaskView):
         task = processed['task']
         self.logger.info("(%s) - AutoApproving AttachUser request."
                          % timezone.now())
-        return self.approve(task)
+
+        response_dict, status = self.approve(task)
+
+        add_task_id_for_roles(request, processed, response_dict, ['admin'])
+
+        return Response(response_dict, status=status)
 
 
 class ResetPassword(TaskView):
@@ -424,8 +432,14 @@ class ResetPassword(TaskView):
         task = processed['task']
         self.logger.info("(%s) - AutoApproving Resetuser request."
                          % timezone.now())
+
         self.approve(task)
-        return Response(status=200)
+        response_dict = {'notes': [
+            "If user with email exists, reset token will be issued."]}
+
+        add_task_id_for_roles(request, processed, response_dict, ['admin'])
+
+        return Response(response_dict, status=200)
 
 
 class EditUser(TaskView):
@@ -496,4 +510,8 @@ class EditUser(TaskView):
         task = processed['task']
         self.logger.info("(%s) - AutoApproving EditUser request."
                          % timezone.now())
-        return self.approve(task)
+        response_dict, status = self.approve(task)
+
+        add_task_id_for_roles(request, processed, response_dict, ['admin'])
+
+        return Response(response_dict, status=status)

@@ -144,7 +144,9 @@ class OpenstackAPITests(APITestCase):
         headers["roles"] = "admin,_member_"
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, None)
+        self.assertEqual(
+            response.data['notes'],
+            ['If user with email exists, reset token will be issued.'])
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
