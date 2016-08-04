@@ -63,9 +63,11 @@ class IdentityManager(object):
     def list_users(self, project):
         """
         Build a list of users for a given project using
-        the v3 api. Less straightforward than the v2 api,
-        but because we have the role data already, we add it
-        to the user model so later roles fetching is not needed.
+        the v3 api.
+
+        Rather than simply list users, we use the assignments
+        endpoint so we can also fetch all the roles for those users
+        in the given project. Saves further api calls later on.
         """
         try:
             roles = self.ks_client.roles.list()
@@ -87,7 +89,7 @@ class IdentityManager(object):
                     # Just means the assignment is a group, so ignore it.
                     pass
         except ks_exceptions.NotFound:
-            users = []
+            return []
         return users.values()
 
     def create_user(self, name, password, email, project_id):

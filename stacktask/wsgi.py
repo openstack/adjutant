@@ -36,13 +36,14 @@ application = get_wsgi_application()
 # the Keystone Auth Middleware.
 identity_url = urlparse(settings.KEYSTONE['auth_url'])
 conf = {
-    'admin_user': settings.KEYSTONE['username'],
-    'admin_password': settings.KEYSTONE['password'],
-    'admin_tenant_name': settings.KEYSTONE['project_name'],
-    'auth_host': identity_url.hostname,
-    'auth_port': identity_url.port,
-    'auth_protocol': identity_url.scheme,
+    "auth_plugin": "password",
+    'username': settings.KEYSTONE['username'],
+    'password': settings.KEYSTONE['password'],
+    'project_name': settings.KEYSTONE['project_name'],
+    "project_domain_name": settings.KEYSTONE.get('domain_name', "default"),
+    "user_domain_name": settings.KEYSTONE.get('domain_name', "default"),
+    "auth_url": settings.KEYSTONE['auth_url'],
     'delay_auth_decision': True,
-    'include_service_catalog': False
+    'include_service_catalog': False,
 }
 application = AuthProtocol(application, conf)

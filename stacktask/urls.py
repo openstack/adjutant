@@ -13,11 +13,7 @@
 #    under the License.
 
 from django.conf.urls import include, url
-from django.conf import settings
 
 urlpatterns = [
     url(r'^', include('stacktask.api.urls')),
 ]
-
-if settings.DEBUG:
-    urlpatterns.append(url(r'^docs/', include('rest_framework_swagger.urls')))

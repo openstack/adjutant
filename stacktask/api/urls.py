@@ -13,7 +13,13 @@
 #    under the License.
 
 from django.conf.urls import url, include
+from django.conf import settings
+
+from stacktask.api import docs
 
 urlpatterns = [
     url(r'^v1/', include('stacktask.api.v1.urls')),
 ]
+
+if settings.DEBUG:
+    urlpatterns.append(url(r'^docs/', docs.docs_view))

@@ -15,19 +15,25 @@
 
 from django.conf import settings
 
-from keystoneclient.v3 import client as client_v3
+from keystoneauth1.identity import v3
+from keystoneauth1 import session
+from keystoneclient import client as ks_client
 
 from neutronclient.v2_0 import client as neutron_client
 
 
 def get_keystoneclient():
-    auth = client_v3.Client(
+
+    auth = v3.Password(
         username=settings.KEYSTONE['username'],
         password=settings.KEYSTONE['password'],
         project_name=settings.KEYSTONE['project_name'],
         auth_url=settings.KEYSTONE['auth_url'],
-        region_name=settings.DEFAULT_REGION
+        user_domain_name="default",
+        project_domain_name="default",
     )
+    sess = session.Session(auth=auth)
+    auth = ks_client.Client(session=sess)
     return auth
 
 
