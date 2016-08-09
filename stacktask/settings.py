@@ -157,8 +157,6 @@ TOKEN_SUBMISSION_URL = CONFIG['TOKEN_SUBMISSION_URL']
 
 TOKEN_EXPIRE_TIME = CONFIG['TOKEN_EXPIRE_TIME']
 
-SHOW_ACTION_ENDPOINTS = CONFIG['SHOW_ACTION_ENDPOINTS']
-
 TASK_SETTINGS = setup_task_settings(
     CONFIG['DEFAULT_TASK_SETTINGS'],
     CONFIG['TASK_SETTINGS'])
@@ -166,6 +164,22 @@ TASK_SETTINGS = setup_task_settings(
 ACTION_SETTINGS = CONFIG['ACTION_SETTINGS']
 
 ROLES_MAPPING = CONFIG['ROLES_MAPPING']
+
+# Defaults for backwards compatibility.
+ACTIVE_TASKVIEWS = CONFIG.get(
+    'ACTIVE_TASKVIEWS',
+    [
+        'UserRoles',
+        'UserDetail',
+        'UserResetPassword',
+        'UserSetPassword',
+        'UserList',
+        'RoleList'
+    ])
+
+# Dict of TaskViews and their url_paths.
+# - This is populated by registering taskviews.
+TASKVIEW_CLASSES = {}
 
 # Dict of actions and their serializers.
 # - This is populated from the various model modules at startup:

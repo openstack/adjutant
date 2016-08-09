@@ -29,14 +29,18 @@ from django.conf import settings
 class TaskView(APIViewWithLogger):
     """
     Base class for api calls that start a Task.
-    Until it is moved to settings, 'default_action' is a
-    required hardcoded field.
+    'default_actions' is a required hardcoded field.
 
-    The default_action is considered the primary action and
-    will always run first. Additional actions are defined in
-    the settings file and will run in the order supplied, but
-    after the default_action.
+    The default_actions are considered the primary actions and
+    will always run first (in the given order). Additional actions
+    are defined in the settings file and will run in the order supplied,
+    but after the default_actions.
+
+    Default actions can be overridden in the settings file as well if
+    needed.
     """
+
+    default_actions = []
 
     def get(self, request):
         """
@@ -45,9 +49,11 @@ class TaskView(APIViewWithLogger):
         """
         class_conf = settings.TASK_SETTINGS.get(self.task_type, {})
 
-        actions = [self.default_action, ]
+        actions = (
+            class_conf.get('default_actions', []) or
+            self.default_actions[:])
 
-        actions += class_conf.get('actions', [])
+        actions += class_conf.get('additional_actions', [])
 
         required_fields = []
 
@@ -71,9 +77,11 @@ class TaskView(APIViewWithLogger):
 
         class_conf = settings.TASK_SETTINGS.get(self.task_type, {})
 
-        actions = [self.default_action, ]
+        actions = (
+            class_conf.get('default_actions', []) or
+            self.default_actions[:])
 
-        actions += class_conf.get('actions', [])
+        actions += class_conf.get('additional_actions', [])
 
         action_list = []
 
@@ -309,7 +317,7 @@ class CreateProject(TaskView):
 
     task_type = "create_project"
 
-    default_action = "NewProject"
+    default_actions = ["NewProject", ]
 
     def post(self, request, format=None):
         """
@@ -347,7 +355,7 @@ class InviteUser(TaskView):
 
     task_type = "invite_user"
 
-    default_action = 'NewUser'
+    default_actions = ['NewUser', ]
 
     @utils.mod_or_admin
     def get(self, request):
@@ -395,7 +403,7 @@ class ResetPassword(TaskView):
 
     task_type = "reset_password"
 
-    default_action = 'ResetUser'
+    default_actions = ['ResetUser', ]
 
     def post(self, request, format=None):
         """
@@ -446,15 +454,17 @@ class EditUser(TaskView):
 
     task_type = "edit_user"
 
-    default_action = 'EditUser'
+    default_actions = ['EditUserRoles', ]
 
     @utils.mod_or_admin
     def get(self, request):
         class_conf = settings.TASK_SETTINGS.get(self.task_type, {})
 
-        actions = [self.default_action, ]
+        actions = (
+            class_conf.get('default_actions', []) or
+            self.default_actions[:])
 
-        actions += class_conf.get('actions', [])
+        actions += class_conf.get('additional_actions', [])
         role_blacklist = class_conf.get('role_blacklist', [])
 
         required_fields = []
