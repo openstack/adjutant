@@ -13,6 +13,7 @@
 #    under the License.
 
 from logging import getLogger
+from uuid import uuid4
 
 from django.conf import settings
 from django.db import models
@@ -379,35 +380,22 @@ class NewUser(UserNameAction):
                 % (self.username, self.roles, self.project_id))
 
 
-class NewProject(UserNameAction):
-    """
-    Similar functionality as the NewUser action,
-    but will create the project if valid. Will setup
-    the user (existing or new) with the 'default_role'.
-    """
+class ProjectCreateBase(object):
+    """Mixin with functions for project creation."""
 
-    required = [
-        'project_name',
-        'username',
-        'email'
-    ]
-
-    # NOTE(adriant): move these to a config somewhere?
-    default_roles = {
-        "project_admin", "project_mod", "_member_", "heat_stack_owner"
-    }
-
-    def _validate(self):
-        project_valid = self._validate_project()
-        user_valid = self._validate_user()
-
-        self.action.valid = project_valid and user_valid
-        self.action.save()
+    def _validate_parent_project(self):
+        # NOTE(adriant): If parent id is None, Keystone defaults to the domain.
+        # So we only care to validate if parent_id is not None.
+        if self.parent_id:
+            parent = self.id_manager.get_project(self.parent_id)
+            if not parent:
+                self.add_note("Parent id: '%s' does not exist." %
+                              self.project_name)
+                return False
+        return True
 
     def _validate_project(self):
-        id_manager = user_store.IdentityManager()
-
-        project = id_manager.find_project(self.project_name)
+        project = self.id_manager.find_project(self.project_name)
         if project:
             self.add_note("Existing project with name '%s'." %
                           self.project_name)
@@ -417,9 +405,148 @@ class NewProject(UserNameAction):
                       self.project_name)
         return True
 
+    def _create_project(self):
+        try:
+            project = self.id_manager.create_project(
+                self.project_name, created_on=str(timezone.now()),
+                parent=self.parent_id)
+        except Exception as e:
+            self.add_note(
+                "Error: '%s' while creating project: %s" %
+                (e, self.project_name))
+            raise
+        # put project_id into action cache:
+        self.action.task.cache['project_id'] = project.id
+        self.set_cache('project_id', project.id)
+        self.add_note("New project '%s' created." % project.name)
+
+    def _grant_roles(self, user, roles, project_id):
+        ks_roles = []
+        for role in roles:
+            ks_role = self.id_manager.find_role(role)
+            if ks_role:
+                ks_roles.append(ks_role)
+            else:
+                raise TypeError("Keystone missing role: %s" % role)
+
+        for role in ks_roles:
+            self.id_manager.add_user_role(user, role, project_id)
+
+
+# TODO(adriant): Write tests for this action.
+class NewProject(BaseAction, ProjectCreateBase):
+    """
+    Creates a new project for the current keystone_user.
+
+    This action can only be used for an autheticated taskview.
+    """
+
+    required = [
+        'parent_id',
+        'project_name',
+    ]
+
+    def __init__(self, *args, **kwargs):
+        super(NewProject, self).__init__(*args, **kwargs)
+        self.id_manager = user_store.IdentityManager()
+
+    def _validate(self):
+        valid_parent = self._validate_parent_project()
+        valid_project = self._validate_project()
+        self.action.valid = valid_project and valid_parent
+        self.action.save()
+
+    def _validate_parent_project(self):
+        if self.parent_id:
+            keystone_user = self.action.task.keystone_user
+
+            if self.parent_id != keystone_user['project_id']:
+                self.add_note(
+                    'Parent id does not match keystone user project.')
+                return False
+            return super(NewProject, self)._validate_parent_project()
+        return True
+
+    def _pre_approve(self):
+        self._validate()
+
+    def _post_approve(self):
+        project_id = self.get_cache('project_id')
+        if project_id:
+            self.action.task.cache['project_id'] = project_id
+            self.add_note("Project already created.")
+        else:
+            self._validate()
+
+            if not self.valid:
+                return
+
+            self._create_project()
+
+        user_id = self.get_cache('user_id')
+        if user_id:
+            self.action.task.cache['user_id'] = user_id
+            self.add_note("User already given roles.")
+        else:
+            default_roles = settings.ACTION_SETTINGS.get(
+                'NewProject', {}).get("default_roles", {})
+
+            project_id = self.get_cache('project_id')
+            keystone_user = self.action.task.keystone_user
+
+            try:
+                user = self.id_manager.get_user(keystone_user['user_id'])
+
+                self._grant_roles(user, default_roles, project_id)
+            except Exception as e:
+                self.add_note(
+                    ("Error: '%s' while adding roles %s "
+                     "to user '%s' on project '%s'") %
+                    (e, self.username, default_roles, project_id))
+                raise
+
+            # put user_id into action cache:
+            self.action.task.cache['user_id'] = user.id
+            self.set_cache('user_id', user.id)
+            self.add_note(("Existing user '%s' attached to project %s" +
+                          " with roles: %s")
+                          % (self.username, project_id,
+                             default_roles))
+
+    def _submit(self, token_data):
+        """
+        Nothing to do here. Everything is done at post_approve.
+        """
+        pass
+
+
+class NewProjectWithUser(UserNameAction, ProjectCreateBase):
+    """
+    Makes a new project for the given username. Will create the user if it
+    doesn't exists.
+    """
+
+    required = [
+        'parent_id',
+        'project_name',
+        'username',
+        'email'
+    ]
+
+    def __init__(self, *args, **kwargs):
+        super(NewProjectWithUser, self).__init__(*args, **kwargs)
+        self.id_manager = user_store.IdentityManager()
+
+    def _validate(self):
+        valid_parent = self._validate_parent_project()
+        project_valid = self._validate_project()
+        user_valid = self._validate_user()
+
+        self.action.valid = valid_parent and project_valid and user_valid
+        self.action.save()
+
     def _validate_user(self):
-        id_manager = user_store.IdentityManager()
-        user = id_manager.find_user(self.username)
+        user = self.id_manager.find_user(self.username)
 
         if user:
             if user.email == self.email:
@@ -441,104 +568,135 @@ class NewProject(UserNameAction):
 
         return valid
 
+    def _validate_user_submit(self):
+        user_id = self.get_cache('user_id')
+        project_id = self.get_cache('project_id')
+
+        user = self.id_manager.get_user(user_id)
+        project = self.id_manager.get_project(project_id)
+
+        if user and project:
+            self.action.valid = True
+        else:
+            self.action.valid = False
+
+        self.action.save()
+
     def _pre_approve(self):
         self._validate()
 
     def _post_approve(self):
         """
-        Approving a registration means we set up the project itself,
-        and then the user registration token is valid for submission and
-        creating the user themselves.
+        Approving a new project means we set up the project itself,
+        and if the user doesn't exist, create it right away. An existing
+        user automatically gets added to the new project.
         """
         project_id = self.get_cache('project_id')
         if project_id:
             self.action.task.cache['project_id'] = project_id
             self.add_note("Project already created.")
-            return
+        else:
+            self.action.valid = (
+                self._validate_project() and self._validate_parent_project())
+            self.action.save()
 
-        self._validate()
-        if not self.valid:
-            return
+            if not self.valid:
+                return
 
-        id_manager = user_store.IdentityManager()
-        try:
-            project = id_manager.create_project(
-                self.project_name, created_on=str(timezone.now()))
-        except Exception as e:
-            self.add_note(
-                "Error: '%s' while creating project: %s" %
-                (e, self.project_name))
-            raise
-        # put project_id into action cache:
-        self.action.task.cache['project_id'] = project.id
-        self.set_cache('project_id', project.id)
-        self.add_note("New project '%s' created." % self.project_name)
+            self._create_project()
+
+        user_id = self.get_cache('user_id')
+        if user_id:
+            self.action.task.cache['user_id'] = user_id
+            self.add_note("User already created.")
+        else:
+            self.action.valid = self._validate_user()
+            self.action.save()
+
+            if not self.valid:
+                return
+
+            default_roles = settings.ACTION_SETTINGS.get(
+                'NewProject', {}).get("default_roles", {})
+
+            project_id = self.get_cache('project_id')
+
+            if self.action.state == "default":
+                try:
+                    # Generate a temporary password:
+                    password = uuid4().hex + uuid4().hex
+
+                    user = self.id_manager.create_user(
+                        name=self.username, password=password,
+                        email=self.email, project_id=project_id)
+
+                    self._grant_roles(user, default_roles, project_id)
+                except Exception as e:
+                    self.add_note(
+                        "Error: '%s' while creating user: %s with roles: %s" %
+                        (e, self.username, default_roles))
+                    raise
+
+                # put user_id into action cache:
+                self.action.task.cache['user_id'] = user.id
+                self.set_cache('user_id', user.id)
+                self.add_note(
+                    "New user '%s' created for project %s with roles: %s" %
+                    (self.username, project_id, default_roles))
+            elif self.action.state == "existing":
+                try:
+                    user = self.id_manager.find_user(self.username)
+
+                    self._grant_roles(user, default_roles, project_id)
+                except Exception as e:
+                    self.add_note(
+                        "Error: '%s' while attaching user: %s with roles: %s" %
+                        (e, self.username, default_roles))
+                    raise
+
+                # put user_id into action cache:
+                self.action.task.cache['user_id'] = user.id
+                self.set_cache('user_id', user.id)
+                self.add_note(("Existing user '%s' attached to project %s" +
+                              " with roles: %s")
+                              % (self.username, project_id,
+                                 default_roles))
 
     def _submit(self, token_data):
         """
-        The submit action is prformed when a token is submitted.
-        This is done for a user account only, and so should now only
-        set up the user, not the project, which was done in approve.
+        The submit action is performed when a token is submitted.
+        This is done to set a user password only, and so should now only
+        change the user password. The project and user themselves are created
+        on post_approve.
         """
 
-        id_manager = user_store.IdentityManager()
-
-        self.action.valid = self._validate_user()
-        self.action.save()
+        self._validate_user_submit()
 
         if not self.valid:
             return
 
         project_id = self.get_cache('project_id')
         self.action.task.cache['project_id'] = project_id
-
-        project = id_manager.get_project(project_id)
+        user_id = self.get_cache('user_id')
+        self.action.task.cache['user_id'] = user_id
 
         if self.action.state == "default":
+            user = self.id_manager.get_user(user_id)
             try:
-                roles = []
-                for role in self.default_roles:
-                    ks_role = id_manager.find_role(role)
-                    if ks_role:
-                        roles.append(ks_role)
-                    else:
-                        raise TypeError("Keystone missing role: %s" % role)
-
-                user = id_manager.create_user(
-                    name=self.username, password=token_data['password'],
-                    email=self.email, project_id=project.id)
-
-                for role in roles:
-                    id_manager.add_user_role(user, role, project.id)
+                self.id_manager.update_user_password(
+                    user, token_data['password'])
             except Exception as e:
                 self.add_note(
-                    "Error: '%s' while creating user: %s with roles: %s" %
-                    (e, self.username, self.default_roles))
+                    "Error: '%s' while changing password for user: %s" %
+                    (e, self.username))
                 raise
+            self.add_note('User %s password has been changed.' % self.username)
 
-            self.add_note(
-                "New user '%s' created for project %s with roles: %s" %
-                (self.username, self.project_name, self.default_roles))
         elif self.action.state == "existing":
-            try:
-                user = id_manager.find_user(self.username)
-
-                roles = []
-                for role in self.default_roles:
-                    roles.append(id_manager.find_role(role))
-
-                for role in roles:
-                    id_manager.add_user_role(user, role, project.id)
-            except Exception as e:
-                self.add_note(
-                    "Error: '%s' while attaching user: %s with roles: %s" %
-                    (e, self.username, self.default_roles))
-                raise
-
-            self.add_note(("Existing user '%s' attached to project %s" +
-                          " with roles: %s")
-                          % (self.username, self.project_name,
-                             self.default_roles))
+            # do nothing, everything is already done.
+            self.add_note(
+                "Existing user '%s' already attached to project %s" % (
+                    user_id, project_id))
 
 
 class ResetUser(UserNameAction):
@@ -761,6 +919,7 @@ def register_action_class(action_class, serializer_class):
 
 # Register each action model
 register_action_class(NewUser, serializers.NewUserSerializer)
-register_action_class(NewProject, serializers.NewProjectSerializer)
+register_action_class(
+    NewProjectWithUser, serializers.NewProjectWithUserSerializer)
 register_action_class(ResetUser, serializers.ResetUserSerializer)
 register_action_class(EditUserRoles, serializers.EditUserSerializer)

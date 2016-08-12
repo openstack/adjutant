@@ -37,6 +37,9 @@ class Task(models.Model):
     keystone_user = JSONField(default={})
     project_id = models.CharField(max_length=32, db_index=True, null=True)
 
+    # keystone_user for the approver:
+    approved_by = JSONField(default={})
+
     # type of the task, for easy grouping
     task_type = models.CharField(max_length=100, db_index=True)
 
@@ -81,6 +84,7 @@ class Task(models.Model):
             "uuid": self.uuid,
             "ip_address": self.ip_address,
             "keystone_user": self.keystone_user,
+            "approved_by": self.approved_by,
             "project_id": self.project_id,
             "actions": actions,
             "task_type": self.task_type,

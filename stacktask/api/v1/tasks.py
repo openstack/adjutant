@@ -110,7 +110,7 @@ class TaskView(APIViewWithLogger):
             for action in action_list:
                 if action['serializer'] is not None:
                     errors.update(action['serializer'].errors)
-            return {'errors': errors}
+            return {'errors': errors}, 400
 
         hash_key = create_task_hash(self.task_type, action_list)
         duplicate_tasks = Task.objects.filter(
@@ -131,7 +131,9 @@ class TaskView(APIViewWithLogger):
                 self.logger.info(
                     "(%s) - Task is a duplicate - Ignoring new task." %
                     timezone.now())
-                return {'errors': ['Task is a duplicate of an existing task']}
+                return (
+                    {'errors': ['Task is a duplicate of an existing task']},
+                    409)
 
         ip_address = request.META['REMOTE_ADDR']
         keystone_user = request.keystone_user
@@ -182,22 +184,27 @@ class TaskView(APIViewWithLogger):
                         ["Error: Something went wrong on the server. " +
                          "It will be looked into shortly."]
                 }
-                return response_dict
+                return response_dict, 200
 
         # send initial conformation email:
         email_conf = class_conf.get('emails', {}).get('initial', None)
         send_email(task, email_conf)
 
-        return {'task': task}
+        return {'task': task}, 200
 
-    def approve(self, task):
+    def approve(self, request, task):
         """
         Approves the task and runs the post_approve steps.
         Will create a token if required, otherwise will run the
         submit steps.
         """
+
+        # We approve the task before running actions,
+        # that way if something goes wrong we know if it was approved,
+        # when it was approved, and who approved it.
         task.approved = True
         task.approved_on = timezone.now()
+        task.approved_by = request.keystone_user
         task.save()
 
         action_models = task.actions
@@ -320,11 +327,11 @@ class CreateProject(TaskView):
 
     task_type = "create_project"
 
-    default_actions = ["NewProject", ]
+    default_actions = ["NewProjectWithUser", ]
 
     def post(self, request, format=None):
         """
-        Unauthenticated endpoint bound primarily to NewProject.
+        Unauthenticated endpoint bound primarily to NewProjectWithUser.
 
         This process requires approval, so this will validate
         incoming data and create a task to be approved
@@ -332,7 +339,16 @@ class CreateProject(TaskView):
         """
         self.logger.info("(%s) - Starting new project task." %
                          timezone.now())
-        processed = self.process_actions(request)
+
+        class_conf = settings.TASK_SETTINGS.get(self.task_type, {})
+
+        # we need to set the region the resources will be created in:
+        request.data['region'] = class_conf.get('default_region')
+
+        # parent_id for new project, if null defaults to domain:
+        request.data['parent_id'] = class_conf.get('default_parent_id')
+
+        processed, status = self.process_actions(request)
 
         errors = processed.get('errors', None)
         if errors:
@@ -351,7 +367,7 @@ class CreateProject(TaskView):
 
         add_task_id_for_roles(request, processed, response_dict, ['admin'])
 
-        return Response(response_dict, status=200)
+        return Response(response_dict, status=status)
 
 
 class InviteUser(TaskView):
@@ -383,19 +399,19 @@ class InviteUser(TaskView):
         # TODO: First check if the user already exists or is pending
         # We should not allow duplicate invites.
 
-        processed = self.process_actions(request)
+        processed, status = self.process_actions(request)
 
         errors = processed.get('errors', None)
         if errors:
             self.logger.info("(%s) - Validation errors with task." %
                              timezone.now())
-            return Response(errors, status=400)
+            return Response(errors, status=status)
 
         task = processed['task']
         self.logger.info("(%s) - AutoApproving AttachUser request."
                          % timezone.now())
 
-        response_dict, status = self.approve(task)
+        response_dict, status = self.approve(request, task)
 
         add_task_id_for_roles(request, processed, response_dict, ['admin'])
 
@@ -432,19 +448,19 @@ class ResetPassword(TaskView):
 
         """
         self.logger.info("(%s) - New ResetUser request." % timezone.now())
-        processed = self.process_actions(request)
+        processed, status = self.process_actions(request)
 
         errors = processed.get('errors', None)
         if errors:
             self.logger.info("(%s) - Validation errors with task." %
                              timezone.now())
-            return Response(errors, status=400)
+            return Response(errors, status=status)
 
         task = processed['task']
         self.logger.info("(%s) - AutoApproving Resetuser request."
                          % timezone.now())
 
-        self.approve(task)
+        self.approve(request, task)
         response_dict = {'notes': [
             "If user with email exists, reset token will be issued."]}
 
@@ -513,18 +529,18 @@ class EditUser(TaskView):
         post_approve validation, and creates a Token if valid.
         """
         self.logger.info("(%s) - New EditUser request." % timezone.now())
-        processed = self.process_actions(request)
+        processed, status = self.process_actions(request)
 
         errors = processed.get('errors', None)
         if errors:
             self.logger.info("(%s) - Validation errors with task." %
                              timezone.now())
-            return Response(errors, status=400)
+            return Response(errors, status=status)
 
         task = processed['task']
         self.logger.info("(%s) - AutoApproving EditUser request."
                          % timezone.now())
-        response_dict, status = self.approve(task)
+        response_dict, status = self.approve(request, task)
 
         add_task_id_for_roles(request, processed, response_dict, ['admin'])
 

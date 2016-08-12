@@ -194,18 +194,18 @@ class UserRoles(tasks.TaskView):
         request.data['user_id'] = user_id
 
         self.logger.info("(%s) - New EditUserRoles request." % timezone.now())
-        processed = self.process_actions(request)
+        processed, status = self.process_actions(request)
 
         errors = processed.get('errors', None)
         if errors:
             self.logger.info("(%s) - Validation errors with registration." %
                              timezone.now())
-            return Response(errors, status=400)
+            return Response(errors, status=status)
 
         task = processed['task']
         self.logger.info("(%s) - AutoApproving EditUserRoles request."
                          % timezone.now())
-        response_dict, status = self.approve(task)
+        response_dict, status = self.approve(request, task)
 
         add_task_id_for_roles(request, processed, response_dict, ['admin'])
 
@@ -223,18 +223,18 @@ class UserRoles(tasks.TaskView):
         request.data['user_id'] = user_id
 
         self.logger.info("(%s) - New EditUser request." % timezone.now())
-        processed = self.process_actions(request)
+        processed, status = self.process_actions(request)
 
         errors = processed.get('errors', None)
         if errors:
             self.logger.info("(%s) - Validation errors with registration." %
                              timezone.now())
-            return Response(errors, status=400)
+            return Response(errors, status=status)
 
         task = processed['task']
         self.logger.info("(%s) - AutoApproving EditUser request."
                          % timezone.now())
-        response_dict, status = self.approve(task)
+        response_dict, status = self.approve(request, task)
 
         add_task_id_for_roles(request, processed, response_dict, ['admin'])
 

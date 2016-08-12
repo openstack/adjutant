@@ -59,6 +59,8 @@ class AdminAPITests(APITestCase):
 
     @mock.patch(
         'stacktask.actions.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
     def test_task_get(self):
         """
         Test the basic task detail view.
@@ -260,7 +262,11 @@ class AdminAPITests(APITestCase):
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-        data = {'project_name': "test_project2", 'email': "test@example.com"}
+        data = {
+            'project_name': "test_project2",
+            'email': "test@example.com",
+            'region': 'RegionOne',
+        }
         response = self.client.put(url, data, format='json',
                                    headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -844,6 +850,8 @@ class AdminAPITests(APITestCase):
 
     @mock.patch(
         'stacktask.actions.models.user_store.IdentityManager', FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
     def test_task_list_filter(self):
         """
         """

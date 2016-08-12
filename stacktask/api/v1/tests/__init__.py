@@ -27,6 +27,10 @@ def setup_temp_cache(projects, users):
 
     users.update({admin_user.id: admin_user})
 
+    region_one = mock.Mock()
+    region_one.id = 'region_id_0'
+    region_one.name = 'RegionOne'
+
     global temp_cache
 
     temp_cache = {
@@ -39,6 +43,9 @@ def setup_temp_cache(projects, users):
             'project_admin': 'project_admin',
             'project_mod': 'project_mod',
             'heat_stack_owner': 'heat_stack_owner'
+        },
+        'regions': {
+            'RegionOne': region_one,
         }
     }
 
@@ -165,7 +172,7 @@ class FakeManager(object):
             if project.id == project_id:
                 return FakeProject(project)
 
-    def create_project(self, project_name, created_on, p_id=None):
+    def create_project(self, project_name, created_on, parent=None, p_id=None):
         global temp_cache
         project = mock.Mock()
         if p_id:
@@ -174,6 +181,18 @@ class FakeManager(object):
             temp_cache['i'] += 0.5
             project.id = "project_id_%s" % int(temp_cache['i'])
         project.name = project_name
+        # TODO(adriant): Do something better with the parent value.
+        project.parent = parent
         project.roles = {}
         temp_cache['projects'][project_name] = project
         return project
+
+    def find_region(self, region_name):
+        global temp_cache
+        return temp_cache['regions'].get(region_name, None)
+
+    def get_region(self, region_id):
+        global temp_cache
+        for region in temp_cache['regions'].values():
+            if region.id == region_id:
+                return region

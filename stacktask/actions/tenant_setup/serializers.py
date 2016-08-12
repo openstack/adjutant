@@ -15,5 +15,12 @@
 from rest_framework import serializers
 
 
-class DefaultProjectResourcesSerializer(serializers.Serializer):
-    setup_resources = serializers.BooleanField(default=False)
+class NewDefaultNetworkSerializer(serializers.Serializer):
+    setup_network = serializers.BooleanField(default=True)
+    project_id = serializers.CharField(max_length=100)
+    region = serializers.CharField(max_length=100)
+
+
+class NewProjectDefaultNetworkSerializer(serializers.Serializer):
+    setup_network = serializers.BooleanField(default=False)
+    region = serializers.CharField(max_length=100)

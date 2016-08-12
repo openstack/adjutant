@@ -17,7 +17,7 @@ from django.test import TestCase
 import mock
 
 from stacktask.actions.tenant_setup.models import (
-    AddAdminToProject, DefaultProjectResources)
+    NewDefaultNetwork, NewProjectDefaultNetwork, AddDefaultUsersToProject)
 from stacktask.api.models import Task
 from stacktask.api.v1 import tests
 from stacktask.api.v1.tests import FakeManager, setup_temp_cache
@@ -69,32 +69,44 @@ def setup_neutron_cache():
     }
 
 
-def get_fake_neutron():
+def get_fake_neutron(region):
     return FakeNeutronClient()
 
 
-class TenantSetupActionTests(TestCase):
+class ProjectSetupActionTests(TestCase):
 
     @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
                 FakeManager)
-    @mock.patch('stacktask.actions.tenant_setup.models.openstack_clients.get_neutronclient',
-                get_fake_neutron)
-    def test_resource_setup(self):
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.' +
+        'openstack_clients.get_neutronclient',
+        get_fake_neutron)
+    def test_network_setup(self):
         """
-        Base case, setup resources, no issues.
+        Base case, setup a new network , no issues.
         """
         setup_neutron_cache()
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+            ip_address="0.0.0.0",
+            keystone_user={
+                'roles': ['admin'],
+                'project_id': 'test_project_id'})
 
-        task.cache = {'project_id': "1"}
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
 
         data = {
-            'setup_resources': True,
+            'setup_network': True,
+            'region': 'RegionOne',
+            'project_id': 'test_project_id',
         }
 
-        action = DefaultProjectResources(data, task=task,
-                                         order=1)
+        action = NewDefaultNetwork(
+            data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -116,56 +128,36 @@ class TenantSetupActionTests(TestCase):
 
     @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
                 FakeManager)
-    @mock.patch('stacktask.actions.tenant_setup.models.openstack_clients.get_neutronclient',
-                get_fake_neutron)
-    def test_resource_setup_no_id(self):
-        """
-        No project id given, should do nothing.
-        """
-        setup_neutron_cache()
-        task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
-
-        data = {
-            'setup_resources': True,
-        }
-
-        action = DefaultProjectResources(data, task=task,
-                                         order=1)
-
-        action.pre_approve()
-        self.assertEquals(action.valid, True)
-
-        action.post_approve()
-        self.assertEquals(action.valid, False)
-
-        self.assertEquals(action.action.cache, {})
-
-        global neutron_cache
-        self.assertEquals(len(neutron_cache['networks']), 0)
-        self.assertEquals(len(neutron_cache['routers']), 0)
-        self.assertEquals(len(neutron_cache['subnets']), 0)
-
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
-    @mock.patch('stacktask.actions.tenant_setup.models.openstack_clients.get_neutronclient',
-                get_fake_neutron)
-    def test_resource_setup_no_setup(self):
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.' +
+        'openstack_clients.get_neutronclient',
+        get_fake_neutron)
+    def test_network_setup_no_setup(self):
         """
         Told not to setup, should do nothing.
         """
         setup_neutron_cache()
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+            ip_address="0.0.0.0",
+            keystone_user={
+                'roles': ['admin'],
+                'project_id': 'test_project_id'})
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
 
         data = {
-            'setup_resources': False,
+            'setup_network': False,
+            'region': 'RegionOne',
+            'project_id': 'test_project_id',
         }
 
-        task.cache = {'project_id': "1"}
-
-        action = DefaultProjectResources(data, task=task,
-                                         order=1)
+        action = NewDefaultNetwork(
+            data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -182,25 +174,37 @@ class TenantSetupActionTests(TestCase):
 
     @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
                 FakeManager)
-    @mock.patch('stacktask.actions.tenant_setup.models.openstack_clients.get_neutronclient',
-                get_fake_neutron)
-    def test_resource_setup_fail(self):
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.' +
+        'openstack_clients.get_neutronclient',
+        get_fake_neutron)
+    def test_network_setup_fail(self):
         """
         Should fail, but on re_approve will continue where it left off.
         """
         setup_neutron_cache()
         global neutron_cache
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+            ip_address="0.0.0.0",
+            keystone_user={
+                'roles': ['admin'],
+                'project_id': 'test_project_id'})
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
 
         data = {
-            'setup_resources': True,
+            'setup_network': True,
+            'region': 'RegionOne',
+            'project_id': 'test_project_id',
         }
 
-        task.cache = {'project_id': "1"}
-
-        action = DefaultProjectResources(data, task=task,
-                                         order=1)
+        action = NewDefaultNetwork(
+            data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -240,9 +244,216 @@ class TenantSetupActionTests(TestCase):
 
     @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
                 FakeManager)
-    def test_add_admin(self):
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.' +
+        'openstack_clients.get_neutronclient',
+        get_fake_neutron)
+    def test_new_project_network_setup(self):
+        """
+        Base case, setup network after a new project, no issues.
+        """
+        setup_neutron_cache()
+        task = Task.objects.create(
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+
+        data = {
+            'setup_network': True,
+            'region': 'RegionOne',
+        }
+
+        action = NewProjectDefaultNetwork(
+            data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        # Now we add the project data as this is where the project
+        # would be created:
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
+
+        task.cache = {'project_id': "test_project_id"}
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
+        self.assertEquals(
+            action.action.cache,
+            {'network_id': 'net_id_0',
+             'router_id': 'router_id_2',
+             'subnet_id': 'subnet_id_1'}
+        )
+
+        global neutron_cache
+        self.assertEquals(len(neutron_cache['networks']), 1)
+        self.assertEquals(len(neutron_cache['routers']), 1)
+        self.assertEquals(len(neutron_cache['subnets']), 1)
+
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.' +
+        'openstack_clients.get_neutronclient',
+        get_fake_neutron)
+    def test_new_project_network_setup_no_id(self):
+        """
+        No project id given, should do nothing.
+        """
+        setup_neutron_cache()
+        task = Task.objects.create(
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+
+        data = {
+            'setup_network': True,
+            'region': 'RegionOne',
+        }
+
+        action = NewProjectDefaultNetwork(
+            data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, False)
+
+        self.assertEquals(action.action.cache, {})
+
+        global neutron_cache
+        self.assertEquals(len(neutron_cache['networks']), 0)
+        self.assertEquals(len(neutron_cache['routers']), 0)
+        self.assertEquals(len(neutron_cache['subnets']), 0)
+
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.' +
+        'openstack_clients.get_neutronclient',
+        get_fake_neutron)
+    def test_new_project_network_setup_no_setup(self):
+        """
+        Told not to setup, should do nothing.
+        """
+        setup_neutron_cache()
+        task = Task.objects.create(
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+
+        data = {
+            'setup_network': False,
+            'region': 'RegionOne',
+        }
+
+        action = NewProjectDefaultNetwork(
+            data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        # Now we add the project data as this is where the project
+        # would be created:
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
+
+        task.cache = {'project_id': "test_project_id"}
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
+        self.assertEquals(action.action.cache, {})
+
+        global neutron_cache
+        self.assertEquals(len(neutron_cache['networks']), 0)
+        self.assertEquals(len(neutron_cache['routers']), 0)
+        self.assertEquals(len(neutron_cache['subnets']), 0)
+
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.' +
+        'openstack_clients.get_neutronclient',
+        get_fake_neutron)
+    def test_new_project_network_setup_fail(self):
+        """
+        Should fail, but on re_approve will continue where it left off.
+        """
+        setup_neutron_cache()
+        global neutron_cache
+        task = Task.objects.create(
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+
+        data = {
+            'setup_network': True,
+            'region': 'RegionOne',
+        }
+
+        action = NewProjectDefaultNetwork(
+            data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        neutron_cache['routers'] = []
+
+        # Now we add the project data as this is where the project
+        # would be created:
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
+
+        task.cache = {'project_id': "test_project_id"}
+
+        try:
+            action.post_approve()
+            self.fail("Shouldn't get here.")
+        except Exception:
+            pass
+
+        self.assertEquals(
+            action.action.cache,
+            {'network_id': 'net_id_0',
+             'subnet_id': 'subnet_id_1'}
+        )
+
+        self.assertEquals(len(neutron_cache['networks']), 1)
+        self.assertEquals(len(neutron_cache['subnets']), 1)
+        self.assertEquals(len(neutron_cache['routers']), 0)
+
+        neutron_cache['routers'] = {}
+
+        action.post_approve()
+
+        self.assertEquals(
+            action.action.cache,
+            {'network_id': 'net_id_0',
+             'router_id': 'router_id_2',
+             'subnet_id': 'subnet_id_1'}
+        )
+
+        self.assertEquals(len(neutron_cache['networks']), 1)
+        self.assertEquals(len(neutron_cache['routers']), 1)
+        self.assertEquals(len(neutron_cache['subnets']), 1)
+
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
+    def test_add_default_users(self):
         """
         Base case, adds admin user with admin role to project.
+
+        NOTE(adriant): both the lists of users, and the roles to add
+        come from test_settings. This test assumes the conf setting of:
+        default_users = ['admin']
+        default_roles = ['admin']
         """
         project = mock.Mock()
         project.id = 'test_project_id'
@@ -256,7 +467,7 @@ class TenantSetupActionTests(TestCase):
 
         task.cache = {'project_id': "test_project_id"}
 
-        action = AddAdminToProject({}, task=task, order=1)
+        action = AddDefaultUsersToProject({}, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -285,7 +496,7 @@ class TenantSetupActionTests(TestCase):
 
         task.cache = {'project_id': "test_project_id"}
 
-        action = AddAdminToProject({}, task=task, order=1)
+        action = AddDefaultUsersToProject({}, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)

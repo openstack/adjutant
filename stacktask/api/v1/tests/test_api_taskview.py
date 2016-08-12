@@ -285,7 +285,10 @@ class TaskViewTests(APITestCase):
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {'errors': ['actions invalid']})
+        self.assertEqual(
+            response.data,
+            {'errors': ['Cannot approve an invalid task. ' +
+                        'Update data and rerun pre_approve.']})
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
@@ -522,7 +525,7 @@ class TaskViewTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {'notes': ['created token']})
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
         data = {'email': "test2@example.com", 'roles': ["_member_"],
                 'project_id': 'test_project_id'}
@@ -530,7 +533,7 @@ class TaskViewTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {'notes': ['created token']})
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)

@@ -152,7 +152,32 @@ class IdentityManager(object):
             project = None
         return project
 
-    def create_project(self, project_name, created_on):
-        project = self.ks_client.projects.create(project_name,
-                                                 created_on=created_on)
+    def update_project(self, project, name=None, domain=None, description=None,
+                       enabled=None, **kwargs):
+        try:
+            return self.ks_client.projects.update(
+                project=project, domain=domain, name=name,
+                description=description, enabled=enabled,
+                **kwargs)
+        except ks_exceptions.NotFound:
+            return None
+
+    def create_project(
+            self, project_name, created_on, parent=None, domain="default"):
+        project = self.ks_client.projects.create(
+            project_name, domain, parent=parent, created_on=created_on)
         return project
+
+    def find_region(self, region_name):
+        try:
+            region = self.ks_client.regions.find(name=region_name)
+        except ks_exceptions.NotFound:
+            region = None
+        return region
+
+    def get_region(self, region_id):
+        try:
+            region = self.ks_client.regions.get(region_id)
+        except ks_exceptions.NotFound:
+            region = None
+        return region

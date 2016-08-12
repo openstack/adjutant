@@ -215,8 +215,6 @@ class TaskDetail(APIViewWithLogger):
         """
         Allows the updating of action data and retriggering
         of the pre_approve step.
-
-        Will undo task approval, and clear tokens for the task.
         """
         try:
             task = Task.objects.get(uuid=uuid)
@@ -321,73 +319,121 @@ class TaskDetail(APIViewWithLogger):
                 {'errors': ['No task with this id.']},
                 status=404)
 
-        if request.data.get('approved', False) is True:
+        if request.data.get('approved') is not True:
+            return Response(
+                {'approved': ["this is a required boolean field."]},
+                status=400)
 
-            if task.completed:
-                return Response(
-                    {'errors':
-                        ['This task has already been completed.']},
-                    status=400)
+        if task.completed:
+            return Response(
+                {'errors':
+                    ['This task has already been completed.']},
+                status=400)
 
-            if task.cancelled:
-                return Response(
-                    {'errors':
-                        ['This task has been cancelled.']},
-                    status=400)
+        if task.cancelled:
+            return Response(
+                {'errors':
+                    ['This task has been cancelled.']},
+                status=400)
 
-            need_token = False
-            valid = True
+        # we check that the task is valid before approving it:
+        valid = True
+        for action in task.actions:
+            if not action.valid:
+                valid = False
 
-            actions = []
+        if not valid:
+            return Response(
+                {'errors':
+                    ['Cannot approve an invalid task. ' +
+                     'Update data and rerun pre_approve.']},
+                status=400)
 
-            for action in task.actions:
-                act_model = action.get_action()
-                actions.append(act_model)
+        # We approve the task before running actions,
+        # that way if something goes wrong we know if it was approved,
+        # when it was approved, and who approved it last. Subsequent
+        # reapproval attempts overwrite previous approved_by/on.
+        task.approved = True
+        task.approved_by = request.keystone_user
+        task.approved_on = timezone.now()
+        task.save()
+
+        need_token = False
+        valid = True
+
+        actions = []
+
+        for action in task.actions:
+            act_model = action.get_action()
+            actions.append(act_model)
+            try:
+                act_model.post_approve()
+            except Exception as e:
+                notes = {
+                    'errors':
+                        [("Error: '%s' while approving task. " +
+                          "See task itself for details.") % e],
+                    'task': task.uuid
+                }
+                create_notification(task, notes)
+
+                import traceback
+                trace = traceback.format_exc()
+                self.logger.critical(("(%s) - Exception escaped! %s\n" +
+                                      "Trace: \n%s") %
+                                     (timezone.now(), e, trace))
+
+                return Response(notes, status=500)
+
+            if not action.valid:
+                valid = False
+            if action.need_token:
+                need_token = True
+
+        if valid:
+            if need_token:
+                token = create_token(task)
                 try:
-                    act_model.post_approve()
-                except Exception as e:
+                    class_conf = settings.TASK_SETTINGS.get(
+                        task.task_type, settings.DEFAULT_TASK_SETTINGS)
+
+                    # will throw a key error if the token template has not
+                    # been specified
+                    email_conf = class_conf['emails']['token']
+                    send_email(task, email_conf, token)
+                    return Response({'notes': ['created token']},
+                                    status=200)
+                except KeyError as e:
                     notes = {
                         'errors':
-                            [("Error: '%s' while approving task. " +
-                              "See task itself for details.") % e],
+                            [("Error: '%s' while sending " +
+                              "token. See task " +
+                              "itself for details.") % e],
                         'task': task.uuid
                     }
                     create_notification(task, notes)
 
                     import traceback
                     trace = traceback.format_exc()
-                    self.logger.critical(("(%s) - Exception escaped! %s\n" +
-                                          "Trace: \n%s") %
+                    self.logger.critical(("(%s) - Exception escaped!" +
+                                          " %s\n Trace: \n%s") %
                                          (timezone.now(), e, trace))
 
-                    return Response(notes, status=500)
-
-                if not action.valid:
-                    valid = False
-                if action.need_token:
-                    need_token = True
-
-            if valid:
-                task.approved = True
-                task.approved_on = timezone.now()
-                task.save()
-                if need_token:
-                    token = create_token(task)
+                    response_dict = {
+                        'errors':
+                            ["Error: Something went wrong on the " +
+                             "server. It will be looked into shortly."]
+                    }
+                    return Response(response_dict, status=500)
+            else:
+                for action in actions:
                     try:
-                        class_conf = settings.TASK_SETTINGS.get(
-                            task.task_type, settings.DEFAULT_TASK_SETTINGS)
-
-                        # will throw a key error if the token template has not
-                        # been specified
-                        email_conf = class_conf['emails']['token']
-                        send_email(task, email_conf, token)
-                        return Response({'notes': ['created token']},
-                                        status=200)
-                    except KeyError as e:
+                        action.submit({})
+                    except Exception as e:
                         notes = {
                             'errors':
-                                [("Error: '%s' while sending " +
-                                  "token. See task " +
+                                [("Error: '%s' while submitting " +
+                                  "task. See task " +
                                   "itself for details.") % e],
                             'task': task.uuid
                         }
@@ -399,52 +445,23 @@ class TaskDetail(APIViewWithLogger):
                                               " %s\n Trace: \n%s") %
                                              (timezone.now(), e, trace))
 
-                        response_dict = {
-                            'errors':
-                                ["Error: Something went wrong on the " +
-                                 "server. It will be looked into shortly."]
-                        }
-                        return Response(response_dict, status=500)
-                else:
-                    for action in actions:
-                        try:
-                            action.submit({})
-                        except Exception as e:
-                            notes = {
-                                'errors':
-                                    [("Error: '%s' while submitting " +
-                                      "task. See task " +
-                                      "itself for details.") % e],
-                                'task': task.uuid
-                            }
-                            create_notification(task, notes)
+                        return Response(notes, status=500)
 
-                            import traceback
-                            trace = traceback.format_exc()
-                            self.logger.critical(("(%s) - Exception escaped!" +
-                                                  " %s\n Trace: \n%s") %
-                                                 (timezone.now(), e, trace))
+                task.completed = True
+                task.completed_on = timezone.now()
+                task.save()
 
-                            return Response(notes, status=500)
+                # Sending confirmation email:
+                class_conf = settings.TASK_SETTINGS.get(
+                    task.task_type, settings.DEFAULT_TASK_SETTINGS)
+                email_conf = class_conf.get(
+                    'emails', {}).get('completed', None)
+                send_email(task, email_conf)
 
-                    task.completed = True
-                    task.completed_on = timezone.now()
-                    task.save()
-
-                    # Sending confirmation email:
-                    class_conf = settings.TASK_SETTINGS.get(
-                        task.task_type, settings.DEFAULT_TASK_SETTINGS)
-                    email_conf = class_conf.get(
-                        'emails', {}).get('completed', None)
-                    send_email(task, email_conf)
-
-                    return Response(
-                        {'notes': "Task completed successfully."},
-                        status=200)
-            return Response({'errors': ['actions invalid']}, status=400)
-        else:
-            return Response({'approved': ["this field is required."]},
-                            status=400)
+                return Response(
+                    {'notes': "Task completed successfully."},
+                    status=200)
+        return Response({'errors': ['actions invalid']}, status=400)
 
     @utils.mod_or_admin
     def delete(self, request, uuid, format=None):

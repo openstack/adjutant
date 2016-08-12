@@ -63,10 +63,8 @@ KEYSTONE = {
     'username': 'admin',
     'password': 'openstack',
     'project_name': 'admin',
-    'auth_url': "http://localhost:5000/v3"
+    'auth_url': "http://localhost:5000/v3",
 }
-
-DEFAULT_REGION = 'RegionOne'
 
 TOKEN_SUBMISSION_URL = 'http://localhost:8080/token/'
 
@@ -120,10 +118,12 @@ TASK_SETTINGS = {
         }
     },
     'create_project': {
-        'actions': [
-            'AddAdminToProject',
-            'DefaultProjectResources'
-        ]
+        'additional_actions': [
+            'AddDefaultUsersToProject',
+            'NewProjectDefaultNetwork'
+        ],
+        'default_region': 'RegionOne',
+        'default_parent_id': None,
     },
     'reset_password': {
         'handle_duplicates': 'cancel',
@@ -154,13 +154,18 @@ TASK_SETTINGS = {
 }
 
 ACTION_SETTINGS = {
+    'NewProject': {
+        'default_roles': {
+            "project_admin", "project_mod", "_member_", "heat_stack_owner"
+        },
+    },
     'NewUser': {
         'allowed_roles': ['project_mod', 'project_admin', "_member_"]
     },
     'ResetUser': {
         'blacklisted_roles': ['admin']
     },
-    'DefaultProjectResources': {
+    'NewDefaultNetwork': {
         'RegionOne': {
             'DNS_NAMESERVERS': ['193.168.1.2', '193.168.1.3'],
             'SUBNET_CIDR': '192.168.1.0/24',
@@ -169,7 +174,16 @@ ACTION_SETTINGS = {
             'router_name': 'somerouter',
             'subnet_name': 'somesubnet'
         }
+    },
+    'AddDefaultUsersToProject': {
+        'default_users': [
+            'admin',
+        ],
+        'default_roles': [
+            'admin',
+        ],
     }
+
 }
 
 ROLES_MAPPING = {
@@ -195,7 +209,6 @@ conf_dict = {
     "EMAIL_SETTINGS": EMAIL_SETTINGS,
     "USERNAME_IS_EMAIL": USERNAME_IS_EMAIL,
     "KEYSTONE": KEYSTONE,
-    "DEFAULT_REGION": DEFAULT_REGION,
     "ACTIVE_TASKVIEWS": ACTIVE_TASKVIEWS,
     "DEFAULT_TASK_SETTINGS": DEFAULT_TASK_SETTINGS,
     "TASK_SETTINGS": TASK_SETTINGS,

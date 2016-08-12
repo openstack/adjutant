@@ -29,21 +29,23 @@ def get_keystoneclient():
         password=settings.KEYSTONE['password'],
         project_name=settings.KEYSTONE['project_name'],
         auth_url=settings.KEYSTONE['auth_url'],
-        user_domain_name="default",
-        project_domain_name="default",
+        user_domain_id=settings.KEYSTONE.get('domain_id', "default"),
+        project_domain_id=settings.KEYSTONE.get('domain_id', "default"),
     )
     sess = session.Session(auth=auth)
     auth = ks_client.Client(session=sess)
     return auth
 
 
-def get_neutronclient():
-    # TODO(Adriant): Add region support.
-    neutron = neutron_client.Client(
+def get_neutronclient(region):
+    auth = v3.Password(
         username=settings.KEYSTONE['username'],
         password=settings.KEYSTONE['password'],
-        tenant_name=settings.KEYSTONE['project_name'],
+        project_name=settings.KEYSTONE['project_name'],
         auth_url=settings.KEYSTONE['auth_url'],
-        region_name=settings.DEFAULT_REGION
+        user_domain_id=settings.KEYSTONE.get('domain_id', "default"),
+        project_domain_id=settings.KEYSTONE.get('domain_id', "default"),
     )
+    sess = session.Session(auth=auth)
+    neutron = neutron_client.Client(session=sess, region_name=region)
     return neutron

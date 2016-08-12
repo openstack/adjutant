@@ -44,7 +44,15 @@ class NewUserSerializer(BaseUserNameSerializer):
     pass
 
 
-class NewProjectSerializer(BaseUserNameSerializer):
+class NewProjectSerializer(serializers.Serializer):
+    parent_id = serializers.CharField(
+        max_length=200, default=None, allow_null=True)
+    project_name = serializers.CharField(max_length=200)
+
+
+class NewProjectWithUserSerializer(BaseUserNameSerializer):
+    parent_id = serializers.CharField(
+        max_length=200, default=None, allow_null=True)
     project_name = serializers.CharField(max_length=200)
 
 

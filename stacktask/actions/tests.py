@@ -17,7 +17,7 @@ from django.test import TestCase
 import mock
 
 from stacktask.actions.models import (
-    EditUserRoles, NewProject, NewUser, ResetUser)
+    EditUserRoles, NewProjectWithUser, NewUser, ResetUser)
 from stacktask.api.models import Task
 from stacktask.api.v1 import tests
 from stacktask.api.v1.tests import FakeManager, setup_temp_cache
@@ -201,8 +201,8 @@ class ActionTests(TestCase):
         """
         Base case, no project, no user.
 
-        Project created at post_approve step,
-        user at submit step.
+        Project and user created at post_approve step,
+        user password at submit step.
         """
 
         setup_temp_cache({}, {})
@@ -213,11 +213,12 @@ class ActionTests(TestCase):
                 'project_id': 'test_project_id'})
 
         data = {
+            'parent_id': None,
             'email': 'test@example.com',
             'project_name': 'test_project',
         }
 
-        action = NewProject(data, task=task, order=1)
+        action = NewProjectWithUser(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -227,7 +228,9 @@ class ActionTests(TestCase):
         self.assertEquals(
             tests.temp_cache['projects']['test_project'].name,
             'test_project')
-        self.assertEquals(task.cache, {'project_id': "project_id_1"})
+        self.assertEquals(
+            task.cache,
+            {'project_id': 'project_id_1', 'user_id': 'user_id_1'})
 
         token_data = {'password': '123456'}
         action.submit(token_data)
@@ -257,11 +260,12 @@ class ActionTests(TestCase):
                 'project_id': 'test_project_id'})
 
         data = {
+            'parent_id': None,
             'email': 'test@example.com',
             'project_name': 'test_project',
         }
 
-        action = NewProject(data, task=task, order=1)
+        action = NewProjectWithUser(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -271,14 +275,18 @@ class ActionTests(TestCase):
         self.assertEquals(
             tests.temp_cache['projects']['test_project'].name,
             'test_project')
-        self.assertEquals(task.cache, {'project_id': "project_id_1"})
+        self.assertEquals(
+            task.cache,
+            {'project_id': 'project_id_1', 'user_id': 'user_id_1'})
 
         action.post_approve()
         self.assertEquals(action.valid, True)
         self.assertEquals(
             tests.temp_cache['projects']['test_project'].name,
             'test_project')
-        self.assertEquals(task.cache, {'project_id': "project_id_1"})
+        self.assertEquals(
+            task.cache,
+            {'project_id': 'project_id_1', 'user_id': 'user_id_1'})
 
         token_data = {'password': '123456'}
         action.submit(token_data)
@@ -301,7 +309,7 @@ class ActionTests(TestCase):
         """
 
         user = mock.Mock()
-        user.id = 'user_id'
+        user.id = 'user_id_1'
         user.name = "test@example.com"
         user.email = "test@example.com"
 
@@ -313,11 +321,12 @@ class ActionTests(TestCase):
                 'project_id': 'test_project_id'})
 
         data = {
+            'parent_id': None,
             'email': 'test@example.com',
             'project_name': 'test_project',
         }
 
-        action = NewProject(data, task=task, order=1)
+        action = NewProjectWithUser(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -327,7 +336,9 @@ class ActionTests(TestCase):
         self.assertEquals(
             tests.temp_cache['projects']['test_project'].name,
             'test_project')
-        self.assertEquals(task.cache, {'project_id': "project_id_1"})
+        self.assertEquals(
+            task.cache,
+            {'project_id': 'project_id_1', 'user_id': 'user_id_1'})
 
         token_data = {'password': '123456'}
         action.submit(token_data)
@@ -362,11 +373,12 @@ class ActionTests(TestCase):
                 'project_id': 'test_project_id'})
 
         data = {
+            'parent_id': None,
             'email': 'test@example.com',
             'project_name': 'test_project',
         }
 
-        action = NewProject(data, task=task, order=1)
+        action = NewProjectWithUser(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, False)
