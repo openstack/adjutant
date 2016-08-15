@@ -102,8 +102,8 @@ def send_email(task, email_conf, token=None):
         }
 
         errors_conf = settings.TASK_SETTINGS.get(
-            task.task_type, {}).get('errors', {}).get(
-            "SMTPException", {})
+            task.task_type, settings.DEFAULT_TASK_SETTINGS).get(
+                'errors', {}).get("SMTPException", {})
 
         if errors_conf:
             notification = create_notification(
@@ -128,7 +128,8 @@ def create_notification(task, notes, error=False, engines=True):
     if not engines:
         return notification
 
-    class_conf = settings.TASK_SETTINGS.get(task.task_type, {})
+    class_conf = settings.TASK_SETTINGS.get(
+        task.task_type, settings.DEFAULT_TASK_SETTINGS)
 
     for note_engine, conf in class_conf.get('notifications', {}).iteritems():
         if error:

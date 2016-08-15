@@ -29,7 +29,8 @@ class UserList(tasks.InviteUser):
     @utils.mod_or_admin
     def get(self, request):
         """Get a list of all users who have been added to a project"""
-        class_conf = settings.TASK_SETTINGS.get('edit_user', {})
+        class_conf = settings.TASK_SETTINGS.get(
+            'edit_user', settings.DEFAULT_TASK_SETTINGS)
         role_blacklist = class_conf.get('role_blacklist', [])
         user_list = []
         id_manager = user_store.IdentityManager()
@@ -117,7 +118,8 @@ class UserDetail(tasks.TaskView):
         if not user:
             return Response(no_user, status=404)
 
-        class_conf = settings.TASK_SETTINGS.get(self.task_type, {})
+        class_conf = settings.TASK_SETTINGS.get(
+            self.task_type, settings.DEFAULT_TASK_SETTINGS)
         role_blacklist = class_conf.get('role_blacklist', [])
         project_id = request.keystone_user['project_id']
         project = id_manager.get_project(project_id)

@@ -47,7 +47,8 @@ class TaskView(APIViewWithLogger):
         The get method will return a json listing the actions this
         view will run, and the data fields that those actions require.
         """
-        class_conf = settings.TASK_SETTINGS.get(self.task_type, {})
+        class_conf = settings.TASK_SETTINGS.get(
+            self.task_type, settings.DEFAULT_TASK_SETTINGS)
 
         actions = (
             class_conf.get('default_actions', []) or
@@ -75,7 +76,8 @@ class TaskView(APIViewWithLogger):
         function on all the actions.
         """
 
-        class_conf = settings.TASK_SETTINGS.get(self.task_type, {})
+        class_conf = settings.TASK_SETTINGS.get(
+            self.task_type, settings.DEFAULT_TASK_SETTINGS)
 
         actions = (
             class_conf.get('default_actions', []) or
@@ -244,7 +246,8 @@ class TaskView(APIViewWithLogger):
                 if need_token:
                     token = create_token(task)
                     try:
-                        class_conf = settings.TASK_SETTINGS[self.task_type]
+                        class_conf = settings.TASK_SETTINGS.get(
+                            self.task_type, settings.DEFAULT_TASK_SETTINGS)
 
                         # will throw a key error if the token template has not
                         # been specified
@@ -304,7 +307,7 @@ class TaskView(APIViewWithLogger):
 
                     # Sending confirmation email:
                     class_conf = settings.TASK_SETTINGS.get(
-                        self.task_type, {})
+                        self.task_type, settings.DEFAULT_TASK_SETTINGS)
                     email_conf = class_conf.get(
                         'emails', {}).get('completed', None)
                     send_email(task, email_conf)
@@ -458,7 +461,8 @@ class EditUser(TaskView):
 
     @utils.mod_or_admin
     def get(self, request):
-        class_conf = settings.TASK_SETTINGS.get(self.task_type, {})
+        class_conf = settings.TASK_SETTINGS.get(
+            self.task_type, settings.DEFAULT_TASK_SETTINGS)
 
         actions = (
             class_conf.get('default_actions', []) or
