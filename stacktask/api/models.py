@@ -30,7 +30,7 @@ class Task(models.Model):
     """
     uuid = models.CharField(max_length=32, default=hex_uuid,
                             primary_key=True)
-    hash_key = models.CharField(max_length=32, db_index=True)
+    hash_key = models.CharField(max_length=64, db_index=True)
 
     # who is this:
     ip_address = models.GenericIPAddressField()

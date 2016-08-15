@@ -148,8 +148,11 @@ def create_task_hash(task_type, action_list):
 
     for action in action_list:
         hashable_list.append(action['name'])
+        if not action['serializer']:
+            continue
         # iterate like this to maintain consistent order for hash
-        for field in action['action'].required:
+        fields = sorted(action['serializer'].validated_data.keys())
+        for field in fields:
             try:
                 hashable_list.append(
                     action['serializer'].validated_data[field])
