@@ -19,11 +19,16 @@ temp_cache = {}
 
 
 def setup_temp_cache(projects, users):
+    default_domain = mock.Mock()
+    default_domain.id = 'default'
+    default_domain.name = 'Default'
+
     admin_user = mock.Mock()
     admin_user.id = 'user_id_0'
     admin_user.name = 'admin'
     admin_user.password = 'password'
     admin_user.email = 'admin@example.com'
+    admin_user.domain = default_domain.id
 
     users.update({admin_user.id: admin_user})
 
@@ -33,6 +38,7 @@ def setup_temp_cache(projects, users):
 
     global temp_cache
 
+    # TODO(adriant): region and project keys are name, should be ID.
     temp_cache = {
         'i': 1,
         'users': users,
@@ -46,7 +52,10 @@ def setup_temp_cache(projects, users):
         },
         'regions': {
             'RegionOne': region_one,
-        }
+        },
+        'domains': {
+            default_domain.id: default_domain,
+        },
     }
 
 
@@ -72,10 +81,10 @@ class FakeProject():
 
 class FakeManager(object):
 
-    def find_user(self, name):
+    def find_user(self, name, domain_id):
         global temp_cache
         for user in temp_cache['users'].values():
-            if user.name == name:
+            if user.name == name and user.domain == domain_id:
                 return user
         return None
 
@@ -98,14 +107,16 @@ class FakeManager(object):
                 user.roles.append(r)
         return users
 
-    def create_user(self, name, password, email, project_id):
+    def create_user(self, name, password, email, created_on,
+                    domain='default', default_project=None):
         global temp_cache
         user = mock.Mock()
         user.id = "user_id_%s" % int(temp_cache['i'])
         user.name = name
         user.password = password
         user.email = email
-        user.default_project = project_id
+        user.domain = domain
+        user.default_project = default_project
         temp_cache['users'][user.id] = user
 
         temp_cache['i'] += 0.5
@@ -162,9 +173,12 @@ class FakeManager(object):
         except KeyError:
             pass
 
-    def find_project(self, project_name):
+    def find_project(self, project_name, domain_id):
         global temp_cache
-        return temp_cache['projects'].get(project_name, None)
+        for project in temp_cache['projects'].values():
+            if project.name == project_name and project.domain == domain_id:
+                return project
+        return None
 
     def get_project(self, project_id):
         global temp_cache
@@ -172,7 +186,8 @@ class FakeManager(object):
             if project.id == project_id:
                 return FakeProject(project)
 
-    def create_project(self, project_name, created_on, parent=None, p_id=None):
+    def create_project(self, project_name, created_on, parent=None,
+                       domain='default', p_id=None):
         global temp_cache
         project = mock.Mock()
         if p_id:
@@ -181,11 +196,25 @@ class FakeManager(object):
             temp_cache['i'] += 0.5
             project.id = "project_id_%s" % int(temp_cache['i'])
         project.name = project_name
-        # TODO(adriant): Do something better with the parent value.
-        project.parent = parent
+        if parent:
+            project.parent = parent
+        else:
+            project.parent = domain
+        project.domain = domain
         project.roles = {}
         temp_cache['projects'][project_name] = project
         return project
+
+    def find_domain(self, domain_name):
+        global temp_cache
+        for domain in temp_cache['domains'].values():
+            if domain.name == domain_name:
+                return domain
+        return None
+
+    def get_domain(self, domain_id):
+        global temp_cache
+        return temp_cache['domains'].get(domain_id, None)
 
     def find_region(self, region_name):
         global temp_cache

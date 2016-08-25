@@ -24,7 +24,8 @@ class BaseUserNameSerializer(serializers.Serializer):
     """
     A serializer where the user is identified by username/email.
     """
-    username = serializers.CharField(max_length=200)
+    domain_id = serializers.CharField(max_length=64, default='default')
+    username = serializers.CharField(max_length=255)
     email = serializers.EmailField()
 
     def __init__(self, *args, **kwargs):
@@ -35,31 +36,35 @@ class BaseUserNameSerializer(serializers.Serializer):
 
 
 class BaseUserIdSerializer(serializers.Serializer):
-    user_id = serializers.CharField(max_length=200)
+    user_id = serializers.CharField(max_length=64)
 
 
 class NewUserSerializer(BaseUserNameSerializer):
     roles = serializers.MultipleChoiceField(choices=role_options)
-    project_id = serializers.CharField(max_length=200)
+    project_id = serializers.CharField(max_length=64)
 
 
 class NewProjectSerializer(serializers.Serializer):
     parent_id = serializers.CharField(
-        max_length=200, default=None, allow_null=True)
-    project_name = serializers.CharField(max_length=200)
+        max_length=64, default=None, allow_null=True)
+    project_name = serializers.CharField(max_length=64)
+    domain_id = serializers.CharField(max_length=64, default='default')
 
 
 class NewProjectWithUserSerializer(BaseUserNameSerializer):
     parent_id = serializers.CharField(
-        max_length=200, default=None, allow_null=True)
-    project_name = serializers.CharField(max_length=200)
+        max_length=64, default=None, allow_null=True)
+    project_name = serializers.CharField(max_length=64)
 
 
 class ResetUserSerializer(BaseUserNameSerializer):
-    pass
+    domain_name = serializers.CharField(max_length=64, default='Default')
+    # override domain_id so serializer doesn't set it up.
+    domain_id = None
 
 
 class EditUserRolesSerializer(BaseUserIdSerializer):
     roles = serializers.MultipleChoiceField(choices=role_options)
     remove = serializers.BooleanField(default=False)
-    project_id = serializers.CharField(max_length=200)
+    project_id = serializers.CharField(max_length=64)
+    domain_id = serializers.CharField(max_length=64, default='default')

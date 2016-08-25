@@ -132,6 +132,7 @@ class AdminAPITests(APITestCase):
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
         user.password = "test_password"
 
         setup_temp_cache({}, {user.id: user})
@@ -167,6 +168,7 @@ class AdminAPITests(APITestCase):
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
         user.password = "test_password"
 
         setup_temp_cache({}, {user.id: user})
@@ -238,6 +240,7 @@ class AdminAPITests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -392,12 +395,14 @@ class AdminAPITests(APITestCase):
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
         user.password = "test_password"
 
         user2 = mock.Mock()
         user2.id = 'user_id2'
         user2.name = "test2@example.com"
         user2.email = "test2@example.com"
+        user2.domain = 'default'
         user2.password = "test_password"
 
         setup_temp_cache({}, {user.id: user, user2.name: user2})
@@ -452,6 +457,7 @@ class AdminAPITests(APITestCase):
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
         user.password = "test_password"
 
         setup_temp_cache({}, {user.id: user})
@@ -498,6 +504,7 @@ class AdminAPITests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -631,6 +638,7 @@ class AdminAPITests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({}, {})
@@ -674,6 +682,7 @@ class AdminAPITests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -720,6 +729,7 @@ class AdminAPITests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -754,6 +764,7 @@ class AdminAPITests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -803,6 +814,7 @@ class AdminAPITests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -858,6 +870,7 @@ class AdminAPITests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -931,11 +944,13 @@ class AdminAPITests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         project2 = mock.Mock()
         project2.id = 'test_project_id_2'
         project2.name = 'test_project_2'
+        project2.domain = 'default'
         project2.roles = {}
 
         setup_temp_cache(
@@ -985,6 +1000,7 @@ class AdminAPITests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -1080,11 +1096,13 @@ class AdminAPITests(APITestCase):
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
         user.password = "test_password"
 
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {user.id: ['admin']}
 
         setup_temp_cache({'test_project': project}, {user.id: user})

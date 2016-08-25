@@ -75,6 +75,7 @@ class TaskViewTests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -174,12 +175,14 @@ class TaskViewTests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         user = mock.Mock()
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
 
         setup_temp_cache({'test_project': project}, {user.id: user})
 
@@ -216,10 +219,12 @@ class TaskViewTests(APITestCase):
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
 
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {user.id: ['_member_']}
 
         setup_temp_cache({'test_project': project}, {user.id: user})
@@ -294,6 +299,7 @@ class TaskViewTests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -336,6 +342,7 @@ class TaskViewTests(APITestCase):
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
 
         setup_temp_cache(
             projects={},
@@ -429,6 +436,7 @@ class TaskViewTests(APITestCase):
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
         user.password = "test_password"
 
         setup_temp_cache({}, {user.id: user})
@@ -461,6 +469,7 @@ class TaskViewTests(APITestCase):
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
         user.password = "test_password"
 
         setup_temp_cache({}, {user.id: user})
@@ -560,6 +569,7 @@ class TaskViewTests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({}, {})
@@ -584,6 +594,7 @@ class TaskViewTests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -624,6 +635,7 @@ class TaskViewTests(APITestCase):
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
         user.password = "test_password"
 
         setup_temp_cache({}, {user.id: user})
@@ -657,6 +669,7 @@ class TaskViewTests(APITestCase):
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
         user.password = "test_password"
 
         setup_temp_cache({}, {user.id: user})

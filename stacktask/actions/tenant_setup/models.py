@@ -273,6 +273,10 @@ class AddDefaultUsersToProjectAction(BaseAction):
     general admin tasks that should be present by default.
     """
 
+    required = [
+        'domain_id',
+    ]
+
     def _validate_users(self):
         self.users = settings.ACTION_SETTINGS.get(
             'AddDefaultUsersToProjectAction', {}).get('default_users', [])
@@ -283,7 +287,7 @@ class AddDefaultUsersToProjectAction(BaseAction):
 
         all_found = True
         for user in self.users:
-            ks_user = id_manager.find_user(user)
+            ks_user = id_manager.find_user(user, self.domain_id)
             if ks_user:
                 self.add_note('User: %s exists.' % user)
             else:
@@ -332,7 +336,7 @@ class AddDefaultUsersToProjectAction(BaseAction):
             project = id_manager.get_project(self.project_id)
             try:
                 for user in self.users:
-                    ks_user = id_manager.find_user(name=user)
+                    ks_user = id_manager.find_user(user, self.domain_id)
                     for role in self.roles:
                         ks_role = id_manager.find_role(name=role)
                         id_manager.add_user_role(ks_user, ks_role, project.id)

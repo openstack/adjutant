@@ -17,7 +17,7 @@ from rest_framework import serializers
 
 class NewDefaultNetworkSerializer(serializers.Serializer):
     setup_network = serializers.BooleanField(default=True)
-    project_id = serializers.CharField(max_length=100)
+    project_id = serializers.CharField(max_length=64)
     region = serializers.CharField(max_length=100)
 
 
@@ -27,4 +27,4 @@ class NewProjectDefaultNetworkSerializer(serializers.Serializer):
 
 
 class AddDefaultUsersToProjectSerializer(serializers.Serializer):
-    pass
+    domain_id = serializers.CharField(max_length=64, default='default')

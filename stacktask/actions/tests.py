@@ -36,19 +36,24 @@ class ActionTests(TestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={
+            ip_address="0.0.0.0",
+            keystone_user={
                 'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id'})
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
 
         data = {
             'email': 'test@example.com',
             'project_id': 'test_project_id',
-            'roles': ['_member_']
+            'roles': ['_member_'],
+            'domain_id': 'default',
         }
 
         action = NewUserAction(data, task=task, order=1)
@@ -82,24 +87,30 @@ class ActionTests(TestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         user = mock.Mock()
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
 
         setup_temp_cache({'test_project': project}, {user.id: user})
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={
+            ip_address="0.0.0.0",
+            keystone_user={
                 'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id'})
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
 
         data = {
             'email': 'test@example.com',
             'project_id': 'test_project_id',
-            'roles': ['_member_']
+            'roles': ['_member_'],
+            'domain_id': 'default',
         }
 
         action = NewUserAction(data, task=task, order=1)
@@ -130,23 +141,29 @@ class ActionTests(TestCase):
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
 
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {user.id: ['_member_']}
 
         setup_temp_cache({'test_project': project}, {user.id: user})
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={
+            ip_address="0.0.0.0",
+            keystone_user={
                 'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id'})
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
 
         data = {
             'email': 'test@example.com',
             'project_id': 'test_project_id',
-            'roles': ['_member_']
+            'roles': ['_member_'],
+            'domain_id': 'default',
         }
 
         action = NewUserAction(data, task=task, order=1)
@@ -174,14 +191,18 @@ class ActionTests(TestCase):
         setup_temp_cache({}, {})
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={
+            ip_address="0.0.0.0",
+            keystone_user={
                 'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id'})
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
 
         data = {
             'email': 'test@example.com',
             'project_id': 'test_project_id',
-            'roles': ['_member_']
+            'roles': ['_member_'],
+            'domain_id': 'default',
         }
 
         action = NewUserAction(data, task=task, order=1)
@@ -209,11 +230,15 @@ class ActionTests(TestCase):
         setup_temp_cache({}, {})
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={
+            ip_address="0.0.0.0",
+            keystone_user={
                 'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id'})
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
 
         data = {
+            'domain_id': 'default',
             'parent_id': None,
             'email': 'test@example.com',
             'project_name': 'test_project',
@@ -256,11 +281,15 @@ class ActionTests(TestCase):
         setup_temp_cache({}, {})
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={
+            ip_address="0.0.0.0",
+            keystone_user={
                 'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id'})
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
 
         data = {
+            'domain_id': 'default',
             'parent_id': None,
             'email': 'test@example.com',
             'project_name': 'test_project',
@@ -313,15 +342,20 @@ class ActionTests(TestCase):
         user.id = 'user_id_1'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
 
         setup_temp_cache({}, {user.id: user})
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={
+            ip_address="0.0.0.0",
+            keystone_user={
                 'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id'})
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
 
         data = {
+            'domain_id': 'default',
             'parent_id': None,
             'email': 'test@example.com',
             'project_name': 'test_project',
@@ -364,16 +398,21 @@ class ActionTests(TestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({project.name: project}, {})
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={
+            ip_address="0.0.0.0",
+            keystone_user={
                 'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id'})
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
 
         data = {
+            'domain_id': 'default',
             'parent_id': None,
             'email': 'test@example.com',
             'project_name': 'test_project',
@@ -398,16 +437,21 @@ class ActionTests(TestCase):
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
         user.password = "gibberish"
 
         setup_temp_cache({}, {user.id: user})
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={
+            ip_address="0.0.0.0",
+            keystone_user={
                 'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id'})
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
 
         data = {
+            'domain_name': 'Default',
             'email': 'test@example.com',
             'project_name': 'test_project',
         }
@@ -438,11 +482,15 @@ class ActionTests(TestCase):
         setup_temp_cache({}, {})
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={
+            ip_address="0.0.0.0",
+            keystone_user={
                 'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id'})
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
 
         data = {
+            'domain_name': 'Default',
             'email': 'test@example.com',
             'project_name': 'test_project',
         }
@@ -468,21 +516,27 @@ class ActionTests(TestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         user = mock.Mock()
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
 
         setup_temp_cache({'test_project': project}, {user.id: user})
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
-            keystone_user={'roles': ['admin', 'project_mod'],
-                           'project_id': 'test_project_id'})
+            keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
 
         data = {
+            'domain_id': 'default',
             'user_id': 'user_id',
             'project_id': 'test_project_id',
             'roles': ['_member_', 'project_mod'],
@@ -515,20 +569,26 @@ class ActionTests(TestCase):
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
 
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {user.id: ['_member_', 'project_mod']}
 
         setup_temp_cache({'test_project': project}, {user.id: user})
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
-            keystone_user={'roles': ['admin', 'project_mod'],
-                           'project_id': 'test_project_id'})
+            keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
 
         data = {
+            'domain_id': 'default',
             'user_id': 'user_id',
             'project_id': 'test_project_id',
             'roles': ['_member_', 'project_mod'],
@@ -563,20 +623,26 @@ class ActionTests(TestCase):
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
 
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {user.id: ['_member_', 'project_mod']}
 
         setup_temp_cache({'test_project': project}, {user.id: user})
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
-            keystone_user={'roles': ['admin', 'project_mod'],
-                           'project_id': 'test_project_id'})
+            keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
 
         data = {
+            'domain_id': 'default',
             'user_id': 'user_id',
             'project_id': 'test_project_id',
             'roles': ['project_mod'],
@@ -608,20 +674,26 @@ class ActionTests(TestCase):
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
 
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {user.id: ['_member_']}
 
         setup_temp_cache({'test_project': project}, {user.id: user})
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
-            keystone_user={'roles': ['admin', 'project_mod'],
-                           'project_id': 'test_project_id'})
+            keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
 
         data = {
+            'domain_id': 'default',
             'user_id': 'user_id',
             'project_id': 'test_project_id',
             'roles': ['project_mod'],

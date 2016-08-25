@@ -39,6 +39,7 @@ class OpenstackAPITests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -72,6 +73,7 @@ class OpenstackAPITests(APITestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -122,6 +124,7 @@ class OpenstackAPITests(APITestCase):
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
+        user.domain = 'default'
         user.password = "test_password"
 
         setup_temp_cache({}, {user.id: user})

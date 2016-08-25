@@ -96,6 +96,7 @@ class ProjectSetupActionTests(TestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -147,6 +148,7 @@ class ProjectSetupActionTests(TestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -194,6 +196,7 @@ class ProjectSetupActionTests(TestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -273,6 +276,7 @@ class ProjectSetupActionTests(TestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -359,6 +363,7 @@ class ProjectSetupActionTests(TestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -408,6 +413,7 @@ class ProjectSetupActionTests(TestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -459,6 +465,7 @@ class ProjectSetupActionTests(TestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -468,7 +475,8 @@ class ProjectSetupActionTests(TestCase):
 
         task.cache = {'project_id': "test_project_id"}
 
-        action = AddDefaultUsersToProjectAction({}, task=task, order=1)
+        action = AddDefaultUsersToProjectAction(
+            {'domain_id': 'default'}, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -488,6 +496,7 @@ class ProjectSetupActionTests(TestCase):
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
+        project.domain = 'default'
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
@@ -497,7 +506,8 @@ class ProjectSetupActionTests(TestCase):
 
         task.cache = {'project_id': "test_project_id"}
 
-        action = AddDefaultUsersToProjectAction({}, task=task, order=1)
+        action = AddDefaultUsersToProjectAction(
+            {'domain_id': 'default'}, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)

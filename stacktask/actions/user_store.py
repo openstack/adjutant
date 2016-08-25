@@ -46,12 +46,16 @@ class IdentityManager(object):
     def __init__(self):
         self.ks_client = get_keystoneclient()
 
-    def find_user(self, name):
+    def find_user(self, name, domain_id):
         try:
-            user = self.ks_client.users.find(name=name)
+            users = self.ks_client.users.list(name=name, domain=domain_id)
+            if users:
+                # NOTE(adriant) usernames are unique in a domain
+                return users[0]
+            else:
+                return None
         except ks_exceptions.NotFound:
-            user = None
-        return user
+            return None
 
     def get_user(self, user_id):
         try:
@@ -92,10 +96,12 @@ class IdentityManager(object):
             return []
         return users.values()
 
-    def create_user(self, name, password, email, project_id):
+    def create_user(self, name, password, email, created_on, domain=None,
+                    default_project=None):
+
         user = self.ks_client.users.create(
-            name=name, password=password,
-            email=email, project_id=project_id)
+            name=name, password=password, domain=domain, email=email,
+            default_project=default_project, created_on=created_on)
         return user
 
     def update_user_password(self, user, password):
@@ -138,19 +144,27 @@ class IdentityManager(object):
     def remove_user_role(self, user, role, project_id):
         self.ks_client.roles.revoke(role, user=user, project=project_id)
 
-    def find_project(self, project_name):
+    def find_project(self, project_name, domain_id):
         try:
-            project = self.ks_client.projects.find(name=project_name)
+            # Using a filtered list as find is more efficient than
+            # using the client find
+            projects = self.ks_client.projects.list(
+                name=project_name, domain=domain_id)
+            if projects:
+                # NOTE(adriant) project names are unique in a domain so
+                # it is safe to assume filtering on project name and domain
+                # will only ever return one.
+                return projects[0]
+            else:
+                return None
         except ks_exceptions.NotFound:
-            project = None
-        return project
+            return None
 
     def get_project(self, project_id):
         try:
-            project = self.ks_client.projects.get(project_id)
+            return self.ks_client.projects.get(project_id)
         except ks_exceptions.NotFound:
-            project = None
-        return project
+            return None
 
     def update_project(self, project, name=None, domain=None, description=None,
                        enabled=None, **kwargs):
@@ -162,11 +176,28 @@ class IdentityManager(object):
         except ks_exceptions.NotFound:
             return None
 
-    def create_project(
-            self, project_name, created_on, parent=None, domain="default"):
+    def create_project(self, project_name, created_on, parent=None,
+                       domain=None):
         project = self.ks_client.projects.create(
             project_name, domain, parent=parent, created_on=created_on)
         return project
+
+    def get_domain(self, domain_id):
+        try:
+            return self.ks_client.domains.get(domain_id)
+        except ks_exceptions.NotFound:
+            return None
+
+    def find_domain(self, domain_name):
+        try:
+            domains = self.ks_client.domains.list(name=domain_name)
+            if domains:
+                # NOTE(adriant) domain names are unique
+                return domains[0]
+            else:
+                return None
+        except ks_exceptions.NotFound:
+            return None
 
     def find_region(self, region_name):
         try:
