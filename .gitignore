@@ -5,3 +5,4 @@
 stacktask.egg-info/*
 dist/*
 .tox/*
+env/*
