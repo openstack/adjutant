@@ -70,6 +70,7 @@ DEFAULT_TASK_SETTINGS:
         initial:
             subject: Initial Confirmation
             reply: no-reply@example.com
+            from: bounce+%(task_uuid)s@example.com
             template: initial.txt
             # html_template: initial.txt
         # If the related actions 'can' send a token,
@@ -77,11 +78,13 @@ DEFAULT_TASK_SETTINGS:
         token:
             subject: Your Token
             reply: no-reply@example.com
+            from: bounce+%(task_uuid)s@example.com
             template: token.txt
             # html_template: token.txt
         completed:
             subject: Task completed
             reply: no-reply@example.com
+            from: bounce+%(task_uuid)s@example.com
             template: completed.txt
             # html_template: completed.txt
     notifications:
@@ -90,6 +93,7 @@ DEFAULT_TASK_SETTINGS:
                 emails:
                     - example@example.com
                 reply: no-reply@example.com
+                from: bounce+%(task_uuid)s@example.com
                 template: notification.txt
                 # html_template: completed.txt
             RTNotification:
@@ -103,6 +107,7 @@ DEFAULT_TASK_SETTINGS:
                 emails:
                     - example@example.com
                 reply: no-reply@example.com
+                from: bounce+%(task_uuid)s@example.com
                 template: notification.txt
                 # html_template: completed.txt
             RTNotification:
@@ -163,10 +168,6 @@ TASK_SETTINGS:
             completed:
                 subject: Password Reset Completed
                 template: password_reset_completed.txt
-        errors:
-            SMTPException:
-                notification: acknowledge
-                engines: False
     force_password:
         handle_duplicates: cancel
         emails:
@@ -177,10 +178,6 @@ TASK_SETTINGS:
             completed:
                 subject: Welcome to OpenStack!
                 template: initial_password_completed.txt
-        errors:
-            SMTPException:
-                notification: acknowledge
-                engines: False
     edit_user:
         emails:
             initial: null

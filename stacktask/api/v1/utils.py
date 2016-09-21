@@ -22,7 +22,7 @@ from decorator import decorator
 
 from django.conf import settings
 from django.core.exceptions import FieldError
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.template import loader
 from django.utils import timezone
 
@@ -88,12 +88,38 @@ def send_email(task, email_conf, token=None):
 
     try:
         message = text_template.render(context)
-        html_message = None
+
+        # from_email is the return-path and is distinct from the
+        # message headers
+        from_email = email_conf.get('from')
+        if not from_email:
+            from_email = email_conf['reply']
+        elif "%(task_uuid)s" in from_email:
+            from_email = from_email % {'task_uuid': task.uuid}
+
+        # these are the message headers which will be visible to
+        # the email client.
+        headers = {
+            'X-StackTask-Task-UUID': task.uuid,
+            # From needs to be set to be disctinct from return-path
+            'From': email_conf['reply'],
+            'Reply-To': email_conf['reply'],
+        }
+
+        email = EmailMultiAlternatives(
+            email_conf['subject'],
+            message,
+            from_email,
+            [emails.pop()],
+            headers=headers,
+        )
+
         if html_template:
-            html_message = html_template.render(context)
-        send_mail(
-            email_conf['subject'], message, email_conf['reply'],
-            [emails.pop()], fail_silently=False, html_message=html_message)
+            email.attach_alternative(
+                html_template.render(context), "text/html")
+
+        email.send(fail_silently=False)
+
     except SMTPException as e:
         notes = {
             'errors':
