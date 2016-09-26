@@ -166,14 +166,12 @@ class UserDetail(tasks.TaskView):
 
 class UserRoles(tasks.TaskView):
 
-    default_actions = ['EditUserRoles', ]
+    default_actions = ['EditUserRolesAction', ]
     task_type = 'edit_roles'
 
     @utils.mod_or_admin
     def get(self, request, user_id):
-        """
-        Get user info based on the user id.
-        """
+        """ Get role info based on the user id. """
         id_manager = user_store.IdentityManager()
         user = id_manager.get_user(user_id)
         project_id = request.keystone_user['project_id']
@@ -184,45 +182,30 @@ class UserRoles(tasks.TaskView):
         return Response({"roles": roles})
 
     @utils.mod_or_admin
-    def put(self, request, user_id, format=None):
-        """
-        Add user roles to the current project.
-        """
-        request.data['remove'] = False
-        if 'project_id' not in request.data:
-            request.data['project_id'] = request.keystone_user['project_id']
-        request.data['user_id'] = user_id
-
-        self.logger.info("(%s) - New EditUserRoles request." % timezone.now())
-        processed, status = self.process_actions(request)
-
-        errors = processed.get('errors', None)
-        if errors:
-            self.logger.info("(%s) - Validation errors with registration." %
-                             timezone.now())
-            return Response(errors, status=status)
-
-        task = processed['task']
-        self.logger.info("(%s) - AutoApproving EditUserRoles request."
-                         % timezone.now())
-        response_dict, status = self.approve(request, task)
-
-        add_task_id_for_roles(request, processed, response_dict, ['admin'])
-
-        return Response(response_dict, status=status)
+    def put(self, args, **kwargs):
+        """ Add user roles to the current project. """
+        kwargs['remove_role'] = False
+        return self._edit_user(args, **kwargs)
 
     @utils.mod_or_admin
-    def delete(self, request, user_id, format=None):
+    def delete(self, args, **kwargs):
+        """ Revoke user roles to the current project.
+
+        This only supports Active users
         """
-        Revoke user roles to the current project.
-        This only supports Active users.
-        """
-        request.data['remove'] = True
+        kwargs['remove_role'] = True
+        return self._edit_user(args, **kwargs)
+
+    def _edit_user(self, request, user_id, remove_role=False, format=None):
+        """ Helper function to add or remove roles from a user """
+        request.data['remove'] = remove_role
         if 'project_id' not in request.data:
             request.data['project_id'] = request.keystone_user['project_id']
         request.data['user_id'] = user_id
 
-        self.logger.info("(%s) - New EditUser request." % timezone.now())
+        self.logger.info("(%s) - New EditUser %s request." % (
+            timezone.now(), request.method
+            ))
         processed, status = self.process_actions(request)
 
         errors = processed.get('errors', None)

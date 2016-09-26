@@ -13,14 +13,13 @@
 #    under the License.
 
 from stacktask.actions.models import BaseAction
-from stacktask.actions.tenant_setup.serializers import (
-    NewDefaultNetworkSerializer, NewProjectDefaultNetworkSerializer)
+from stacktask.actions.tenant_setup import serializers
 from django.conf import settings
 from stacktask.actions.user_store import IdentityManager
 from stacktask.actions import openstack_clients
 
 
-class NewDefaultNetwork(BaseAction):
+class NewDefaultNetworkAction(BaseAction):
     """
     This action will setup all required basic networking
     resources so that a new user can launch instances
@@ -66,7 +65,7 @@ class NewDefaultNetwork(BaseAction):
         self.add_note('Region: %s exists.' % self.region)
 
         self.defaults = settings.ACTION_SETTINGS.get(
-            'NewDefaultNetwork', {}).get(self.region, {})
+            'NewDefaultNetworkAction', {}).get(self.region, {})
 
         if not self.defaults:
             self.add_note('ERROR: No default settings for given region.')
@@ -177,7 +176,7 @@ class NewDefaultNetwork(BaseAction):
         pass
 
 
-class NewProjectDefaultNetwork(NewDefaultNetwork):
+class NewProjectDefaultNetworkAction(NewDefaultNetworkAction):
     """
     A variant of NewDefaultNetwork that expects the project
     to not be created until after post_approve.
@@ -208,7 +207,7 @@ class NewProjectDefaultNetwork(NewDefaultNetwork):
         self.add_note('Region: %s exists.' % self.region)
 
         self.defaults = settings.ACTION_SETTINGS.get(
-            'NewDefaultNetwork', {}).get(self.region, {})
+            'NewDefaultNetworkAction', {}).get(self.region, {})
 
         if not self.defaults:
             self.add_note('ERROR: No default settings for given region.')
@@ -246,7 +245,7 @@ class NewProjectDefaultNetwork(NewDefaultNetwork):
         self.add_note('Region: %s exists.' % self.region)
 
         self.defaults = settings.ACTION_SETTINGS.get(
-            'NewDefaultNetwork', {}).get(self.region, {})
+            'NewDefaultNetworkAction', {}).get(self.region, {})
 
         if not self.defaults:
             self.add_note('ERROR: No default settings for given region.')
@@ -266,20 +265,19 @@ class NewProjectDefaultNetwork(NewDefaultNetwork):
             self._create_network()
 
 
-class AddDefaultUsersToProject(BaseAction):
+class AddDefaultUsersToProjectAction(BaseAction):
     """
     The purpose of this action is to add a given set of users after
     the creation of a new Project. This is mainly for administrative
     purposes, and for users involved with migrations, monitoring, and
-    general admin tasks that should de present by default.
+    general admin tasks that should be present by default.
     """
 
     def _validate_users(self):
-
         self.users = settings.ACTION_SETTINGS.get(
-            'AddDefaultUsersToProject', {}).get('default_users', [])
+            'AddDefaultUsersToProjectAction', {}).get('default_users', [])
         self.roles = settings.ACTION_SETTINGS.get(
-            'AddDefaultUsersToProject', {}).get('default_roles', [])
+            'AddDefaultUsersToProjectAction', {}).get('default_roles', [])
 
         id_manager = IdentityManager()
 
@@ -306,7 +304,6 @@ class AddDefaultUsersToProject(BaseAction):
             return False
 
     def _validate_project(self):
-
         self.project_id = self.action.task.cache.get('project_id', None)
 
         id_manager = IdentityManager()
@@ -319,10 +316,7 @@ class AddDefaultUsersToProject(BaseAction):
         return True
 
     def _validate(self):
-        if self._validate_users() and self._validate_project():
-            self.action.valid = True
-        else:
-            self.action.valid = False
+        self.action.valid = self._validate_users() and self._validate_project()
         self.action.save()
 
     def _pre_approve(self):
@@ -359,12 +353,15 @@ class AddDefaultUsersToProject(BaseAction):
 
 
 action_classes = {
-    'NewDefaultNetwork': (
-        NewDefaultNetwork, NewDefaultNetworkSerializer),
-    'NewProjectDefaultNetwork': (
-        NewProjectDefaultNetwork, NewProjectDefaultNetworkSerializer),
-    'AddDefaultUsersToProject': (AddDefaultUsersToProject, None)
+    'NewDefaultNetworkAction':
+        (NewDefaultNetworkAction,
+         serializers.NewDefaultNetworkSerializer),
+    'NewProjectDefaultNetworkAction':
+        (NewProjectDefaultNetworkAction,
+         serializers.NewProjectDefaultNetworkSerializer),
+    'AddDefaultUsersToProjectAction':
+        (AddDefaultUsersToProjectAction,
+         serializers.AddDefaultUsersToProjectSerializer)
 }
-
 
 settings.ACTION_CLASSES.update(action_classes)

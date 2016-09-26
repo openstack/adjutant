@@ -24,3 +24,7 @@ class NewDefaultNetworkSerializer(serializers.Serializer):
 class NewProjectDefaultNetworkSerializer(serializers.Serializer):
     setup_network = serializers.BooleanField(default=False)
     region = serializers.CharField(max_length=100)
+
+
+class AddDefaultUsersToProjectSerializer(serializers.Serializer):
+    pass

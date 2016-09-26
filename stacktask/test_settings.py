@@ -119,14 +119,14 @@ TASK_SETTINGS = {
     },
     'create_project': {
         'additional_actions': [
-            'AddDefaultUsersToProject',
-            'NewProjectDefaultNetwork'
+            'AddDefaultUsersToProjectAction',
+            'NewProjectDefaultNetworkAction'
         ],
         'default_region': 'RegionOne',
         'default_parent_id': None,
     },
     'reset_password': {
-        'handle_duplicates': 'cancel',
+        'duplicate_policy': 'cancel',
         'emails': {
             'token': {
                 'template': 'password_reset_token.txt',
@@ -139,7 +139,7 @@ TASK_SETTINGS = {
         }
     },
     'force_password': {
-        'handle_duplicates': 'cancel',
+        'duplicate_policy': 'cancel',
         'emails': {
             'token': {
                 'template': 'initial_password_token.txt',
@@ -154,18 +154,18 @@ TASK_SETTINGS = {
 }
 
 ACTION_SETTINGS = {
-    'NewProject': {
+    'NewProjectAction': {
         'default_roles': {
             "project_admin", "project_mod", "_member_", "heat_stack_owner"
         },
     },
-    'NewUser': {
+    'NewUserAction': {
         'allowed_roles': ['project_mod', 'project_admin', "_member_"]
     },
-    'ResetUser': {
+    'ResetUserAction': {
         'blacklisted_roles': ['admin']
     },
-    'NewDefaultNetwork': {
+    'NewDefaultNetworkAction': {
         'RegionOne': {
             'DNS_NAMESERVERS': ['193.168.1.2', '193.168.1.3'],
             'SUBNET_CIDR': '192.168.1.0/24',
@@ -175,7 +175,7 @@ ACTION_SETTINGS = {
             'subnet_name': 'somesubnet'
         }
     },
-    'AddDefaultUsersToProject': {
+    'AddDefaultUsersToProjectAction': {
         'default_users': [
             'admin',
         ],

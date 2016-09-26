@@ -28,3 +28,7 @@ class TaskViewNotFound(BaseException):
 
 class ActionNotFound(BaseException):
     """Attempting to setup Action that has not been registered."""
+
+
+class SerializerMissingException(BaseException):
+    """ Serializer configured but it does not exist """

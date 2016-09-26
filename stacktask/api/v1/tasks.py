@@ -21,6 +21,7 @@ from stacktask.api.v1.views import APIViewWithLogger
 from stacktask.api.v1.utils import (
     send_email, create_notification, create_token, create_task_hash,
     add_task_id_for_roles)
+from stacktask.exceptions import SerializerMissingException
 
 
 from django.conf import settings
@@ -67,6 +68,69 @@ class TaskView(APIViewWithLogger):
         return Response({'actions': actions,
                          'required_fields': required_fields})
 
+    def _instantiate_action_serializers(self, request, class_conf):
+        action_serializer_list = []
+
+        action_names = (
+            class_conf.get('default_actions', []) or
+            self.default_actions[:])
+        action_names += class_conf.get('additional_actions', [])
+
+        # instantiate all action serializers and check validity
+        valid = True
+        for action_name in action_names:
+            action_class, serializer_class = \
+                settings.ACTION_CLASSES[action_name]
+
+            # instantiate serializer class
+            if not serializer_class:
+                raise SerializerMissingException(
+                    "No serializer defined for action %s" % action_name)
+            serializer = serializer_class(data=request.data)
+
+            action_serializer_list.append({
+                'name': action_name,
+                'action': action_class,
+                'serializer': serializer})
+
+            if serializer and not serializer.is_valid():
+                valid = False
+
+        if not valid:
+            errors = {}
+            for action in action_serializer_list:
+                if action['serializer']:
+                    errors.update(action['serializer'].errors)
+            return {'errors': errors}, 400
+
+        return action_serializer_list
+
+    def _handle_duplicates(self, class_conf, hash_key):
+        duplicate_tasks = Task.objects.filter(
+            hash_key=hash_key,
+            completed=0,
+            cancelled=0)
+
+        if not duplicate_tasks:
+            return False
+
+        duplicate_policy = class_conf.get("duplicate_policy", "")
+        if duplicate_policy == "cancel":
+            self.logger.info(
+                "(%s) - Task is a duplicate - Cancelling old tasks." %
+                timezone.now())
+            for task in duplicate_tasks:
+                task.cancelled = True
+                task.save()
+            return False
+
+        self.logger.info(
+            "(%s) - Task is a duplicate - Ignoring new task." %
+            timezone.now())
+        return (
+            {'errors': ['Task is a duplicate of an existing task']},
+            409)
+
     def process_actions(self, request):
         """
         Will ensure the request data contains the required data
@@ -75,91 +139,49 @@ class TaskView(APIViewWithLogger):
         based on running of the the pre_approve validation
         function on all the actions.
         """
-
         class_conf = settings.TASK_SETTINGS.get(
             self.task_type, settings.DEFAULT_TASK_SETTINGS)
 
-        actions = (
-            class_conf.get('default_actions', []) or
-            self.default_actions[:])
+        # Action serializers
+        action_serializer_list = self._instantiate_action_serializers(
+            request, class_conf)
 
-        actions += class_conf.get('additional_actions', [])
+        if isinstance(action_serializer_list, tuple):
+            return action_serializer_list
 
-        action_list = []
+        hash_key = create_task_hash(self.task_type, action_serializer_list)
 
-        valid = True
-        for action in actions:
-            action_class, action_serializer = settings.ACTION_CLASSES[action]
+        # Handle duplicates
+        duplicate_error = self._handle_duplicates(class_conf, hash_key)
+        if duplicate_error:
+            return duplicate_error
 
-            # instantiate serializer class
-            if action_serializer is not None:
-                serializer = action_serializer(data=request.data)
-            else:
-                serializer = None
-
-            action_list.append({
-                'name': action,
-                'action': action_class,
-                'serializer': serializer})
-
-            if serializer is not None and not serializer.is_valid():
-                valid = False
-
-        if not valid:
-            errors = {}
-            for action in action_list:
-                if action['serializer'] is not None:
-                    errors.update(action['serializer'].errors)
-            return {'errors': errors}, 400
-
-        hash_key = create_task_hash(self.task_type, action_list)
-        duplicate_tasks = Task.objects.filter(
-            hash_key=hash_key,
-            completed=0,
-            cancelled=0)
-
-        if duplicate_tasks:
-            duplicate_policy = class_conf.get("handle_duplicates", "")
-            if duplicate_policy == "cancel":
-                self.logger.info(
-                    "(%s) - Task is a duplicate - Cancelling old tasks." %
-                    timezone.now())
-                for task in duplicate_tasks:
-                    task.cancelled = True
-                    task.save()
-            else:
-                self.logger.info(
-                    "(%s) - Task is a duplicate - Ignoring new task." %
-                    timezone.now())
-                return (
-                    {'errors': ['Task is a duplicate of an existing task']},
-                    409)
-
+        # Instantiate Task
         ip_address = request.META['REMOTE_ADDR']
         keystone_user = request.keystone_user
-
         try:
             task = Task.objects.create(
-                ip_address=ip_address, keystone_user=keystone_user,
+                ip_address=ip_address,
+                keystone_user=keystone_user,
                 project_id=keystone_user['project_id'],
                 task_type=self.task_type,
                 hash_key=hash_key)
         except KeyError:
             task = Task.objects.create(
-                ip_address=ip_address, keystone_user=keystone_user,
+                ip_address=ip_address,
+                keystone_user=keystone_user,
                 task_type=self.task_type,
                 hash_key=hash_key)
         task.save()
 
-        for i, action in enumerate(action_list):
-            if action['serializer'] is not None:
-                data = action['serializer'].validated_data
-            else:
-                data = {}
+        # Instantiate actions with serializers
+        for i, action in enumerate(action_serializer_list):
+            data = action['serializer'].validated_data
 
             # construct the action class
             action_instance = action['action'](
-                data=data, task=task,
+                data=data,
+                task=task,
                 order=i
             )
 
@@ -186,11 +208,44 @@ class TaskView(APIViewWithLogger):
                 }
                 return response_dict, 200
 
-        # send initial conformation email:
+        # send initial confirmation email:
         email_conf = class_conf.get('emails', {}).get('initial', None)
         send_email(task, email_conf)
 
         return {'task': task}, 200
+
+    def _create_token(self, task):
+        token = create_token(task)
+        try:
+            class_conf = settings.TASK_SETTINGS.get(
+                self.task_type, settings.DEFAULT_TASK_SETTINGS)
+
+            # will throw a key error if the token template has not
+            # been specified
+            email_conf = class_conf['emails']['token']
+            send_email(task, email_conf, token)
+            return {'notes': ['created token']}, 200
+        except KeyError as e:
+            notes = {
+                'errors':
+                    [("Error: '%s' while sending " +
+                      "token. See task " +
+                      "itself for details.") % e]
+            }
+            create_notification(task, notes, error=True)
+
+            import traceback
+            trace = traceback.format_exc()
+            self.logger.critical(("(%s) - Exception escaped!" +
+                                  " %s\n Trace: \n%s") %
+                                 (timezone.now(), e, trace))
+
+            response_dict = {
+                'errors':
+                    ["Error: Something went wrong on the " +
+                     "server. It will be looked into shortly."]
+            }
+            return response_dict, 500
 
     def approve(self, request, task):
         """
@@ -208,126 +263,90 @@ class TaskView(APIViewWithLogger):
         task.save()
 
         action_models = task.actions
-        actions = []
-
-        valid = True
+        actions = [act.get_action() for act in action_models]
         need_token = False
-        for action in action_models:
-            act = action.get_action()
-            actions.append(act)
 
-            if not act.valid:
-                valid = False
-
-        if valid:
-            for action in actions:
-                try:
-                    action.post_approve()
-                except Exception as e:
-                    notes = {
-                        'errors':
-                            [("Error: '%s' while approving task. " +
-                              "See task itself for details.") % e]
-                    }
-                    create_notification(task, notes, error=True)
-
-                    import traceback
-                    trace = traceback.format_exc()
-                    self.logger.critical(("(%s) - Exception escaped! %s\n" +
-                                          "Trace: \n%s") %
-                                         (timezone.now(), e, trace))
-
-                    response_dict = {
-                        'errors':
-                            ["Error: Something went wrong on the server. " +
-                             "It will be looked into shortly."]
-                    }
-                    return response_dict, 500
-
-                if not action.valid:
-                    valid = False
-                if action.need_token:
-                    need_token = True
-
-            if valid:
-                if need_token:
-                    token = create_token(task)
-                    try:
-                        class_conf = settings.TASK_SETTINGS.get(
-                            self.task_type, settings.DEFAULT_TASK_SETTINGS)
-
-                        # will throw a key error if the token template has not
-                        # been specified
-                        email_conf = class_conf['emails']['token']
-                        send_email(task, email_conf, token)
-                        return {'notes': ['created token']}, 200
-                    except KeyError as e:
-                        notes = {
-                            'errors':
-                                [("Error: '%s' while sending " +
-                                  "token. See task " +
-                                  "itself for details.") % e]
-                        }
-                        create_notification(task, notes, error=True)
-
-                        import traceback
-                        trace = traceback.format_exc()
-                        self.logger.critical(("(%s) - Exception escaped!" +
-                                              " %s\n Trace: \n%s") %
-                                             (timezone.now(), e, trace))
-
-                        response_dict = {
-                            'errors':
-                                ["Error: Something went wrong on the " +
-                                 "server. It will be looked into shortly."]
-                        }
-                        return response_dict, 500
-                else:
-                    for action in actions:
-                        try:
-                            action.submit({})
-                        except Exception as e:
-                            notes = {
-                                'errors':
-                                    [("Error: '%s' while submitting " +
-                                      "task. See task " +
-                                      "itself for details.") % e]
-                            }
-                            create_notification(task, notes, error=True)
-
-                            import traceback
-                            trace = traceback.format_exc()
-                            self.logger.critical(("(%s) - Exception escaped!" +
-                                                  " %s\n Trace: \n%s") %
-                                                 (timezone.now(), e, trace))
-
-                            response_dict = {
-                                'errors':
-                                    ["Error: Something went wrong on the " +
-                                     "server. It will be looked into shortly."]
-                            }
-                            return response_dict, 500
-
-                    task.completed = True
-                    task.completed_on = timezone.now()
-                    task.save()
-
-                    # Sending confirmation email:
-                    class_conf = settings.TASK_SETTINGS.get(
-                        self.task_type, settings.DEFAULT_TASK_SETTINGS)
-                    email_conf = class_conf.get(
-                        'emails', {}).get('completed', None)
-                    send_email(task, email_conf)
-                    return {'notes': "Task completed successfully."}, 200
+        valid = all([act.valid for act in actions])
+        if not valid:
             return {'errors': ['actions invalid']}, 400
-        return {'errors': ['actions invalid']}, 400
+
+        # post_approve all actions
+        for action in actions:
+            try:
+                action.post_approve()
+            except Exception as e:
+                notes = {
+                    'errors':
+                        [("Error: '%s' while approving task. " +
+                          "See task itself for details.") % e]
+                }
+                create_notification(task, notes, error=True)
+
+                import traceback
+                trace = traceback.format_exc()
+                self.logger.critical(("(%s) - Exception escaped! %s\n" +
+                                      "Trace: \n%s") %
+                                     (timezone.now(), e, trace))
+
+                response_dict = {
+                    'errors':
+                        ["Error: Something went wrong on the server. " +
+                         "It will be looked into shortly."]
+                }
+                return response_dict, 500
+
+        valid = all([act.valid for act in actions])
+        if not valid:
+            return {'errors': ['actions invalid']}, 400
+
+        need_token = any([act.need_token for act in actions])
+        if need_token:
+            return self._create_token(task)
+
+        # submit all actions
+        for action in actions:
+            try:
+                action.submit({})
+            except Exception as e:
+                notes = {
+                    'errors':
+                        [("Error: '%s' while submitting " +
+                          "task. See task " +
+                          "itself for details.") % e]
+                }
+                create_notification(task, notes, error=True)
+
+                import traceback
+                trace = traceback.format_exc()
+                self.logger.critical(("(%s) - Exception escaped!" +
+                                      " %s\n Trace: \n%s") %
+                                     (timezone.now(), e, trace))
+
+                response_dict = {
+                    'errors':
+                        ["Error: Something went wrong on the " +
+                         "server. It will be looked into shortly."]
+                }
+                return response_dict, 500
+
+        task.completed = True
+        task.completed_on = timezone.now()
+        task.save()
+
+        # Sending confirmation email:
+        class_conf = settings.TASK_SETTINGS.get(
+            self.task_type, settings.DEFAULT_TASK_SETTINGS)
+        email_conf = class_conf.get(
+            'emails', {}).get('completed', None)
+        send_email(task, email_conf)
+        return {'notes': "Task completed successfully."}, 200
 
 
 class CreateProject(TaskView):
 
     task_type = "create_project"
 
-    default_actions = ["NewProjectWithUser", ]
+    default_actions = ["NewProjectWithUserAction", ]
 
     def post(self, request, format=None):
         """
@@ -374,7 +393,7 @@ class InviteUser(TaskView):
 
     task_type = "invite_user"
 
-    default_actions = ['NewUser', ]
+    default_actions = ['NewUserAction', ]
 
     @utils.mod_or_admin
     def get(self, request):
@@ -395,9 +414,6 @@ class InviteUser(TaskView):
         if ('project_id' not in request.data or
                 request.data['project_id'] is None):
             request.data['project_id'] = request.keystone_user['project_id']
-
-        # TODO: First check if the user already exists or is pending
-        # We should not allow duplicate invites.
 
         processed, status = self.process_actions(request)
 
@@ -422,7 +438,7 @@ class ResetPassword(TaskView):
 
     task_type = "reset_password"
 
-    default_actions = ['ResetUser', ]
+    default_actions = ['ResetUserAction', ]
 
     def post(self, request, format=None):
         """
@@ -473,33 +489,33 @@ class EditUser(TaskView):
 
     task_type = "edit_user"
 
-    default_actions = ['EditUserRoles', ]
+    default_actions = ['EditUserRolesAction', ]
 
     @utils.mod_or_admin
     def get(self, request):
         class_conf = settings.TASK_SETTINGS.get(
             self.task_type, settings.DEFAULT_TASK_SETTINGS)
 
-        actions = (
+        action_names = (
             class_conf.get('default_actions', []) or
             self.default_actions[:])
 
-        actions += class_conf.get('additional_actions', [])
+        action_names += class_conf.get('additional_actions', [])
         role_blacklist = class_conf.get('role_blacklist', [])
 
-        required_fields = []
+        required_fields = set()
 
-        for action in actions:
-            action_class, action_serializer = settings.ACTION_CLASSES[action]
-            for field in action_class.required:
-                if field not in required_fields:
-                    required_fields.append(field)
+        for action_name in action_names:
+            action_class, action_serializer = \
+                settings.ACTION_CLASSES[action_name]
+            required_fields |= action_class.required
 
         user_list = []
         id_manager = IdentityManager()
         project_id = request.keystone_user['project_id']
         project = id_manager.get_project(project_id)
 
+        # todo: move to interface class
         for user in id_manager.list_users(project):
             skip = False
             roles = []
@@ -514,8 +530,8 @@ class EditUser(TaskView):
                               "email": user.username,
                               "roles": roles})
 
-        return Response({'actions': actions,
-                         'required_fields': required_fields,
+        return Response({'actions': action_names,
+                         'required_fields': list(required_fields),
                          'users': user_list})
 
     @utils.mod_or_admin

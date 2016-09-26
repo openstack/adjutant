@@ -124,13 +124,13 @@ TASK_SETTINGS:
         # The order of the actions is order of execution.
         #
         # default_actions:
-        #     - NewProject
+        #     - NewProjectAction
         #
         # Additonal actions for views
         # These will run after the default actions, in the given order.
         additional_actions:
-            - AddDefaultUsersToProject
-            - NewProjectDefaultNetwork
+            - AddDefaultUsersToProjectAction
+            - NewProjectDefaultNetworkAction
         notifications:
             standard:
                 EmailNotification:
@@ -163,7 +163,7 @@ TASK_SETTINGS:
                 notification: acknowledge
                 engines: False
     reset_password:
-        handle_duplicates: cancel
+        duplicate_policy: cancel
         emails:
             initial: null
             token:
@@ -173,7 +173,7 @@ TASK_SETTINGS:
                 subject: Password Reset Completed
                 template: password_reset_completed.txt
     force_password:
-        handle_duplicates: cancel
+        duplicate_policy: cancel
         emails:
             initial: null
             token:
@@ -191,22 +191,22 @@ TASK_SETTINGS:
 
 # Action settings:
 ACTION_SETTINGS:
-    NewProject:
+    NewProjectAction:
         default_roles:
             - project_admin
             - project_mod
             - heat_stack_owner
             - _member_
-    NewUser:
+    NewUserAction:
         allowed_roles:
             - project_admin
             - project_mod
             - heat_stack_owner
             - _member_
-    ResetUser:
+    ResetUserAction:
         blacklisted_roles:
             - admin
-    NewDefaultNetwork:
+    NewDefaultNetworkAction:
         RegionOne:
             network_name: default_network
             subnet_name: default_subnet
@@ -216,7 +216,7 @@ ACTION_SETTINGS:
                 - 193.168.1.2
                 - 193.168.1.3
             SUBNET_CIDR: 192.168.1.0/24
-    AddDefaultUsersToProject:
+    AddDefaultUsersToProjectAction:
         default_users:
             - admin
         default_roles:
@@ -238,4 +238,3 @@ ROLES_MAPPING:
         - project_mod
         - heat_stack_owner
         - _member_
-

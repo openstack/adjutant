@@ -17,7 +17,8 @@ from django.test import TestCase
 import mock
 
 from stacktask.actions.models import (
-    EditUserRoles, NewProjectWithUser, NewUser, ResetUser)
+    EditUserRolesAction, NewProjectWithUserAction, NewUserAction,
+    ResetUserAction)
 from stacktask.api.models import Task
 from stacktask.api.v1 import tests
 from stacktask.api.v1.tests import FakeManager, setup_temp_cache
@@ -50,7 +51,7 @@ class ActionTests(TestCase):
             'roles': ['_member_']
         }
 
-        action = NewUser(data, task=task, order=1)
+        action = NewUserAction(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -101,7 +102,7 @@ class ActionTests(TestCase):
             'roles': ['_member_']
         }
 
-        action = NewUser(data, task=task, order=1)
+        action = NewUserAction(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -148,7 +149,7 @@ class ActionTests(TestCase):
             'roles': ['_member_']
         }
 
-        action = NewUser(data, task=task, order=1)
+        action = NewUserAction(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -183,7 +184,7 @@ class ActionTests(TestCase):
             'roles': ['_member_']
         }
 
-        action = NewUser(data, task=task, order=1)
+        action = NewUserAction(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, False)
@@ -218,7 +219,7 @@ class ActionTests(TestCase):
             'project_name': 'test_project',
         }
 
-        action = NewProjectWithUser(data, task=task, order=1)
+        action = NewProjectWithUserAction(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -265,7 +266,7 @@ class ActionTests(TestCase):
             'project_name': 'test_project',
         }
 
-        action = NewProjectWithUser(data, task=task, order=1)
+        action = NewProjectWithUserAction(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -326,7 +327,7 @@ class ActionTests(TestCase):
             'project_name': 'test_project',
         }
 
-        action = NewProjectWithUser(data, task=task, order=1)
+        action = NewProjectWithUserAction(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -378,7 +379,7 @@ class ActionTests(TestCase):
             'project_name': 'test_project',
         }
 
-        action = NewProjectWithUser(data, task=task, order=1)
+        action = NewProjectWithUserAction(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, False)
@@ -411,7 +412,7 @@ class ActionTests(TestCase):
             'project_name': 'test_project',
         }
 
-        action = ResetUser(data, task=task, order=1)
+        action = ResetUserAction(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -446,7 +447,7 @@ class ActionTests(TestCase):
             'project_name': 'test_project',
         }
 
-        action = ResetUser(data, task=task, order=1)
+        action = ResetUserAction(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, False)
@@ -488,7 +489,7 @@ class ActionTests(TestCase):
             'remove': False
         }
 
-        action = EditUserRoles(data, task=task, order=1)
+        action = EditUserRolesAction(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -534,7 +535,7 @@ class ActionTests(TestCase):
             'remove': False
         }
 
-        action = EditUserRoles(data, task=task, order=1)
+        action = EditUserRolesAction(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -582,7 +583,7 @@ class ActionTests(TestCase):
             'remove': True
         }
 
-        action = EditUserRoles(data, task=task, order=1)
+        action = EditUserRolesAction(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -627,7 +628,7 @@ class ActionTests(TestCase):
             'remove': True
         }
 
-        action = EditUserRoles(data, task=task, order=1)
+        action = EditUserRolesAction(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)

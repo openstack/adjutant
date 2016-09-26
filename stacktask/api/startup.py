@@ -15,27 +15,27 @@ def check_expected_taskviews():
                 "Expected taskviews are unregistered: %s" % missing_taskviews))
 
 
-def check_expected_actions():
+def check_configured_actions():
     """Check that all the expected actions have been registered."""
-    expected_actions = []
+    configured_actions = []
 
     for taskview in settings.ACTIVE_TASKVIEWS:
         task_class = settings.TASKVIEW_CLASSES.get(taskview)['class']
 
         try:
-            expected_actions += settings.TASK_SETTINGS.get(
+            configured_actions += settings.TASK_SETTINGS.get(
                 task_class.task_type, {})['default_actions']
         except KeyError:
-            expected_actions += task_class.default_actions
-        expected_actions += settings.TASK_SETTINGS.get(
+            configured_actions += task_class.default_actions
+        configured_actions += settings.TASK_SETTINGS.get(
             task_class.task_type, {}).get('additional_actions', [])
 
     missing_actions = list(
-        set(expected_actions) - set(settings.ACTION_CLASSES.keys()))
+        set(configured_actions) - set(settings.ACTION_CLASSES.keys()))
 
     if missing_actions:
         raise ActionNotFound(
-            "Expected actions are unregistered: %s" % missing_actions)
+            "Configured actions are unregistered: %s" % missing_actions)
 
 
 class APIConfig(AppConfig):
@@ -55,4 +55,4 @@ class APIConfig(AppConfig):
         check_expected_taskviews()
 
         # Now check if all the actions those views expecte are present.
-        check_expected_actions()
+        check_configured_actions()

@@ -17,7 +17,8 @@ from django.test import TestCase
 import mock
 
 from stacktask.actions.tenant_setup.models import (
-    NewDefaultNetwork, NewProjectDefaultNetwork, AddDefaultUsersToProject)
+    NewDefaultNetworkAction, NewProjectDefaultNetworkAction,
+    AddDefaultUsersToProjectAction)
 from stacktask.api.models import Task
 from stacktask.api.v1 import tests
 from stacktask.api.v1.tests import FakeManager, setup_temp_cache
@@ -105,7 +106,7 @@ class ProjectSetupActionTests(TestCase):
             'project_id': 'test_project_id',
         }
 
-        action = NewDefaultNetwork(
+        action = NewDefaultNetworkAction(
             data, task=task, order=1)
 
         action.pre_approve()
@@ -156,7 +157,7 @@ class ProjectSetupActionTests(TestCase):
             'project_id': 'test_project_id',
         }
 
-        action = NewDefaultNetwork(
+        action = NewDefaultNetworkAction(
             data, task=task, order=1)
 
         action.pre_approve()
@@ -203,7 +204,7 @@ class ProjectSetupActionTests(TestCase):
             'project_id': 'test_project_id',
         }
 
-        action = NewDefaultNetwork(
+        action = NewDefaultNetworkAction(
             data, task=task, order=1)
 
         action.pre_approve()
@@ -261,7 +262,7 @@ class ProjectSetupActionTests(TestCase):
             'region': 'RegionOne',
         }
 
-        action = NewProjectDefaultNetwork(
+        action = NewProjectDefaultNetworkAction(
             data, task=task, order=1)
 
         action.pre_approve()
@@ -312,7 +313,7 @@ class ProjectSetupActionTests(TestCase):
             'region': 'RegionOne',
         }
 
-        action = NewProjectDefaultNetwork(
+        action = NewProjectDefaultNetworkAction(
             data, task=task, order=1)
 
         action.pre_approve()
@@ -347,7 +348,7 @@ class ProjectSetupActionTests(TestCase):
             'region': 'RegionOne',
         }
 
-        action = NewProjectDefaultNetwork(
+        action = NewProjectDefaultNetworkAction(
             data, task=task, order=1)
 
         action.pre_approve()
@@ -394,7 +395,7 @@ class ProjectSetupActionTests(TestCase):
             'region': 'RegionOne',
         }
 
-        action = NewProjectDefaultNetwork(
+        action = NewProjectDefaultNetworkAction(
             data, task=task, order=1)
 
         action.pre_approve()
@@ -467,7 +468,7 @@ class ProjectSetupActionTests(TestCase):
 
         task.cache = {'project_id': "test_project_id"}
 
-        action = AddDefaultUsersToProject({}, task=task, order=1)
+        action = AddDefaultUsersToProjectAction({}, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -496,7 +497,7 @@ class ProjectSetupActionTests(TestCase):
 
         task.cache = {'project_id': "test_project_id"}
 
-        action = AddDefaultUsersToProject({}, task=task, order=1)
+        action = AddDefaultUsersToProjectAction({}, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)

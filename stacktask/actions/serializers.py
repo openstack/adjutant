@@ -16,7 +16,7 @@ from rest_framework import serializers
 from django.conf import settings
 
 
-role_options = settings.ACTION_SETTINGS.get("NewUser", {}).get(
+role_options = settings.ACTION_SETTINGS.get("NewUserAction", {}).get(
     "allowed_roles", [])
 
 
@@ -41,7 +41,6 @@ class BaseUserIdSerializer(serializers.Serializer):
 class NewUserSerializer(BaseUserNameSerializer):
     roles = serializers.MultipleChoiceField(choices=role_options)
     project_id = serializers.CharField(max_length=200)
-    pass
 
 
 class NewProjectSerializer(serializers.Serializer):
@@ -60,7 +59,7 @@ class ResetUserSerializer(BaseUserNameSerializer):
     pass
 
 
-class EditUserSerializer(BaseUserIdSerializer):
+class EditUserRolesSerializer(BaseUserIdSerializer):
     roles = serializers.MultipleChoiceField(choices=role_options)
     remove = serializers.BooleanField(default=False)
     project_id = serializers.CharField(max_length=200)

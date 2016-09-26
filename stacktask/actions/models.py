@@ -218,10 +218,10 @@ class UserNameAction(UserAction):
             except ValueError:
                 pass
                 # nothing to remove
-            super(UserAction, self).__init__(*args, **kwargs)
+            super(UserNameAction, self).__init__(*args, **kwargs)
             self.username = self.email
         else:
-            super(UserAction, self).__init__(*args, **kwargs)
+            super(UserNameAction, self).__init__(*args, **kwargs)
 
     def _get_email(self):
         return self.email
@@ -236,8 +236,7 @@ class UserNameAction(UserAction):
         return user
 
 
-# TODO: rename to InviteUser
-class NewUser(UserNameAction):
+class NewUserAction(UserNameAction):
     """
     Setup a new user with a role on the given project.
     Creates the user if they don't exist, otherwise
@@ -434,7 +433,7 @@ class ProjectCreateBase(object):
 
 
 # TODO(adriant): Write tests for this action.
-class NewProject(BaseAction, ProjectCreateBase):
+class NewProjectAction(BaseAction, ProjectCreateBase):
     """
     Creates a new project for the current keystone_user.
 
@@ -447,7 +446,7 @@ class NewProject(BaseAction, ProjectCreateBase):
     ]
 
     def __init__(self, *args, **kwargs):
-        super(NewProject, self).__init__(*args, **kwargs)
+        super(NewProjectAction, self).__init__(*args, **kwargs)
         self.id_manager = user_store.IdentityManager()
 
     def _validate(self):
@@ -464,7 +463,7 @@ class NewProject(BaseAction, ProjectCreateBase):
                 self.add_note(
                     'Parent id does not match keystone user project.')
                 return False
-            return super(NewProject, self)._validate_parent_project()
+            return super(NewProjectAction, self)._validate_parent_project()
         return True
 
     def _pre_approve(self):
@@ -489,7 +488,7 @@ class NewProject(BaseAction, ProjectCreateBase):
             self.add_note("User already given roles.")
         else:
             default_roles = settings.ACTION_SETTINGS.get(
-                'NewProject', {}).get("default_roles", {})
+                'NewProjectAction', {}).get("default_roles", {})
 
             project_id = self.get_cache('project_id')
             keystone_user = self.action.task.keystone_user
@@ -520,7 +519,7 @@ class NewProject(BaseAction, ProjectCreateBase):
         pass
 
 
-class NewProjectWithUser(UserNameAction, ProjectCreateBase):
+class NewProjectWithUserAction(UserNameAction, ProjectCreateBase):
     """
     Makes a new project for the given username. Will create the user if it
     doesn't exists.
@@ -534,7 +533,7 @@ class NewProjectWithUser(UserNameAction, ProjectCreateBase):
     ]
 
     def __init__(self, *args, **kwargs):
-        super(NewProjectWithUser, self).__init__(*args, **kwargs)
+        super(NewProjectWithUserAction, self).__init__(*args, **kwargs)
         self.id_manager = user_store.IdentityManager()
 
     def _validate(self):
@@ -617,7 +616,7 @@ class NewProjectWithUser(UserNameAction, ProjectCreateBase):
                 return
 
             default_roles = settings.ACTION_SETTINGS.get(
-                'NewProject', {}).get("default_roles", {})
+                'NewProjectAction', {}).get("default_roles", {})
 
             project_id = self.get_cache('project_id')
 
@@ -699,7 +698,7 @@ class NewProjectWithUser(UserNameAction, ProjectCreateBase):
                     user_id, project_id))
 
 
-class ResetUser(UserNameAction):
+class ResetUserAction(UserNameAction):
     """
     Simple action to reset a password for a given user.
     """
@@ -713,7 +712,7 @@ class ResetUser(UserNameAction):
     ]
 
     blacklist = settings.ACTION_SETTINGS.get(
-        'ResetUser', {}).get("blacklisted_roles", {})
+        'ResetUserAction', {}).get("blacklisted_roles", {})
 
     def _validate(self):
         id_manager = user_store.IdentityManager()
@@ -773,7 +772,7 @@ class ResetUser(UserNameAction):
         self.add_note('User %s password has been changed.' % self.username)
 
 
-class EditUserRoles(UserIdAction):
+class EditUserRolesAction(UserIdAction):
     """
     A class for adding or removing roles
     on a user for the given project.
@@ -918,8 +917,8 @@ def register_action_class(action_class, serializer_class):
     settings.ACTION_CLASSES.update(data)
 
 # Register each action model
-register_action_class(NewUser, serializers.NewUserSerializer)
+register_action_class(NewUserAction, serializers.NewUserSerializer)
 register_action_class(
-    NewProjectWithUser, serializers.NewProjectWithUserSerializer)
-register_action_class(ResetUser, serializers.ResetUserSerializer)
-register_action_class(EditUserRoles, serializers.EditUserSerializer)
+    NewProjectWithUserAction, serializers.NewProjectWithUserSerializer)
+register_action_class(ResetUserAction, serializers.ResetUserSerializer)
+register_action_class(EditUserRolesAction, serializers.EditUserRolesSerializer)

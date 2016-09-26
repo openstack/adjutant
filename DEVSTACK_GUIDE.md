@@ -2,7 +2,7 @@
 
 This is a guide to setting up StackTask in a running Devstack environment similar to how we have been running it for development purposes.
 
-This guide assumes you are running this in a clean ubuntu 14.04 virtual machine with sudo access. 
+This guide assumes you are running this in a clean ubuntu 14.04 virtual machine with sudo access.
 
 ## Deploy Devstack
 

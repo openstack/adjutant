@@ -29,6 +29,42 @@ class TaskViewTests(APITestCase):
     and tokens are created/updated.
     """
 
+    def test_bad_data(self):
+        """
+        Simple test to confirm the serializers are correctly processing
+        wrong data or missing fields.
+        """
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
+
+        url = "/v1/actions/InviteUser"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        data = {'wrong_email_field': "test@example.com", 'roles': ["_member_"],
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {'email': ['This field is required.']})
+
+        data = {'email': "not_a_valid_email", 'roles': ["not_a_valid_role"],
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data, {
+                'email': ['Enter a valid email address.'],
+                'roles': ['"not_a_valid_role" is not a valid choice.']})
+
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
     def test_new_user(self):
