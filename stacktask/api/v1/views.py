@@ -459,7 +459,7 @@ class TaskDetail(APIViewWithLogger):
                 send_email(task, email_conf)
 
                 return Response(
-                    {'notes': "Task completed successfully."},
+                    {'notes': ["Task completed successfully."]},
                     status=200)
         return Response({'errors': ['actions invalid']}, status=400)
 
@@ -498,7 +498,7 @@ class TaskDetail(APIViewWithLogger):
         task.save()
 
         return Response(
-            {'notes': "Task cancelled successfully."},
+            {'notes': ["Task cancelled successfully."]},
             status=200)
 
 
@@ -752,5 +752,5 @@ class TokenDetail(APIViewWithLogger):
         send_email(token.task, email_conf)
 
         return Response(
-            {'notes': "Token submitted successfully."},
+            {'notes': ["Token submitted successfully."]},
             status=200)

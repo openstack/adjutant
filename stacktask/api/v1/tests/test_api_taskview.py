@@ -239,7 +239,7 @@ class TaskViewTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             response.data,
-            {'notes': 'Task completed successfully.'})
+            {'notes': ['Task completed successfully.']})
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
@@ -270,6 +270,10 @@ class TaskViewTests(APITestCase):
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data,
+            {'notes': ['created token']}
+        )
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -294,15 +298,6 @@ class TaskViewTests(APITestCase):
 
         setup_temp_cache({'test_project': project}, {})
 
-        url = "/v1/actions/InviteUser"
-        headers = {
-            'project_name': "test_project",
-            'project_id': "test_project_id",
-            'roles': "project_admin,_member_,project_mod",
-            'username': "test@example.com",
-            'user_id': "test_user_id",
-            'authenticated': True
-        }
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
@@ -336,33 +331,29 @@ class TaskViewTests(APITestCase):
         No token should be needed.
         """
 
+        # pre-create user
         user = mock.Mock()
         user.id = 'user_id'
         user.name = "test@example.com"
         user.email = "test@example.com"
 
-        setup_temp_cache({}, {user.id: user})
+        setup_temp_cache(
+            projects={},
+            users={user.id: user})
 
-        url = "/v1/actions/InviteUser"
-        headers = {
-            'project_name': "test_project",
-            'project_id': "test_project_id",
-            'roles': "project_admin,_member_,project_mod",
-            'username': "test@example.com",
-            'user_id': "test_user_id",
-            'authenticated': True
-        }
+        # unauthenticated sign up as existing user
         url = "/v1/actions/CreateProject"
-        data = {'project_name': "test_project", 'email': "test@example.com"}
+        data = {'project_name': "test_project", 'email': user.email}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+        # approve the sign-up as admin
         headers = {
-            'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_name': "admin_project",
+            'project_id': "admin_project_id",
             'roles': "admin,_member_",
-            'username': "test@example.com",
-            'user_id': "test_user_id",
+            'username': "admin",
+            'user_id': "admin_id",
             'authenticated': True
         }
         new_task = Task.objects.all()[0]
@@ -372,7 +363,58 @@ class TaskViewTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             response.data,
-            {'notes': 'Task completed successfully.'}
+            {'notes': ['Task completed successfully.']}
+        )
+
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
+    def test_new_project_existing_project_new_user(self):
+        """
+        Project already exists but new user attempting to create it.
+        """
+        setup_temp_cache({}, {})
+
+        # create signup#1 - project1 with user 1
+        url = "/v1/actions/CreateProject"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Create signup#2 - project1 with user 2
+        data = {'project_name': "test_project", 'email': "test2@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        headers = {
+            'project_name': "admin_project",
+            'project_id': "admin_project_id",
+            'roles': "admin,_member_",
+            'username': "admin",
+            'user_id': "admin_id",
+            'authenticated': True
+        }
+        # approve signup #1
+        new_task1 = Task.objects.all()[0]
+        url = "/v1/tasks/" + new_task1.uuid
+        response = self.client.post(url, {'approved': True}, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data,
+            {'notes': ['created token']}
+        )
+
+        # Attempt to approve signup #2
+        new_task2 = Task.objects.all()[1]
+        url = "/v1/tasks/" + new_task2.uuid
+        response = self.client.post(url, {'approved': True}, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data,
+            {'errors': ['actions invalid']}
         )
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
@@ -527,7 +569,7 @@ class TaskViewTests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
         data = {'project_name': "test_project_2", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')

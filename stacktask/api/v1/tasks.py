@@ -339,7 +339,7 @@ class TaskView(APIViewWithLogger):
         email_conf = class_conf.get(
             'emails', {}).get('completed', None)
         send_email(task, email_conf)
-        return {'notes': "Task completed successfully."}, 200
+        return {'notes': ["Task completed successfully."]}, 200
 
 
 class CreateProject(TaskView):
@@ -373,7 +373,7 @@ class CreateProject(TaskView):
         if errors:
             self.logger.info("(%s) - Validation errors with task." %
                              timezone.now())
-            return Response(errors, status=400)
+            return Response(errors, status=status)
 
         notes = {
             'notes':
