@@ -39,8 +39,8 @@ register_taskview_class(
 register_taskview_class(
     r'^openstack/roles/?$', openstack.RoleList)
 register_taskview_class(
-    r'^openstack/users/password-reset?$', openstack.UserResetPassword)
+    r'^openstack/users/password-reset/?$', openstack.UserResetPassword)
 register_taskview_class(
-    r'^openstack/users/password-set?$', openstack.UserSetPassword)
+    r'^openstack/users/password-set/?$', openstack.UserSetPassword)
 register_taskview_class(
     r'^openstack/sign-up/?$', openstack.SignUp)
