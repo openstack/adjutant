@@ -35,7 +35,7 @@ class Task(models.Model):
     # who is this:
     ip_address = models.GenericIPAddressField()
     keystone_user = JSONField(default={})
-    project_id = models.CharField(max_length=32, db_index=True, null=True)
+    project_id = models.CharField(max_length=64, db_index=True, null=True)
 
     # keystone_user for the approver:
     approved_by = JSONField(default={})
