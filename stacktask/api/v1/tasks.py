@@ -500,11 +500,10 @@ class EditUser(TaskView):
         project_id = request.keystone_user['project_id']
         project = id_manager.get_project(project_id)
 
-        for user in project.list_users():
+        for user in id_manager.list_users(project):
             skip = False
-            self.logger.info(user)
             roles = []
-            for role in id_manager.get_roles(user, project):
+            for role in user.roles:
                 if role.name in role_blacklist:
                     skip = True
                     continue
