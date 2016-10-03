@@ -296,3 +296,20 @@ class UserSetPassword(tasks.ResetPassword):
     @utils.admin
     def post(self, request, format=None):
         return super(UserSetPassword, self).post(request)
+
+
+class SignUp(tasks.CreateProject):
+    """
+    The openstack endpoint for signups.
+    """
+
+    def get(self, request):
+        """
+        The SignUp endpoint does not support GET.
+        This returns a 404.
+        """
+        return Response(status=404)
+
+    @utils.admin
+    def post(self, request, format=None):
+        return super(SignUp, self).post(request)

@@ -42,3 +42,5 @@ register_taskview_class(
     r'^openstack/users/password-reset?$', openstack.UserResetPassword)
 register_taskview_class(
     r'^openstack/users/password-set?$', openstack.UserSetPassword)
+register_taskview_class(
+    r'^openstack/sign-up/?$', openstack.SignUp)
