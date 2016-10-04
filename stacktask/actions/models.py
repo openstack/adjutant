@@ -484,7 +484,7 @@ class NewProjectAction(BaseAction, ProjectCreateBase):
             self.add_note('Domain id does not match keystone user domain.')
             return False
 
-        return super(NewProject, self)._validate_domain()
+        return super(NewProjectAction, self)._validate_domain()
 
     def _validate_parent_project(self):
         if self.parent_id:

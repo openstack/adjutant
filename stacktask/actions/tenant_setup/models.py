@@ -17,6 +17,7 @@ from stacktask.actions.tenant_setup import serializers
 from django.conf import settings
 from stacktask.actions.user_store import IdentityManager
 from stacktask.actions import openstack_clients
+import six
 
 
 class NewDefaultNetworkAction(BaseAction):
@@ -356,6 +357,112 @@ class AddDefaultUsersToProjectAction(BaseAction):
         pass
 
 
+class SetProjectQuotaAction(BaseAction):
+    """ Updates quota for a given project to a configured quota level """
+
+    class ServiceQuotaFunctor(object):
+        def __call__(self, project_id, values):
+            self.client.quotas.update(
+                    project_id,
+                    **values)
+
+    class ServiceQuotaCinderFunctor(ServiceQuotaFunctor):
+        def __init__(self, region_name):
+            self.client = openstack_clients.get_cinderclient(
+                region=region_name)
+
+    class ServiceQuotaNovaFunctor(ServiceQuotaFunctor):
+        def __init__(self, region_name):
+            self.client = openstack_clients.get_novaclient(
+                region=region_name)
+
+    class ServiceQuotaNeutronFunctor(ServiceQuotaFunctor):
+        def __init__(self, region_name):
+            self.client = openstack_clients.get_neutronclient(
+                region=region_name)
+
+        def __call__(self, project_id, values):
+            body = {
+                'quota': values
+            }
+            self.client.update_quota(
+                    project_id,
+                    body)
+
+    _quota_updaters = {
+        'cinder': ServiceQuotaCinderFunctor,
+        'nova': ServiceQuotaNovaFunctor,
+        'neutron': ServiceQuotaNeutronFunctor
+    }
+
+    def _validate_project_exists(self):
+        if not self.project_id:
+            self.add_note('No project_id set, previous action should have '
+                          'set it.')
+            return False
+
+        id_manager = IdentityManager()
+        project = id_manager.get_project(self.project_id)
+        if not project:
+            self.add_note('Project with id %s does not exist.' %
+                          self.project_id)
+            return False
+        self.add_note('Project with id %s exists.' % self.project_id)
+        return True
+
+    def _pre_validate(self):
+        # Nothing to validate yet.
+        self.action.valid = True
+        self.action.save()
+
+    def _validate(self):
+        # Make sure the project id is valid and can be used
+        self.action.valid = (
+            self._validate_project_exists()
+        )
+        self.action.save()
+
+    def _pre_approve(self):
+        self._pre_validate()
+
+    def _post_approve(self):
+        # Assumption: another action has placed the project_id into the cache.
+        self.project_id = self.action.task.cache.get('project_id', None)
+        self._validate()
+
+        if not self.valid or self.action.state == "completed":
+            return
+
+        # update quota for each openstack service
+        regions_dict = settings.ACTION_SETTINGS.get(
+            'SetProjectQuotaAction', {}).get('regions', {})
+        for region_name, region_settings in six.iteritems(regions_dict):
+            quota_size = region_settings.get('quota_size')
+            quota_settings = settings.PROJECT_QUOTA_SIZES.get(quota_size, {})
+            if not quota_settings:
+                self.add_note(
+                    "Project quota not defined for size '%s' in region %s." % (
+                        quota_size, region_name))
+                continue
+            for service_name, values in six.iteritems(quota_settings):
+                updater_class = self._quota_updaters.get(service_name)
+                if not updater_class:
+                    self.add_note("No quota updater found for %s. Ignoring" %
+                                  service_name)
+                    continue
+                # functor for the service+region
+                service_functor = updater_class(region_name)
+                service_functor(self.project_id, values)
+            self.add_note("Project quota for region %s set to %s" % (
+                    region_name, quota_size))
+
+        self.action.state = "completed"
+        self.action.save()
+
+    def _submit(self, token_data):
+        pass
+
+
 action_classes = {
     'NewDefaultNetworkAction':
         (NewDefaultNetworkAction,
@@ -365,7 +472,10 @@ action_classes = {
          serializers.NewProjectDefaultNetworkSerializer),
     'AddDefaultUsersToProjectAction':
         (AddDefaultUsersToProjectAction,
-         serializers.AddDefaultUsersToProjectSerializer)
+         serializers.AddDefaultUsersToProjectSerializer),
+    'SetProjectQuotaAction':
+        (SetProjectQuotaAction,
+         serializers.SetProjectQuotaSerializer)
 }
 
 settings.ACTION_CLASSES.update(action_classes)

@@ -19,33 +19,63 @@ from keystoneauth1.identity import v3
 from keystoneauth1 import session
 from keystoneclient import client as ks_client
 
-from neutronclient.v2_0 import client as neutron_client
+from cinderclient import client as cinderclient
+from neutronclient.v2_0 import client as neutronclient
+from novaclient import client as novaclient
+
+# Defined for use locally
+DEFAULT_COMPUTE_VERSION = "2"
+DEFAULT_IDENTITY_VERSION = "3"
+DEFAULT_IMAGE_VERSION = "2"
+DEFAULT_METERING_VERSION = "2"
+DEFAULT_OBJECT_STORAGE_VERSION = "1"
+DEFAULT_ORCHESTRATION_VERSION = "1"
+DEFAULT_VOLUME_VERSION = "2"
+
+# Auth session shared by default with all clients
+client_auth_session = None
 
 
-def get_keystoneclient():
+def get_auth_session():
+    """ Returns a global auth session to be shared by all clients """
+    global client_auth_session
+    if not client_auth_session:
 
-    auth = v3.Password(
-        username=settings.KEYSTONE['username'],
-        password=settings.KEYSTONE['password'],
-        project_name=settings.KEYSTONE['project_name'],
-        auth_url=settings.KEYSTONE['auth_url'],
-        user_domain_id=settings.KEYSTONE.get('domain_id', "default"),
-        project_domain_id=settings.KEYSTONE.get('domain_id', "default"),
-    )
-    sess = session.Session(auth=auth)
-    auth = ks_client.Client(session=sess)
-    return auth
+        auth = v3.Password(
+            username=settings.KEYSTONE['username'],
+            password=settings.KEYSTONE['password'],
+            project_name=settings.KEYSTONE['project_name'],
+            auth_url=settings.KEYSTONE['auth_url'],
+            user_domain_id=settings.KEYSTONE.get('domain_id', "default"),
+            project_domain_id=settings.KEYSTONE.get('domain_id', "default"),
+        )
+        client_auth_session = session.Session(auth=auth)
+
+    return client_auth_session
+
+
+def get_keystoneclient(version=DEFAULT_IDENTITY_VERSION):
+    return ks_client.Client(
+        version,
+        session=get_auth_session())
 
 
 def get_neutronclient(region):
-    auth = v3.Password(
-        username=settings.KEYSTONE['username'],
-        password=settings.KEYSTONE['password'],
-        project_name=settings.KEYSTONE['project_name'],
-        auth_url=settings.KEYSTONE['auth_url'],
-        user_domain_id=settings.KEYSTONE.get('domain_id', "default"),
-        project_domain_id=settings.KEYSTONE.get('domain_id', "default"),
-    )
-    sess = session.Session(auth=auth)
-    neutron = neutron_client.Client(session=sess, region_name=region)
-    return neutron
+    # always returns neutron client v2
+    return neutronclient.Client(
+        session=get_auth_session(),
+        region_name=region)
+
+
+def get_novaclient(region, version=DEFAULT_COMPUTE_VERSION):
+    return novaclient.Client(
+        version,
+        session=get_auth_session(),
+        region_name=region)
+
+
+def get_cinderclient(region, version=DEFAULT_VOLUME_VERSION):
+    return cinderclient.Client(
+        version,
+        session=get_auth_session(),
+        region_name=region)

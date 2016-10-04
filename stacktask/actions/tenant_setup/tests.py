@@ -18,13 +18,40 @@ import mock
 
 from stacktask.actions.tenant_setup.models import (
     NewDefaultNetworkAction, NewProjectDefaultNetworkAction,
-    AddDefaultUsersToProjectAction)
+    AddDefaultUsersToProjectAction, SetProjectQuotaAction)
 from stacktask.api.models import Task
 from stacktask.api.v1 import tests
 from stacktask.api.v1.tests import FakeManager, setup_temp_cache
 
 
 neutron_cache = {}
+nova_cache = {}
+cinder_cache = {}
+
+
+class FakeOpenstackClient(object):
+    class Quotas(object):
+        """ Stub class for testing quotas """
+        def __init__(self, service):
+            self.service = service
+
+        def update(self, project_id, **kwargs):
+            self.service.update_quota(project_id, **kwargs)
+
+    def __init__(self, region, cache):
+        self.region = region
+        self._cache = cache
+        self.quotas = FakeOpenstackClient.Quotas(self)
+
+    def update_quota(self, project_id, **kwargs):
+        if self.region not in self._cache:
+            self._cache[self.region] = {}
+        if project_id not in self._cache[self.region]:
+            self._cache[self.region][project_id] = {
+                'quota': {}
+            }
+        quota = self._cache[self.region][project_id]['quota']
+        quota.update(kwargs)
 
 
 class FakeNeutronClient(object):
@@ -59,6 +86,16 @@ class FakeNeutronClient(object):
         router['router']['interface'] = body
         return router
 
+    def update_quota(self, project_id, body):
+        global neutron_cache
+        if project_id not in neutron_cache:
+            neutron_cache[project_id] = {}
+        if 'quota' not in neutron_cache[project_id]:
+            neutron_cache[project_id]['quota'] = {}
+
+        quota = neutron_cache[project_id]['quota']
+        quota.update(body['quota'])
+
 
 def setup_neutron_cache():
     global neutron_cache
@@ -66,12 +103,22 @@ def setup_neutron_cache():
         'i': 0,
         'networks': {},
         'subnets': {},
-        'routers': {}
+        'routers': {},
     }
 
 
 def get_fake_neutron(region):
     return FakeNeutronClient()
+
+
+def get_fake_novaclient(region):
+    global nova_cache
+    return FakeOpenstackClient(region, nova_cache)
+
+
+def get_fake_cinderclient(region):
+    global cinder_cache
+    return FakeOpenstackClient(region, cinder_cache)
 
 
 class ProjectSetupActionTests(TestCase):
@@ -523,3 +570,59 @@ class ProjectSetupActionTests(TestCase):
 
         project = tests.temp_cache['projects']['test_project']
         self.assertEquals(project.roles['user_id_0'], ['admin'])
+
+    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
+                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.' +
+        'openstack_clients.get_neutronclient',
+        get_fake_neutron)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.' +
+        'openstack_clients.get_novaclient',
+        get_fake_novaclient)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.' +
+        'openstack_clients.get_cinderclient',
+        get_fake_cinderclient)
+    def test_set_quota(self):
+        """
+        Base case, sets quota on all services of the cached project id.
+        """
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
+        setup_neutron_cache()
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+
+        task.cache = {'project_id': "test_project_id"}
+
+        action = SetProjectQuotaAction({}, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
+        # check the quotas were updated
+        # This relies on test_settings heavily.
+        cinderquota = cinder_cache['RegionOne']['test_project_id']['quota']
+        self.assertEquals(cinderquota['gigabytes'], 5000)
+        novaquota = nova_cache['RegionOne']['test_project_id']['quota']
+        self.assertEquals(novaquota['ram'], 65536)
+        neutronquota = neutron_cache['test_project_id']['quota']
+        self.assertEquals(neutronquota['network'], 3)
+
+        # RegionTwo, cinder only
+        self.assertFalse('RegionTwo' in nova_cache)
+        r2_cinderquota = cinder_cache['RegionTwo']['test_project_id']['quota']
+        self.assertEquals(r2_cinderquota['gigabytes'], 73571)
+        self.assertEquals(r2_cinderquota['snapshots'], 73572)
+        self.assertEquals(r2_cinderquota['volumes'], 73573)

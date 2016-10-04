@@ -127,11 +127,12 @@ TASK_SETTINGS:
         # default_actions:
         #     - NewProjectAction
         #
-        # Additonal actions for views
+        # Additional actions for views
         # These will run after the default actions, in the given order.
         additional_actions:
             - AddDefaultUsersToProjectAction
             - NewProjectDefaultNetworkAction
+            - SetProjectQuotaAction
         notifications:
             standard:
                 EmailNotification:
@@ -222,6 +223,10 @@ ACTION_SETTINGS:
             - admin
         default_roles:
             - admin
+    SetProjectQuotaAction:
+        regions:
+            RegionOne:
+                quota_size: small
 
 # mapping between roles and managable roles
 ROLES_MAPPING:
@@ -239,3 +244,30 @@ ROLES_MAPPING:
         - project_mod
         - heat_stack_owner
         - _member_
+
+PROJECT_QUOTA_SIZES:
+    small:
+        nova:
+            instances: 10
+            cores: 20
+            ram: 65536
+            floating_ips: 10
+            fixed_ips: 0
+            metadata_items: 128
+            injected_files: 5
+            injected_file_content_bytes: 10240
+            key_pairs: 50
+            security_groups: 20
+            security_group_rules: 100
+        cinder:
+            gigabytes: 5000
+            snapshots: 50
+            volumes: 20
+        neutron:
+            floatingip: 10
+            network: 3
+            port: 50
+            router: 3
+            security_group: 20
+            security_group_rule: 100
+            subnet: 3

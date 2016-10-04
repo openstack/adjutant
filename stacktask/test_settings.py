@@ -173,7 +173,7 @@ ACTION_SETTINGS = {
             'public_network': '3cb50f61-5bce-4c03-96e6-8e262e12bb35',
             'router_name': 'somerouter',
             'subnet_name': 'somesubnet'
-        }
+        },
     },
     'AddDefaultUsersToProjectAction': {
         'default_users': [
@@ -182,7 +182,17 @@ ACTION_SETTINGS = {
         'default_roles': [
             'admin',
         ],
-    }
+    },
+    'SetProjectQuotaAction': {
+        'regions': {
+            'RegionOne': {
+                'quota_size': 'small'
+            },
+            'RegionTwo': {
+                'quota_size': 'large'
+            }
+        },
+    },
 
 }
 
@@ -196,6 +206,45 @@ ROLES_MAPPING = {
     'project_mod': [
         '_member_', 'heat_stack_owner'
     ],
+}
+
+PROJECT_QUOTA_SIZES = {
+    'small': {
+        'nova': {
+            'instances': 10,
+            'cores': 20,
+            'ram': 65536,
+            'floating_ips': 10,
+            'fixed_ips': 0,
+            'metadata_items': 128,
+            'injected_files': 5,
+            'injected_file_content_bytes': 10240,
+            'key_pairs': 50,
+            'security_groups': 20,
+            'security_group_rules': 100,
+        },
+        'cinder': {
+            'gigabytes': 5000,
+            'snapshots': 50,
+            'volumes': 20,
+        },
+        'neutron': {
+            'floatingip': 10,
+            'network': 3,
+            'port': 50,
+            'router': 3,
+            'security_group': 20,
+            'security_group_rule': 100,
+            'subnet': 3,
+        },
+    },
+    'large': {
+        'cinder': {
+            'gigabytes': 73571,
+            'snapshots': 73572,
+            'volumes': 73573,
+        },
+    },
 }
 
 SHOW_ACTION_ENDPOINTS = True
@@ -216,5 +265,6 @@ conf_dict = {
     "TOKEN_SUBMISSION_URL": TOKEN_SUBMISSION_URL,
     "TOKEN_EXPIRE_TIME": TOKEN_EXPIRE_TIME,
     "ROLES_MAPPING": ROLES_MAPPING,
-    "SHOW_ACTION_ENDPOINTS": SHOW_ACTION_ENDPOINTS
+    "PROJECT_QUOTA_SIZES": PROJECT_QUOTA_SIZES,
+    "SHOW_ACTION_ENDPOINTS": SHOW_ACTION_ENDPOINTS,
 }

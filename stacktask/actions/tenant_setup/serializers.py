@@ -28,3 +28,7 @@ class NewProjectDefaultNetworkSerializer(serializers.Serializer):
 
 class AddDefaultUsersToProjectSerializer(serializers.Serializer):
     domain_id = serializers.CharField(max_length=64, default='default')
+
+
+class SetProjectQuotaSerializer(serializers.Serializer):
+    pass
