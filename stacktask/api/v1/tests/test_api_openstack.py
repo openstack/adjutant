@@ -157,3 +157,41 @@ class OpenstackAPITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(user.password, 'new_test_password')
+
+    @mock.patch(
+        'stacktask.actions.models.user_store.IdentityManager', FakeManager)
+    def test_remove_user_role(self):
+        """ Remove all roles on a user from our project """
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {'user_id_1': ['_member_']}
+
+        user1 = mock.Mock()
+        user1.id = 'user_id_1'
+        user1.name = 'test@example.com'
+        user1.password = 'testpassword'
+        user1.email = 'test@example.com'
+
+        setup_temp_cache(
+            {'test_project': project},
+            {'user_id_1': user1})
+
+        admin_headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        # admins removes role from the test user
+        url = "/v1/openstack/users/%s/roles" % user1.id
+        data = {'roles': ["_member_"]}
+        response = self.client.delete(url, data,
+                                      format='json', headers=admin_headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data,
+                         {'notes': ['Task completed successfully.']})

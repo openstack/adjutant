@@ -67,6 +67,9 @@ def send_email(task, email_conf, token=None):
             emails.add(email)
             actions[unicode(act)] = act
 
+    if not emails:
+        return
+
     if len(emails) > 1:
         notes = {
             'errors':
