@@ -293,6 +293,5 @@ class SignUp(tasks.CreateProject):
         """
         return Response(status=404)
 
-    @utils.admin
     def post(self, request, format=None):
         return super(SignUp, self).post(request)

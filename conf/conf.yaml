@@ -64,6 +64,7 @@ ACTIVE_TASKVIEWS:
     - UserSetPassword
     - UserList
     - RoleList
+    - SignUp
 
 DEFAULT_TASK_SETTINGS:
     emails:
