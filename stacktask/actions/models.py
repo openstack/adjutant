@@ -93,7 +93,7 @@ class BaseAction(object):
         Sets up required data as fields.
         """
 
-        self.logger = getLogger('django.request')
+        self.logger = getLogger('stacktask')
 
         for field in self.required:
             field_data = data[field]
@@ -172,11 +172,90 @@ class BaseAction(object):
         return self.__class__.__name__
 
 
-class UserAction(BaseAction):
-    """
-    Base action for dealing with users.
-    Contains role utility functions.
-    """
+class ResourceMixin(object):
+    """Base Mixin class for dealing with Openstack resources."""
+
+    def _validate_keystone_user(self):
+        keystone_user = self.action.task.keystone_user
+
+        if keystone_user['project_domain_id'] != self.domain_id:
+            self.add_note('Domain id does not match keystone user domain.')
+            return False
+
+        if keystone_user['project_id'] != self.project_id:
+            self.add_note('Project id does not match keystone user project.')
+            return False
+        return True
+
+    def _validate_domain_id(self):
+        id_manager = user_store.IdentityManager()
+        domain = id_manager.get_domain(self.domain_id)
+        if not domain:
+            self.add_note('Domain does not exist.')
+            return False
+
+        return True
+
+    def _validate_project_id(self):
+        # Handle an edge_case where some actions set their
+        # own project_id value.
+        if not self.project_id:
+            self.add_note('No project_id given.')
+            return False
+
+        # Now actually check the project exists.
+        id_manager = user_store.IdentityManager()
+        project = id_manager.get_project(self.project_id)
+        if not project:
+            self.add_note('Project with id %s does not exist.' %
+                          self.project_id)
+            return False
+        self.add_note('Project with id %s exists.' % self.project_id)
+        return True
+
+    def _validate_domain_name(self):
+        id_manager = user_store.IdentityManager()
+
+        self.domain = id_manager.find_domain(self.domain_name)
+        if not self.domain:
+            self.add_note('Domain does not exist.')
+            return False
+        return True
+
+
+class UserMixin(ResourceMixin):
+    """Mixin with functions for users."""
+
+    def _validate_username_exists(self):
+        id_manager = user_store.IdentityManager()
+
+        self.user = id_manager.find_user(self.username, self.domain.id)
+        if not self.user:
+            self.add_note('No user present with username')
+            return False
+        return True
+
+    def _grant_roles(self, user, roles, project_id):
+        id_manager = user_store.IdentityManager()
+        ks_roles = []
+        for role in roles:
+            ks_role = id_manager.find_role(role)
+            if ks_role:
+                ks_roles.append(ks_role)
+            else:
+                raise TypeError("Keystone missing role: %s" % role)
+
+        for role in ks_roles:
+            id_manager.add_user_role(user, role, project_id)
+
+    def _validate_role_permissions(self):
+        keystone_user = self.action.task.keystone_user
+        # Role permissions check
+        if not self.are_roles_managable(user_roles=keystone_user['roles'],
+                                        requested_roles=self.roles):
+            self.add_note('User does not have permission to edit role(s).')
+            return False
+        return True
 
     def are_roles_managable(self, user_roles=[], requested_roles=[]):
         requested_roles = set(requested_roles)
@@ -192,7 +271,52 @@ class UserAction(BaseAction):
         return intersection == requested_roles
 
 
-class UserIdAction(UserAction):
+class ProjectMixin(ResourceMixin):
+    """Mixin with functions for projects."""
+
+    def _validate_parent_project(self):
+        id_manager = user_store.IdentityManager()
+        # NOTE(adriant): If parent id is None, Keystone defaults to the domain.
+        # So we only care to validate if parent_id is not None.
+        if self.parent_id:
+            parent = id_manager.get_project(self.parent_id)
+            if not parent:
+                self.add_note("Parent id: '%s' does not exist." %
+                              self.project_name)
+                return False
+        return True
+
+    def _validate_project_absent(self):
+        id_manager = user_store.IdentityManager()
+        project = id_manager.find_project(
+            self.project_name, self.domain_id)
+        if project:
+            self.add_note("Existing project with name '%s'." %
+                          self.project_name)
+            return False
+
+        self.add_note("No existing project with name '%s'." %
+                      self.project_name)
+        return True
+
+    def _create_project(self):
+        id_manager = user_store.IdentityManager()
+        try:
+            project = id_manager.create_project(
+                self.project_name, created_on=str(timezone.now()),
+                parent=self.parent_id, domain=self.domain_id)
+        except Exception as e:
+            self.add_note(
+                "Error: '%s' while creating project: %s" %
+                (e, self.project_name))
+            raise
+        # put project_id into action cache:
+        self.action.task.cache['project_id'] = project.id
+        self.set_cache('project_id', project.id)
+        self.add_note("New project '%s' created." % project.name)
+
+
+class UserIdAction(BaseAction):
 
     def _get_target_user(self):
         """
@@ -202,10 +326,9 @@ class UserIdAction(UserAction):
         user = id_manager.get_user(self.user_id)
 
         return user
-    pass
 
 
-class UserNameAction(UserAction):
+class UserNameAction(BaseAction):
     """
     Base action for dealing with users. Removes username if
     USERNAME_IS_EMAIL and sets email to be username.
@@ -236,7 +359,7 @@ class UserNameAction(UserAction):
         return user
 
 
-class NewUserAction(UserNameAction):
+class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
     """
     Setup a new user with a role on the given project.
     Creates the user if they don't exist, otherwise
@@ -252,59 +375,29 @@ class NewUserAction(UserNameAction):
         'domain_id',
     ]
 
-    def _validate(self):
+    def _validate_targer_user(self):
         id_manager = user_store.IdentityManager()
 
-        # Default state is invalid
-        self.action.valid = False
-
-        keystone_user = self.action.task.keystone_user
-
-        if keystone_user['project_domain_id'] != self.domain_id:
-            self.add_note('Domain id does not match keystone user domain.')
-            return
-
-        if keystone_user['project_id'] != self.project_id:
-            self.add_note('Project id does not match keystone user project.')
-            return
-
-        # Role permissions check
-        if not self.are_roles_managable(user_roles=keystone_user['roles'],
-                                        requested_roles=self.roles):
-            self.add_note('User does not have permission to edit role(s).')
-            return
-
-        domain = id_manager.get_domain(self.domain_id)
-        if not domain:
-            self.add_note('Domain does not exist.')
-            return
-
-        project = id_manager.get_project(self.project_id)
-        if not project:
-            self.add_note('Project does not exist.')
-            return
-
-        # Get target user
+        # check if user exists and is valid
+        # this may mean we need a token.
         user = self._get_target_user()
         if not user:
             self.action.need_token = True
             self.set_token_fields(["password"])
             self.add_note(
                 'No user present with username. Need to create new user.')
-            self.action.valid = True
-            return
-
+            return True
         if user.email != self.email:
             self.add_note(
                 'Found matching username, but email did not match.' +
                 'Reporting as invalid.')
-            return
+            return False
 
-        roles = id_manager.get_roles(user, project)
-        roles = {role.name for role in roles}
-        missing = set(self.roles) - roles
+        # role_validation
+        roles = id_manager.get_roles(user, self.project_id)
+        role_names = {role.name for role in roles}
+        missing = set(self.roles) - role_names
         if not missing:
-            self.action.valid = True
             self.action.need_token = False
             self.action.state = "complete"
             self.add_note(
@@ -312,24 +405,32 @@ class NewUserAction(UserNameAction):
             )
         else:
             self.roles = list(missing)
-            self.action.valid = True
             self.action.need_token = True
             self.set_token_fields(["confirm"])
             self.action.state = "existing"
             self.add_note(
                 'Existing user with matching email missing roles.')
 
+        return True
+
+    def _validate(self):
+        self.action.valid = (
+            self._validate_role_permissions() and
+            self._validate_keystone_user() and
+            self._validate_domain_id() and
+            self._validate_project_id() and
+            self._validate_targer_user()
+            )
+        self.action.save()
+
     def _pre_approve(self):
         self._validate()
-        self.action.save()
 
     def _post_approve(self):
         self._validate()
-        self.action.save()
 
     def _submit(self, token_data):
         self._validate()
-        self.action.save()
 
         if not self.valid:
             return
@@ -339,21 +440,12 @@ class NewUserAction(UserNameAction):
         if self.action.state == "default":
             # default action: Create a new user in the tenant and add roles
             try:
-                roles = []
-                for role in self.roles:
-                    ks_role = id_manager.find_role(role)
-                    if ks_role:
-                        roles.append(ks_role)
-                    else:
-                        raise TypeError("Keystone missing role: %s" % role)
-
                 user = id_manager.create_user(
                     name=self.username, password=token_data['password'],
                     email=self.email, domain=self.domain_id,
                     created_on=str(timezone.now()))
 
-                for role in roles:
-                    id_manager.add_user_role(user, role, self.project_id)
+                self._grant_roles(user, self.roles, self.project_id)
             except Exception as e:
                 self.add_note(
                     "Error: '%s' while creating user: %s with roles: %s" %
@@ -368,12 +460,7 @@ class NewUserAction(UserNameAction):
             try:
                 user = id_manager.find_user(self.username, self.domain_id)
 
-                roles = []
-                for role in self.roles:
-                    roles.append(id_manager.find_role(role))
-
-                for role in roles:
-                    id_manager.add_user_role(user, role, self.project_id)
+                self._grant_roles(user, self.roles, self.project_id)
             except Exception as e:
                 self.add_note(
                     "Error: '%s' while attaching user: %s with roles: %s" %
@@ -390,70 +477,8 @@ class NewUserAction(UserNameAction):
                 % (self.username, self.roles, self.project_id))
 
 
-class ProjectCreateBase(object):
-    """Mixin with functions for project creation."""
-
-    def _validate_domain(self):
-        domain = self.id_manager.get_domain(self.domain_id)
-        if not domain:
-            self.add_note('Domain does not exist.')
-            return False
-
-        return True
-
-    def _validate_parent_project(self):
-        # NOTE(adriant): If parent id is None, Keystone defaults to the domain.
-        # So we only care to validate if parent_id is not None.
-        if self.parent_id:
-            parent = self.id_manager.get_project(self.parent_id)
-            if not parent:
-                self.add_note("Parent id: '%s' does not exist." %
-                              self.project_name)
-                return False
-        return True
-
-    def _validate_project(self):
-        project = self.id_manager.find_project(
-            self.project_name, self.domain_id)
-        if project:
-            self.add_note("Existing project with name '%s'." %
-                          self.project_name)
-            return False
-
-        self.add_note("No existing project with name '%s'." %
-                      self.project_name)
-        return True
-
-    def _create_project(self):
-        try:
-            project = self.id_manager.create_project(
-                self.project_name, created_on=str(timezone.now()),
-                parent=self.parent_id, domain=self.domain_id)
-        except Exception as e:
-            self.add_note(
-                "Error: '%s' while creating project: %s" %
-                (e, self.project_name))
-            raise
-        # put project_id into action cache:
-        self.action.task.cache['project_id'] = project.id
-        self.set_cache('project_id', project.id)
-        self.add_note("New project '%s' created." % project.name)
-
-    def _grant_roles(self, user, roles, project_id):
-        ks_roles = []
-        for role in roles:
-            ks_role = self.id_manager.find_role(role)
-            if ks_role:
-                ks_roles.append(ks_role)
-            else:
-                raise TypeError("Keystone missing role: %s" % role)
-
-        for role in ks_roles:
-            self.id_manager.add_user_role(user, role, project_id)
-
-
 # TODO(adriant): Write tests for this action.
-class NewProjectAction(BaseAction, ProjectCreateBase):
+class NewProjectAction(BaseAction, ProjectMixin, UserMixin):
     """
     Creates a new project for the current keystone_user.
 
@@ -468,23 +493,22 @@ class NewProjectAction(BaseAction, ProjectCreateBase):
 
     def __init__(self, *args, **kwargs):
         super(NewProjectAction, self).__init__(*args, **kwargs)
-        self.id_manager = user_store.IdentityManager()
 
     def _validate(self):
         self.action.valid = (
-            self._validate_domain() and
+            self._validate_domain_id() and
             self._validate_parent_project() and
-            self._validate_project())
+            self._validate_project_absent())
         self.action.save()
 
-    def _validate_domain(self):
+    def _validate_domain_id(self):
         keystone_user = self.action.task.keystone_user
 
         if keystone_user['project_domain_id'] != self.domain_id:
             self.add_note('Domain id does not match keystone user domain.')
             return False
 
-        return super(NewProjectAction, self)._validate_domain()
+        return super(NewProjectAction, self)._validate_domain_id()
 
     def _validate_parent_project(self):
         if self.parent_id:
@@ -525,7 +549,8 @@ class NewProjectAction(BaseAction, ProjectCreateBase):
             keystone_user = self.action.task.keystone_user
 
             try:
-                user = self.id_manager.get_user(keystone_user['user_id'])
+                id_manager = user_store.IdentityManager()
+                user = id_manager.get_user(keystone_user['user_id'])
 
                 self._grant_roles(user, default_roles, project_id)
             except Exception as e:
@@ -550,7 +575,7 @@ class NewProjectAction(BaseAction, ProjectCreateBase):
         pass
 
 
-class NewProjectWithUserAction(UserNameAction, ProjectCreateBase):
+class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
     """
     Makes a new project for the given username. Will create the user if it
     doesn't exists.
@@ -566,18 +591,18 @@ class NewProjectWithUserAction(UserNameAction, ProjectCreateBase):
 
     def __init__(self, *args, **kwargs):
         super(NewProjectWithUserAction, self).__init__(*args, **kwargs)
-        self.id_manager = user_store.IdentityManager()
 
     def _validate(self):
         self.action.valid = (
-            self._validate_domain() and
+            self._validate_domain_id() and
             self._validate_parent_project() and
-            self._validate_project() and
+            self._validate_project_absent() and
             self._validate_user())
         self.action.save()
 
     def _validate_user(self):
-        user = self.id_manager.find_user(self.username, self.domain_id)
+        id_manager = user_store.IdentityManager()
+        user = id_manager.find_user(self.username, self.domain_id)
 
         if user:
             if user.email == self.email:
@@ -630,9 +655,9 @@ class NewProjectWithUserAction(UserNameAction, ProjectCreateBase):
             self.add_note("Project already created.")
         else:
             self.action.valid = (
-                self._validate_domain() and
+                self._validate_domain_id() and
                 self._validate_parent_project() and
-                self._validate_project())
+                self._validate_project_absent())
             self.action.save()
 
             if not self.valid:
@@ -640,6 +665,7 @@ class NewProjectWithUserAction(UserNameAction, ProjectCreateBase):
 
             self._create_project()
 
+        # User validation and checks
         user_id = self.get_cache('user_id')
         if user_id:
             self.action.task.cache['user_id'] = user_id
@@ -651,53 +677,57 @@ class NewProjectWithUserAction(UserNameAction, ProjectCreateBase):
             if not self.valid:
                 return
 
-            default_roles = settings.ACTION_SETTINGS.get(
-                'NewProjectAction', {}).get("default_roles", {})
+            self._create_user_for_project()
 
-            project_id = self.get_cache('project_id')
+    def _create_user_for_project(self):
+        id_manager = user_store.IdentityManager()
+        default_roles = settings.ACTION_SETTINGS.get(
+            'NewProjectAction', {}).get("default_roles", {})
 
-            if self.action.state == "default":
-                try:
-                    # Generate a temporary password:
-                    password = uuid4().hex + uuid4().hex
+        project_id = self.get_cache('project_id')
 
-                    user = self.id_manager.create_user(
-                        name=self.username, password=password,
-                        email=self.email, domain=self.domain_id,
-                        created_on=str(timezone.now()))
+        if self.action.state == "default":
+            try:
+                # Generate a temporary password:
+                password = uuid4().hex + uuid4().hex
 
-                    self._grant_roles(user, default_roles, project_id)
-                except Exception as e:
-                    self.add_note(
-                        "Error: '%s' while creating user: %s with roles: %s" %
-                        (e, self.username, default_roles))
-                    raise
+                user = id_manager.create_user(
+                    name=self.username, password=password,
+                    email=self.email, domain=self.domain_id,
+                    created_on=str(timezone.now()))
 
-                # put user_id into action cache:
-                self.action.task.cache['user_id'] = user.id
-                self.set_cache('user_id', user.id)
+                self._grant_roles(user, default_roles, project_id)
+            except Exception as e:
                 self.add_note(
-                    "New user '%s' created for project %s with roles: %s" %
-                    (self.username, project_id, default_roles))
-            elif self.action.state == "existing":
-                try:
-                    user = self.id_manager.find_user(
-                        self.username, self.domain_id)
+                    "Error: '%s' while creating user: %s with roles: %s" %
+                    (e, self.username, default_roles))
+                raise
 
-                    self._grant_roles(user, default_roles, project_id)
-                except Exception as e:
-                    self.add_note(
-                        "Error: '%s' while attaching user: %s with roles: %s" %
-                        (e, self.username, default_roles))
-                    raise
+            # put user_id into action cache:
+            self.action.task.cache['user_id'] = user.id
+            self.set_cache('user_id', user.id)
+            self.add_note(
+                "New user '%s' created for project %s with roles: %s" %
+                (self.username, project_id, default_roles))
+        elif self.action.state == "existing":
+            try:
+                user = id_manager.find_user(
+                    self.username, self.domain_id)
 
-                # put user_id into action cache:
-                self.action.task.cache['user_id'] = user.id
-                self.set_cache('user_id', user.id)
-                self.add_note(("Existing user '%s' attached to project %s" +
-                              " with roles: %s")
-                              % (self.username, project_id,
-                                 default_roles))
+                self._grant_roles(user, default_roles, project_id)
+            except Exception as e:
+                self.add_note(
+                    "Error: '%s' while attaching user: %s with roles: %s" %
+                    (e, self.username, default_roles))
+                raise
+
+            # put user_id into action cache:
+            self.action.task.cache['user_id'] = user.id
+            self.set_cache('user_id', user.id)
+            self.add_note(("Existing user '%s' attached to project %s" +
+                          " with roles: %s")
+                          % (self.username, project_id,
+                             default_roles))
 
     def _submit(self, token_data):
         """
@@ -716,11 +746,12 @@ class NewProjectWithUserAction(UserNameAction, ProjectCreateBase):
         self.action.task.cache['project_id'] = project_id
         user_id = self.get_cache('user_id')
         self.action.task.cache['user_id'] = user_id
+        id_manager = user_store.IdentityManager()
 
         if self.action.state == "default":
-            user = self.id_manager.get_user(user_id)
+            user = id_manager.get_user(user_id)
             try:
-                self.id_manager.update_user_password(
+                id_manager.update_user_password(
                     user, token_data['password'])
             except Exception as e:
                 self.add_note(
@@ -736,7 +767,8 @@ class NewProjectWithUserAction(UserNameAction, ProjectCreateBase):
                     user_id, project_id))
 
 
-class ResetUserAction(UserNameAction):
+# TODO: rename to ResetUserPasswordAction
+class ResetUserAction(UserNameAction, UserMixin):
     """
     Simple action to reset a password for a given user.
     """
@@ -753,21 +785,10 @@ class ResetUserAction(UserNameAction):
     blacklist = settings.ACTION_SETTINGS.get(
         'ResetUserAction', {}).get("blacklisted_roles", {})
 
-    def _validate(self):
+    def _validate_user_roles(self):
         id_manager = user_store.IdentityManager()
 
-        self.domain = id_manager.find_domain(self.domain_name)
-        if not self.domain:
-            self.add_note('Domain does not exist.')
-            return False
-
         self.user = id_manager.find_user(self.username, self.domain.id)
-
-        if not self.user:
-            valid = False
-            self.add_note('No user present with username')
-            return valid
-
         roles = id_manager.get_all_roles(self.user)
 
         user_roles = []
@@ -775,36 +796,41 @@ class ResetUserAction(UserNameAction):
             user_roles.extend(role.name for role in roles)
 
         if set(self.blacklist) & set(user_roles):
-            valid = False
             self.add_note('Cannot reset users with blacklisted roles.')
-        elif self.user.email == self.email:
-            valid = True
+            return False
+
+        if self.user.email == self.email:
             self.action.need_token = True
             self.set_token_fields(["password"])
             self.add_note('Existing user with matching email.')
+            return True
         else:
-            valid = False
             self.add_note('Existing user with non-matching email.')
+            return False
 
-        return valid
+    def _validate(self):
+        # Here, the order of validation matters
+        # as each one adds new class variables
+        self.action.valid = (
+            self._validate_domain_name() and
+            self._validate_username_exists() and
+            self._validate_user_roles()
+            )
+        self.action.save()
 
     def _pre_approve(self):
-        self.action.valid = self._validate()
-        self.action.save()
+        self._validate()
 
     def _post_approve(self):
-        self.action.valid = self._validate()
-        self.action.save()
+        self._validate()
 
     def _submit(self, token_data):
-        self.action.valid = self._validate()
-        self.action.save()
+        self._validate()
 
         if not self.valid:
             return
 
         id_manager = user_store.IdentityManager()
-
         try:
             id_manager.update_user_password(self.user, token_data['password'])
         except Exception as e:
@@ -815,7 +841,7 @@ class ResetUserAction(UserNameAction):
         self.add_note('User %s password has been changed.' % self.username)
 
 
-class EditUserRolesAction(UserIdAction):
+class EditUserRolesAction(UserIdAction, ProjectMixin, UserMixin):
     """
     A class for adding or removing roles
     on a user for the given project.
@@ -829,89 +855,64 @@ class EditUserRolesAction(UserIdAction):
         'remove'
     ]
 
-    def _validate(self):
-        id_manager = user_store.IdentityManager()
-
-        keystone_user = self.action.task.keystone_user
-
-        if keystone_user['project_domain_id'] != self.domain_id:
-            self.add_note('Domain id does not match keystone user domain.')
-            self.action.valid = False
-            return
-
-        domain = id_manager.get_domain(self.domain_id)
-        if not domain:
-            self.add_note('Domain does not exist.')
-            self.action.valid = False
-            return
-
-        # TODO: This is potentially too limiting and could be changed into
-        # an auth check. Perhaps just allowing 'admin' role users is enough.
-        if not keystone_user['project_id'] == self.project_id:
-            self.add_note('Project id does not match keystone user project.')
-            self.action.valid = False
-            return
-
-        # Role permissions check
-        if not self.are_roles_managable(user_roles=keystone_user['roles'],
-                                        requested_roles=self.roles):
-            self.add_note('User does not have permission to edit role(s).')
-            self.action.valid = False
-            return
-
-        project = id_manager.get_project(self.project_id)
-        if not project:
-            self.add_note('Project does not exist.')
-            self.action.valid = False
-            return
-
+    def _validate_target_user(self):
         # Get target user
         user = self._get_target_user()
         if not user:
             self.add_note('No user present with user_id')
-            self.action.valid = False
-            return
+            return False
+        return True
 
+    def _validate_user_roles(self):
+        id_manager = user_store.IdentityManager()
+        user = self._get_target_user()
+        project = id_manager.get_project(self.project_id)
+        # user roles
         current_roles = id_manager.get_roles(user, project)
         current_role_names = {role.name for role in current_roles}
         if self.remove:
             remaining = set(current_role_names) & set(self.roles)
             if not remaining:
-                self.action.valid = True
                 self.action.state = "complete"
                 self.add_note(
-                    "User doesn't have roles."
-                )
+                    "User doesn't have roles to remove.")
             else:
                 self.roles = list(remaining)
-                self.action.valid = True
                 self.add_note(
                     'User has roles to remove.')
         else:
             missing = set(self.roles) - set(current_role_names)
             if not missing:
-                self.action.valid = True
                 self.action.state = "complete"
                 self.add_note(
-                    'User already has roles.'
-                )
+                    'User already has roles.')
             else:
                 self.roles = list(missing)
-                self.action.valid = True
                 self.add_note(
                     'User user missing roles.')
+        # All paths are valid here
+        # We've just set state and roles that need to be changed.
+        return True
+
+    def _validate(self):
+        self.action.valid = (
+            self._validate_keystone_user() and
+            self._validate_role_permissions() and
+            self._validate_domain_id() and
+            self._validate_project_id() and
+            self._validate_target_user() and
+            self._validate_user_roles()
+            )
+        self.action.save()
 
     def _pre_approve(self):
         self._validate()
-        self.action.save()
 
     def _post_approve(self):
         self._validate()
-        self.action.save()
 
     def _submit(self, token_data):
         self._validate()
-        self.action.save()
 
         if not self.valid:
             return

@@ -59,32 +59,37 @@ def setup_temp_cache(projects, users):
     }
 
 
-class FakeProject():
-
-    def __init__(self, project):
-        self.id = project.id
-        self.name = project.name
-        self.roles = project.roles
-
-    def list_users(self):
-        global temp_cache
-        usernames = []
-        for username, roles in self.roles.iteritems():
-            if roles:
-                usernames.append(username)
-        users = []
-        for user in temp_cache['users'].values():
-            if user.name in usernames:
-                users.append(user)
-        return users
-
-
 class FakeManager(object):
 
-    def find_user(self, name, domain_id):
+    def _project_from_id(self, project):
+        if isinstance(project, mock.Mock):
+            return project
+        else:
+            return self.get_project(project)
+
+    def _role_from_id(self, role):
+        if isinstance(role, mock.Mock):
+            return role
+        else:
+            return self.get_role(role)
+
+    def _user_from_id(self, user):
+        if isinstance(user, mock.Mock):
+            return user
+        else:
+            return self.get_user(user)
+
+    def _domain_from_id(self, domain):
+        if isinstance(domain, mock.Mock):
+            return domain
+        else:
+            return self.get_domain(domain)
+
+    def find_user(self, name, domain):
+        domain = self._domain_from_id(domain)
         global temp_cache
         for user in temp_cache['users'].values():
-            if user.name == name and user.domain == domain_id:
+            if user.name == name and user.domain == domain.id:
                 return user
         return None
 
@@ -93,6 +98,7 @@ class FakeManager(object):
         return temp_cache['users'].get(user_id, None)
 
     def list_users(self, project):
+        project = self._project_from_id(project)
         global temp_cache
         roles = temp_cache['projects'][project.name].roles
         users = []
@@ -109,6 +115,8 @@ class FakeManager(object):
 
     def create_user(self, name, password, email, created_on,
                     domain='default', default_project=None):
+        domain = self._project_from_id(domain)
+        default_project = self._project_from_id(default_project)
         global temp_cache
         user = mock.Mock()
         user.id = "user_id_%s" % int(temp_cache['i'])
@@ -123,8 +131,7 @@ class FakeManager(object):
         return user
 
     def update_user_password(self, user, password):
-        global temp_cache
-        user = temp_cache['users'][user.id]
+        user = self._user_from_id(user)
         user.password = password
 
     def find_role(self, name):
@@ -136,7 +143,8 @@ class FakeManager(object):
         return None
 
     def get_roles(self, user, project):
-        global temp_cache
+        user = self._user_from_id(user)
+        project = self._project_from_id(project)
         try:
             roles = []
             for role in project.roles[user.id]:
@@ -148,6 +156,7 @@ class FakeManager(object):
             return []
 
     def get_all_roles(self, user):
+        user = self._user_from_id(user)
         global temp_cache
         projects = {}
         for project in temp_cache['projects'].values():
@@ -159,24 +168,29 @@ class FakeManager(object):
 
         return projects
 
-    def add_user_role(self, user, role, project_id):
-        project = self.get_project(project_id)
+    def add_user_role(self, user, role, project):
+        user = self._user_from_id(user)
+        role = self._role_from_id(role)
+        project = self._project_from_id(project)
         try:
             project.roles[user.id].append(role.name)
         except KeyError:
             project.roles[user.id] = [role.name]
 
-    def remove_user_role(self, user, role, project_id):
-        project = self.get_project(project_id)
+    def remove_user_role(self, user, role, project):
+        user = self._user_from_id(user)
+        role = self._role_from_id(role)
+        project = self._project_from_id(project)
         try:
             project.roles[user.id].remove(role.name)
         except KeyError:
             pass
 
-    def find_project(self, project_name, domain_id):
+    def find_project(self, project_name, domain):
+        domain = self._domain_from_id(domain)
         global temp_cache
         for project in temp_cache['projects'].values():
-            if project.name == project_name and project.domain == domain_id:
+            if project.name == project_name and project.domain == domain.id:
                 return project
         return None
 
@@ -184,10 +198,11 @@ class FakeManager(object):
         global temp_cache
         for project in temp_cache['projects'].values():
             if project.id == project_id:
-                return FakeProject(project)
+                return project
 
     def create_project(self, project_name, created_on, parent=None,
                        domain='default', p_id=None):
+        parent = self._project_from_id(parent)
         global temp_cache
         project = mock.Mock()
         if p_id:

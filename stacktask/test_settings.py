@@ -37,15 +37,20 @@ LOGGING = {
         },
     },
     'loggers': {
+        'stacktask': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
         'django': {
             'handlers': ['file'],
             'level': 'INFO',
-            'propagate': True,
+            'propagate': False,
         },
         'keystonemiddleware': {
             'handlers': ['file'],
             'level': 'INFO',
-            'propagate': True,
+            'propagate': False,
         },
     },
 }

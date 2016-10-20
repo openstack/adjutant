@@ -219,6 +219,135 @@ class ActionTests(TestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
+    def test_new_user_wrong_project(self):
+        """
+        Existing user, valid project, project does not match keystone user.
+
+        Action should be invalid.
+        """
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+
+        project = mock.Mock()
+        project.id = 'test_project_id_1'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {user.id: ['_member_']}
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={
+                'roles': ['project_mod'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
+
+        data = {
+            'email': 'test@example.com',
+            'project_id': 'test_project_id_1',
+            'roles': ['_member_'],
+            'domain_id': 'default',
+        }
+
+        action = NewUserAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, False)
+
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
+    def test_new_user_only_member(self):
+        """
+        Existing user, valid project, no edit permissions.
+
+        Action should be invalid.
+        """
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {user.id: ['_member_']}
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={
+                'roles': ['_member_'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
+
+        data = {
+            'email': 'test@example.com',
+            'project_id': 'test_project_id',
+            'roles': ['_member_'],
+            'domain_id': 'default',
+        }
+
+        action = NewUserAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertFalse(action.valid)
+
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
+    def test_new_user_wrong_domain(self):
+        """
+        Existing user, valid project, invalid domain.
+
+        Action should be invalid.
+        """
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {user.id: ['_member_']}
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={
+                'roles': ['_member_'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
+
+        data = {
+            'email': 'test@example.com',
+            'project_id': 'test_project_id',
+            'roles': ['_member_'],
+            'domain_id': 'not_default',
+        }
+
+        action = NewUserAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertFalse(action.valid)
+
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_new_project(self):
         """
         Base case, no project, no user.
@@ -335,7 +464,7 @@ class ActionTests(TestCase):
                 FakeManager)
     def test_new_project_existing_user(self):
         """
-        no project, existing user.
+        Create a project for a user that already exists.
         """
 
         user = mock.Mock()
@@ -390,9 +519,9 @@ class ActionTests(TestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
-    def test_new_project_existing(self):
+    def test_new_project_existing_project(self):
         """
-        Existing project.
+        Create a project that already exists.
         """
 
         project = mock.Mock()
@@ -428,7 +557,37 @@ class ActionTests(TestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
-    def test_reset_user(self):
+    def test_new_project_invalid_domain_id(self):
+        """ Create a project using an invalid domain """
+
+        setup_temp_cache({}, {})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
+
+        data = {
+            'domain_id': 'not_default_id',
+            'parent_id': None,
+            'email': 'test@example.com',
+            'project_name': 'test_project',
+        }
+
+        action = NewProjectWithUserAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, False)
+
+        action.post_approve()
+        self.assertEquals(action.valid, False)
+
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
+    def test_reset_user_password(self):
         """
         Base case, existing user.
         """
@@ -474,9 +633,9 @@ class ActionTests(TestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
-    def test_reset_user_no_user(self):
+    def test_reset_user_password_no_user(self):
         """
-        No user.
+        Reset password for a non-existant user.
         """
 
         setup_temp_cache({}, {})
@@ -509,7 +668,7 @@ class ActionTests(TestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
-    def test_edit_user_add(self):
+    def test_edit_user_roles_add(self):
         """
         Add roles to existing user.
         """
@@ -561,7 +720,7 @@ class ActionTests(TestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
-    def test_edit_user_add_complete(self):
+    def test_edit_user_roles_add_complete(self):
         """
         Add roles to existing user.
         """
@@ -614,7 +773,7 @@ class ActionTests(TestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
-    def test_edit_user_remove(self):
+    def test_edit_user_roles_remove(self):
         """
         Remove roles from existing user.
         """
@@ -665,9 +824,9 @@ class ActionTests(TestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
-    def test_edit_user_remove_complete(self):
+    def test_edit_user_roles_remove_complete(self):
         """
-        Remove roles from existing user.
+        Remove roles from user that does not have them.
         """
 
         user = mock.Mock()

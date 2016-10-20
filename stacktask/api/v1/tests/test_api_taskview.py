@@ -248,8 +248,9 @@ class TaskViewTests(APITestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     def test_new_project(self):
         """
         Ensure the new project workflow goes as expected.
@@ -286,10 +287,12 @@ class TaskViewTests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
-                FakeManager)
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.models.user_store.IdentityManager',
+        FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     def test_new_project_existing(self):
         """
         Test to ensure validation marks actions as invalid
@@ -327,10 +330,12 @@ class TaskViewTests(APITestCase):
             {'errors': ['Cannot approve an invalid task. ' +
                         'Update data and rerun pre_approve.']})
 
-    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
-                FakeManager)
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.models.user_store.IdentityManager',
+        FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     def test_new_project_existing_user(self):
         """
         Project created if not present, existing user attached.
@@ -373,10 +378,12 @@ class TaskViewTests(APITestCase):
             {'notes': ['Task completed successfully.']}
         )
 
-    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
-                FakeManager)
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.models.user_store.IdentityManager',
+        FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     def test_new_project_existing_project_new_user(self):
         """
         Project already exists but new user attempting to create it.
@@ -525,8 +532,9 @@ class TaskViewTests(APITestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     def test_notification_createproject(self):
         """
         CreateProject should create a notification.
@@ -560,7 +568,8 @@ class TaskViewTests(APITestCase):
     @mock.patch(
         'stacktask.actions.models.user_store.IdentityManager', FakeManager)
     @mock.patch(
-        'stacktask.actions.tenant_setup.models.IdentityManager', FakeManager)
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     def test_duplicate_tasks_new_project(self):
         """
         Ensure we can't submit duplicate tasks

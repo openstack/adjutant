@@ -73,7 +73,7 @@ class RequestLoggingMiddleware(object):
     """
 
     def __init__(self):
-        self.logger = getLogger('django.request')
+        self.logger = getLogger('stacktask')
 
     def process_request(self, request):
         self.logger.info(

@@ -46,9 +46,9 @@ class IdentityManager(object):
     def __init__(self):
         self.ks_client = get_keystoneclient()
 
-    def find_user(self, name, domain_id):
+    def find_user(self, name, domain):
         try:
-            users = self.ks_client.users.list(name=name, domain=domain_id)
+            users = self.ks_client.users.list(name=name, domain=domain)
             if users:
                 # NOTE(adriant) usernames are unique in a domain
                 return users[0]
@@ -134,22 +134,22 @@ class IdentityManager(object):
 
         return projects
 
-    def add_user_role(self, user, role, project_id):
+    def add_user_role(self, user, role, project):
         try:
-            self.ks_client.roles.grant(role, user=user, project=project_id)
+            self.ks_client.roles.grant(role, user=user, project=project)
         except ks_exceptions.Conflict:
             # Conflict is ok, it means the user already has this role.
             pass
 
-    def remove_user_role(self, user, role, project_id):
-        self.ks_client.roles.revoke(role, user=user, project=project_id)
+    def remove_user_role(self, user, role, project):
+        self.ks_client.roles.revoke(role, user=user, project=project)
 
-    def find_project(self, project_name, domain_id):
+    def find_project(self, project_name, domain):
         try:
             # Using a filtered list as find is more efficient than
             # using the client find
             projects = self.ks_client.projects.list(
-                name=project_name, domain=domain_id)
+                name=project_name, domain=domain)
             if projects:
                 # NOTE(adriant) project names are unique in a domain so
                 # it is safe to assume filtering on project name and domain

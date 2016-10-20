@@ -32,7 +32,7 @@ class APIViewWithLogger(APIView):
     """
     def __init__(self, *args, **kwargs):
         super(APIViewWithLogger, self).__init__(*args, **kwargs)
-        self.logger = getLogger('django.request')
+        self.logger = getLogger('stacktask')
 
 
 class StatusView(APIViewWithLogger):

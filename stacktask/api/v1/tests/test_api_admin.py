@@ -59,8 +59,9 @@ class AdminAPITests(APITestCase):
 
     @mock.patch(
         'stacktask.actions.models.user_store.IdentityManager', FakeManager)
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     def test_task_get(self):
         """
         Test the basic task detail view.
@@ -194,8 +195,9 @@ class AdminAPITests(APITestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     def test_task_complete(self):
         """
         Can't approve a completed task.
@@ -228,8 +230,9 @@ class AdminAPITests(APITestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     def test_task_update(self):
         """
         Creates a invalid task.
@@ -286,8 +289,9 @@ class AdminAPITests(APITestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     def test_notification_acknowledge(self):
         """
         Test that you can acknowledge a notification.
@@ -337,8 +341,9 @@ class AdminAPITests(APITestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     def test_notification_acknowledge_list(self):
         """
         Test that you can acknowledge a list of notifications.
@@ -550,8 +555,9 @@ class AdminAPITests(APITestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     def test_cancel_task(self):
         """
         Ensure the ability to cancel a task.
@@ -588,8 +594,9 @@ class AdminAPITests(APITestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     def test_cancel_task_sent_token(self):
         """
         Ensure the ability to cancel a task after the token is sent.
@@ -628,8 +635,9 @@ class AdminAPITests(APITestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     def test_task_update_unapprove(self):
         """
         Ensure task update doesn't work for approved actions.
@@ -673,7 +681,8 @@ class AdminAPITests(APITestCase):
     @mock.patch(
         'stacktask.actions.models.user_store.IdentityManager', FakeManager)
     @mock.patch(
-        'stacktask.actions.tenant_setup.models.IdentityManager', FakeManager)
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     def test_cancel_task_own(self):
         """
         Ensure the ability to cancel your own task.
@@ -720,7 +729,8 @@ class AdminAPITests(APITestCase):
     @mock.patch(
         'stacktask.actions.models.user_store.IdentityManager', FakeManager)
     @mock.patch(
-        'stacktask.actions.tenant_setup.models.IdentityManager', FakeManager)
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     def test_cancel_task_own_fail(self):
         """
         Ensure the ability to cancel ONLY your own task.
@@ -862,8 +872,9 @@ class AdminAPITests(APITestCase):
 
     @mock.patch(
         'stacktask.actions.models.user_store.IdentityManager', FakeManager)
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     def test_task_list_filter(self):
         """
         """
@@ -1085,7 +1096,8 @@ class AdminAPITests(APITestCase):
     @mock.patch(
         'stacktask.actions.models.user_store.IdentityManager', FakeManager)
     @mock.patch(
-        'stacktask.actions.tenant_setup.models.IdentityManager', FakeManager)
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     def test_reset_admin(self):
         """
         Ensure that you cannot issue a password reset for an

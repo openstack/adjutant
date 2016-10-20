@@ -12,15 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from stacktask.actions.models import BaseAction
+from stacktask.actions.models import BaseAction, ProjectMixin, UserMixin
 from stacktask.actions.tenant_setup import serializers
 from django.conf import settings
-from stacktask.actions.user_store import IdentityManager
-from stacktask.actions import openstack_clients
+from stacktask.actions import openstack_clients, user_store
 import six
 
 
-class NewDefaultNetworkAction(BaseAction):
+class NewDefaultNetworkAction(BaseAction, ProjectMixin):
     """
     This action will setup all required basic networking
     resources so that a new user can launch instances
@@ -33,56 +32,59 @@ class NewDefaultNetworkAction(BaseAction):
         'region',
     ]
 
-    def _validate(self):
+    def __init__(self, *args, **kwargs):
+        super(NewDefaultNetworkAction, self).__init__(*args, **kwargs)
 
-        # Default state is invalid
-        self.action.valid = False
-
-        if not self.project_id:
-            self.add_note('No project_id given.')
-            return
-
+    def _validate_region(self):
         if not self.region:
-            self.add_note('No region given.')
-            return
+            self.add_note('ERROR: No region given.')
+            return False
 
+        id_manager = user_store.IdentityManager()
+        region = id_manager.find_region(self.region)
+        if not region:
+            self.add_note('ERROR: Region does not exist.')
+            return False
+
+        self.add_note('Region: %s exists.' % self.region)
+        return True
+
+    def _validate_defaults(self):
+        defaults = settings.ACTION_SETTINGS.get(
+            'NewDefaultNetworkAction', {}).get(self.region, {})
+
+        if not defaults:
+            self.add_note('ERROR: No default settings for region %s.' %
+                          self.region)
+            return False
+        return True
+
+    def _validate_keystone_user(self):
         keystone_user = self.action.task.keystone_user
         if keystone_user.get('project_id') != self.project_id:
             self.add_note('Project id does not match keystone user project.')
-            return
+            return False
+        return True
 
-        id_manager = IdentityManager()
-
-        project = id_manager.get_project(self.project_id)
-        if not project:
-            self.add_note('Project does not exist.')
-            return
-        self.add_note('Project_id: %s exists.' % project.id)
-
-        region = id_manager.find_region(self.region)
-        if not region:
-            self.add_note('Region does not exist.')
-            return
-        self.add_note('Region: %s exists.' % self.region)
-
-        self.defaults = settings.ACTION_SETTINGS.get(
-            'NewDefaultNetworkAction', {}).get(self.region, {})
-
-        if not self.defaults:
-            self.add_note('ERROR: No default settings for given region.')
-            return
-
-        self.action.valid = True
+    def _validate(self):
+        self.action.valid = (
+            self._validate_region() and
+            self._validate_project_id() and
+            self._validate_defaults() and
+            self._validate_keystone_user()
+            )
+        self.action.save()
 
     def _create_network(self):
-
         neutron = openstack_clients.get_neutronclient(region=self.region)
+        defaults = settings.ACTION_SETTINGS.get(
+            'NewDefaultNetworkAction', {}).get(self.region, {})
 
         if not self.get_cache('network_id'):
             try:
                 network_body = {
                     "network": {
-                        "name": self.defaults['network_name'],
+                        "name": defaults['network_name'],
                         'tenant_id': self.project_id,
                         "admin_state_up": True
                     }
@@ -91,15 +93,15 @@ class NewDefaultNetworkAction(BaseAction):
             except Exception as e:
                 self.add_note(
                     "Error: '%s' while creating network: %s" %
-                    (e, self.defaults['network_name']))
+                    (e, defaults['network_name']))
                 raise
             self.set_cache('network_id', network['network']['id'])
             self.add_note("Network %s created for project %s" %
-                          (self.defaults['network_name'],
+                          (defaults['network_name'],
                            self.project_id))
         else:
             self.add_note("Network %s already created for project %s" %
-                          (self.defaults['network_name'],
+                          (defaults['network_name'],
                            self.project_id))
 
         if not self.get_cache('subnet_id'):
@@ -109,8 +111,8 @@ class NewDefaultNetworkAction(BaseAction):
                         "network_id": self.get_cache('network_id'),
                         "ip_version": 4,
                         'tenant_id': self.project_id,
-                        'dns_nameservers': self.defaults['DNS_NAMESERVERS'],
-                        "cidr": self.defaults['SUBNET_CIDR']
+                        'dns_nameservers': defaults['DNS_NAMESERVERS'],
+                        "cidr": defaults['SUBNET_CIDR']
                     }
                 }
                 subnet = neutron.create_subnet(body=subnet_body)
@@ -120,18 +122,18 @@ class NewDefaultNetworkAction(BaseAction):
                 raise
             self.set_cache('subnet_id', subnet['subnet']['id'])
             self.add_note("Subnet created for network %s" %
-                          self.defaults['network_name'])
+                          defaults['network_name'])
         else:
             self.add_note("Subnet already created for network %s" %
-                          self.defaults['network_name'])
+                          defaults['network_name'])
 
         if not self.get_cache('router_id'):
             try:
                 router_body = {
                     "router": {
-                        "name": self.defaults['router_name'],
+                        "name": defaults['router_name'],
                         "external_gateway_info": {
-                            "network_id": self.defaults['public_network']
+                            "network_id": defaults['public_network']
                         },
                         'tenant_id': self.project_id,
                         "admin_state_up": True
@@ -141,7 +143,7 @@ class NewDefaultNetworkAction(BaseAction):
             except Exception as e:
                 self.add_note(
                     "Error: '%s' while creating router: %s" %
-                    (e, self.defaults['router_name']))
+                    (e, defaults['router_name']))
                 raise
             self.set_cache('router_id', router['router']['id'])
             self.add_note("Router created for project %s" %
@@ -163,12 +165,12 @@ class NewDefaultNetworkAction(BaseAction):
         self.add_note("Interface added to router for subnet")
 
     def _pre_approve(self):
+        # Note: Do we need to get this from cache? it is a required setting
+        # self.project_id = self.action.task.cache.get('project_id', None)
         self._validate()
-        self.action.save()
 
     def _post_approve(self):
         self._validate()
-        self.action.save()
 
         if self.setup_network and self.valid:
             self._create_network()
@@ -189,84 +191,33 @@ class NewProjectDefaultNetworkAction(NewDefaultNetworkAction):
     ]
 
     def _pre_validate(self):
-
-        # Default state is invalid
-        self.action.valid = False
-
-        # We don't check project here as it doesn't exist yet.
-
-        if not self.region:
-            self.add_note('No region given.')
-            return
-
-        id_manager = IdentityManager()
-
-        region = id_manager.find_region(self.region)
-        if not region:
-            self.add_note('Region does not exist.')
-            return
-        self.add_note('Region: %s exists.' % self.region)
-
-        self.defaults = settings.ACTION_SETTINGS.get(
-            'NewDefaultNetworkAction', {}).get(self.region, {})
-
-        if not self.defaults:
-            self.add_note('ERROR: No default settings for given region.')
-            return
-
-        self.action.valid = True
+        # Note: Don't check project here as it doesn't exist yet.
+        self.action.valid = (
+            self._validate_region() and
+            self._validate_defaults()
+            )
+        self.action.save()
 
     def _validate(self):
-
-        # Default state is invalid
-        self.action.valid = False
-
-        self.project_id = self.action.task.cache.get('project_id', None)
-
-        if not self.project_id:
-            self.add_note('No project_id given.')
-            return
-
-        if not self.region:
-            self.add_note('No region given.')
-            return
-
-        id_manager = IdentityManager()
-
-        project = id_manager.get_project(self.project_id)
-        if not project:
-            self.add_note('Project does not exist.')
-            return
-        self.add_note('Project_id: %s exists.' % project.id)
-
-        region = id_manager.find_region(self.region)
-        if not region:
-            self.add_note('Region does not exist.')
-            return
-        self.add_note('Region: %s exists.' % self.region)
-
-        self.defaults = settings.ACTION_SETTINGS.get(
-            'NewDefaultNetworkAction', {}).get(self.region, {})
-
-        if not self.defaults:
-            self.add_note('ERROR: No default settings for given region.')
-            return
-
-        self.action.valid = True
+        self.action.valid = (
+            self._validate_region() and
+            self._validate_project_id() and
+            self._validate_defaults()
+            )
+        self.action.save()
 
     def _pre_approve(self):
         self._pre_validate()
-        self.action.save()
 
     def _post_approve(self):
+        self.project_id = self.action.task.cache.get('project_id', None)
         self._validate()
-        self.action.save()
 
         if self.setup_network and self.valid:
             self._create_network()
 
 
-class AddDefaultUsersToProjectAction(BaseAction):
+class AddDefaultUsersToProjectAction(BaseAction, ProjectMixin, UserMixin):
     """
     The purpose of this action is to add a given set of users after
     the creation of a new Project. This is mainly for administrative
@@ -278,14 +229,15 @@ class AddDefaultUsersToProjectAction(BaseAction):
         'domain_id',
     ]
 
-    def _validate_users(self):
+    def __init__(self, *args, **kwargs):
         self.users = settings.ACTION_SETTINGS.get(
             'AddDefaultUsersToProjectAction', {}).get('default_users', [])
         self.roles = settings.ACTION_SETTINGS.get(
             'AddDefaultUsersToProjectAction', {}).get('default_roles', [])
+        super(AddDefaultUsersToProjectAction, self).__init__(*args, **kwargs)
 
-        id_manager = IdentityManager()
-
+    def _validate_users(self):
+        id_manager = user_store.IdentityManager()
         all_found = True
         for user in self.users:
             ks_user = id_manager.find_user(user, self.domain_id)
@@ -295,59 +247,40 @@ class AddDefaultUsersToProjectAction(BaseAction):
                 self.add_note('ERROR: User: %s does not exist.' % user)
                 all_found = False
 
-        for role in self.roles:
-            ks_role = id_manager.find_role(role)
-            if ks_role:
-                self.add_note('Role: %s exists.' % role)
-            else:
-                self.add_note('ERROR: Role: %s does not exist.' % role)
-                all_found = False
+        return all_found
 
-        if all_found:
-            return True
-        else:
-            return False
-
-    def _validate_project(self):
-        self.project_id = self.action.task.cache.get('project_id', None)
-
-        id_manager = IdentityManager()
-
-        project = id_manager.get_project(self.project_id)
-        if not project:
-            self.add_note('Project does not exist.')
-            return False
-        self.add_note('Project_id: %s exists.' % project.id)
-        return True
-
-    def _validate(self):
-        self.action.valid = self._validate_users() and self._validate_project()
-        self.action.save()
-
-    def _pre_approve(self):
+    def _pre_validate(self):
         self.action.valid = self._validate_users()
         self.action.save()
 
+    def _validate(self):
+        self.action.valid = (
+            self._validate_users() and
+            self._validate_project_id()
+            )
+        self.action.save()
+
+    def _pre_approve(self):
+        self._pre_validate()
+
     def _post_approve(self):
+        id_manager = user_store.IdentityManager()
+        self.project_id = self.action.task.cache.get('project_id', None)
         self._validate()
 
         if self.valid and not self.action.state == "completed":
-            id_manager = IdentityManager()
-
-            project = id_manager.get_project(self.project_id)
             try:
                 for user in self.users:
                     ks_user = id_manager.find_user(user, self.domain_id)
-                    for role in self.roles:
-                        ks_role = id_manager.find_role(name=role)
-                        id_manager.add_user_role(ks_user, ks_role, project.id)
-                        self.add_note(
-                            'User: "%s" given role: %s on project: %s.' %
-                            (ks_user.name, ks_role.name, project.id))
+
+                    self._grant_roles(ks_user, self.roles, self.project_id)
+                    self.add_note(
+                        'User: "%s" given roles: %s on project: %s.' %
+                        (ks_user.name, self.roles, self.project_id))
             except Exception as e:
                 self.add_note(
                     "Error: '%s' while adding users to project: %s" %
-                    (e, project.id))
+                    (e, self.project_id))
                 raise
             self.action.state = "completed"
             self.action.save()
@@ -401,7 +334,7 @@ class SetProjectQuotaAction(BaseAction):
                           'set it.')
             return False
 
-        id_manager = IdentityManager()
+        id_manager = user_store.IdentityManager()
         project = id_manager.get_project(self.project_id)
         if not project:
             self.add_note('Project with id %s does not exist.' %

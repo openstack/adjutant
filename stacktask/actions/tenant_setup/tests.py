@@ -123,8 +123,9 @@ def get_fake_cinderclient(region):
 
 class ProjectSetupActionTests(TestCase):
 
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     @mock.patch(
         'stacktask.actions.tenant_setup.models.' +
         'openstack_clients.get_neutronclient',
@@ -175,8 +176,9 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(len(neutron_cache['routers']), 1)
         self.assertEquals(len(neutron_cache['subnets']), 1)
 
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     @mock.patch(
         'stacktask.actions.tenant_setup.models.' +
         'openstack_clients.get_neutronclient',
@@ -222,8 +224,9 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(len(neutron_cache['routers']), 0)
         self.assertEquals(len(neutron_cache['subnets']), 0)
 
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     @mock.patch(
         'stacktask.actions.tenant_setup.models.' +
         'openstack_clients.get_neutronclient',
@@ -293,8 +296,9 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(len(neutron_cache['routers']), 1)
         self.assertEquals(len(neutron_cache['subnets']), 1)
 
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     @mock.patch(
         'stacktask.actions.tenant_setup.models.' +
         'openstack_clients.get_neutronclient',
@@ -345,8 +349,9 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(len(neutron_cache['routers']), 1)
         self.assertEquals(len(neutron_cache['subnets']), 1)
 
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     @mock.patch(
         'stacktask.actions.tenant_setup.models.' +
         'openstack_clients.get_neutronclient',
@@ -380,8 +385,9 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(len(neutron_cache['routers']), 0)
         self.assertEquals(len(neutron_cache['subnets']), 0)
 
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     @mock.patch(
         'stacktask.actions.tenant_setup.models.' +
         'openstack_clients.get_neutronclient',
@@ -427,8 +433,9 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(len(neutron_cache['routers']), 0)
         self.assertEquals(len(neutron_cache['subnets']), 0)
 
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     @mock.patch(
         'stacktask.actions.tenant_setup.models.' +
         'openstack_clients.get_neutronclient',
@@ -498,8 +505,9 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(len(neutron_cache['routers']), 1)
         self.assertEquals(len(neutron_cache['subnets']), 1)
 
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     def test_add_default_users(self):
         """
         Base case, adds admin user with admin role to project.
@@ -534,11 +542,45 @@ class ProjectSetupActionTests(TestCase):
         project = tests.temp_cache['projects']['test_project']
         self.assertEquals(project.roles['user_id_0'], ['admin'])
 
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
-    def test_add_admin_reapprove(self):
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
+    def test_add_default_users_invalid_project(self):
+        """Add default users to a project that doesn't exist.
+
+        Action should become invalid at the post_approve state, it's ok if
+        the project isn't created yet during pre_approve.
         """
-        Ensure nothing happens or changes if rerun of approve.
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+
+        task.cache = {'project_id': "invalid_project_id"}
+
+        action = AddDefaultUsersToProjectAction(
+            {'domain_id': 'default'}, task=task, order=1)
+
+        action.pre_approve()
+        # No need to test project yet - it's ok if it doesn't exist
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        # Now the missing project should make the action invalid
+        self.assertEquals(action.valid, False)
+
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
+    def test_add_default_users_reapprove(self):
+        """
+        Ensure nothing happens or changes during rerun of approve.
         """
         project = mock.Mock()
         project.id = 'test_project_id'
@@ -571,8 +613,9 @@ class ProjectSetupActionTests(TestCase):
         project = tests.temp_cache['projects']['test_project']
         self.assertEquals(project.roles['user_id_0'], ['admin'])
 
-    @mock.patch('stacktask.actions.tenant_setup.models.IdentityManager',
-                FakeManager)
+    @mock.patch(
+        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
+        FakeManager)
     @mock.patch(
         'stacktask.actions.tenant_setup.models.' +
         'openstack_clients.get_neutronclient',
