@@ -446,7 +446,8 @@ class ActionTests(TestCase):
             'test_project')
         self.assertEquals(
             task.cache,
-            {'project_id': 'project_id_1', 'user_id': 'user_id_1'})
+            {'project_id': 'project_id_1', 'user_id': 'user_id_1',
+             'user_state': 'default'})
 
         token_data = {'password': '123456'}
         action.submit(token_data)
@@ -497,7 +498,8 @@ class ActionTests(TestCase):
             'test_project')
         self.assertEquals(
             task.cache,
-            {'project_id': 'project_id_1', 'user_id': 'user_id_1'})
+            {'project_id': 'project_id_1', 'user_id': 'user_id_1',
+             'user_state': 'default'})
 
         action.post_approve()
         self.assertEquals(action.valid, True)
@@ -506,7 +508,8 @@ class ActionTests(TestCase):
             'test_project')
         self.assertEquals(
             task.cache,
-            {'project_id': 'project_id_1', 'user_id': 'user_id_1'})
+            {'project_id': 'project_id_1', 'user_id': 'user_id_1',
+             'user_state': 'default'})
 
         token_data = {'password': '123456'}
         action.submit(token_data)
@@ -563,7 +566,8 @@ class ActionTests(TestCase):
             'test_project')
         self.assertEquals(
             task.cache,
-            {'user_id': 'user_id_1', 'project_id': 'project_id_1'})
+            {'user_id': 'user_id_1', 'project_id': 'project_id_1',
+             'user_state': 'existing'})
 
         token_data = {'password': '123456'}
         action.submit(token_data)
@@ -621,7 +625,8 @@ class ActionTests(TestCase):
             'test_project')
         self.assertEquals(
             task.cache,
-            {'user_id': 'user_id_1', 'project_id': 'project_id_1'})
+            {'user_id': 'user_id_1', 'project_id': 'project_id_1',
+             'user_state': 'disabled'})
 
         token_data = {'password': '123456'}
         action.submit(token_data)

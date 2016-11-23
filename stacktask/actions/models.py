@@ -383,6 +383,8 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
         user = self._get_target_user()
         if not user:
             self.action.need_token = True
+            # add to cache to use in template
+            self.action.task.cache['user_state'] = "default"
             self.set_token_fields(["password"])
             self.add_note(
                 'No user present with username. Need to create new user.')
@@ -396,6 +398,8 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
         if not user.enabled:
             self.action.need_token = True
             self.action.state = "disabled"
+            # add to cache to use in template
+            self.action.task.cache['user_state'] = "disabled"
             # as they are disabled we'll reset their password
             self.set_token_fields(["password"])
             self.add_note(
@@ -417,6 +421,8 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
             self.action.need_token = True
             self.set_token_fields(["confirm"])
             self.action.state = "existing"
+            # add to cache to use in template
+            self.action.task.cache['user_state'] = "existing"
             self.add_note(
                 'Existing user with matching email missing roles.')
 
@@ -647,6 +653,8 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
         user = id_manager.find_user(self.username, self.domain_id)
 
         if not user:
+            # add to cache to use in template
+            self.action.task.cache['user_state'] = "default"
             self.action.need_token = True
             self.set_token_fields(["password"])
             self.add_note("No user present with username '%s'." %
@@ -660,6 +668,8 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
 
         if not user.enabled:
             self.action.state = "disabled"
+            # add to cache to use in template
+            self.action.task.cache['user_state'] = "disabled"
             self.action.need_token = True
             self.add_note(
                 "Existing disabled user '%s' with matching email." %
@@ -667,6 +677,8 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
             return True
         else:
             self.action.state = "existing"
+            # add to cache to use in template
+            self.action.task.cache['user_state'] = "existing"
             self.action.need_token = False
             self.add_note("Existing user '%s' with matching email." %
                           self.email)

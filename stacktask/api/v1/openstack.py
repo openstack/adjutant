@@ -286,6 +286,8 @@ class SignUp(tasks.CreateProject):
     The openstack endpoint for signups.
     """
 
+    task_type = "signup"
+
     def get(self, request):
         """
         The SignUp endpoint does not support GET.

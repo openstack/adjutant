@@ -123,6 +123,20 @@ TASK_SETTINGS = {
         }
     },
     'create_project': {
+        'emails': {
+            'initial': {
+                'template': 'signup_initial.txt',
+                'subject': 'signup received'
+            },
+            'token': {
+                'template': 'signup_token.txt',
+                'subject': 'signup approved'
+            },
+            'completed': {
+                'template': 'signup_completed.txt',
+                'subject': 'signup completed'
+            }
+        },
         'additional_actions': [
             'AddDefaultUsersToProjectAction',
             'NewProjectDefaultNetworkAction'

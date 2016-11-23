@@ -1,0 +1,17 @@
+Your OpenStack sign-up has been approved!
+
+Please follow this link to finalise access to your new OpenStack project:
+{{ tokenurl }}{{ token }}
+
+{% if task.cache.user_state == "default" %}
+You will be asked to define a password, after that you will be given access to the project and will be able to login
+{% elif task.cache.user_state == "disabled" %}
+It appears you already have a user account that was disabled. We've reactivated it, but because it may have been a while we've reset your password. After you setup your new password you will be given access to your new project and will be able to login.
+{% endif %}
+
+This link expires automatically after 24 hours. If expired, you can simply go to the dashboard and request a password reset.
+
+You can find examples and documentation on using Openstack at http://docs.openstack.org/
+
+Kind regards,
+The Openstack team

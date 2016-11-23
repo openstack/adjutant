@@ -1,0 +1,8 @@
+Hello,
+
+Your signup is in our system and now waiting approval.
+
+Once someone has approved it you will be emailed an update.
+
+Kind regards,
+The Openstack team

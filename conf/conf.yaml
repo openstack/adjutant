@@ -125,7 +125,7 @@ DEFAULT_TASK_SETTINGS:
 
 # These are cascading overrides for the default settings:
 TASK_SETTINGS:
-    create_project:
+    signup:
         # You can override 'default_actions' if needed for given taskviews
         # The order of the actions is order of execution.
         #
@@ -138,6 +138,16 @@ TASK_SETTINGS:
             - AddDefaultUsersToProjectAction
             - NewProjectDefaultNetworkAction
             - SetProjectQuotaAction
+        emails:
+            initial:
+                subject: Your OpenStack signup has been received
+                template: signup_initial.txt
+            token:
+                subject: Your OpenStack signup has been approved
+                template: signup_token.txt
+            completed:
+                subject: Your OpenStack signup has been completed
+                template: signup_completed.txt
         notifications:
             standard:
                 EmailNotification:
