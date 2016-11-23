@@ -393,6 +393,15 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
                 'Reporting as invalid.')
             return False
 
+        if not user.enabled:
+            self.action.need_token = True
+            self.action.state = "disabled"
+            # as they are disabled we'll reset their password
+            self.set_token_fields(["password"])
+            self.add_note(
+                'Existing disabled user with matching email.')
+            return True
+
         # role_validation
         roles = id_manager.get_roles(user, self.project_id)
         role_names = {role.name for role in roles}
@@ -455,6 +464,39 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
             self.add_note(
                 'User %s has been created, with roles %s in project %s.'
                 % (self.username, self.roles, self.project_id))
+        elif self.action.state == "disabled":
+            # first re-enable user
+            try:
+                user = id_manager.find_user(self.username, self.domain_id)
+                id_manager.enable_user(user)
+            except Exception as e:
+                self.add_note(
+                    "Error: '%s' while re-enabling user: %s with roles: %s" %
+                    (e, self.username, self.roles))
+                raise
+            # now add their roles
+            try:
+                self._grant_roles(user, self.roles, self.project_id)
+            except Exception as e:
+                self.add_note(
+                    "Error: '%s' while attaching user: %s with roles: %s" %
+                    (e, self.username, self.roles))
+                raise
+            # and now update their password
+            try:
+                id_manager.update_user_password(
+                    user, token_data['password'])
+            except Exception as e:
+                self.add_note(
+                    "Error: '%s' while changing password for user: %s" %
+                    (e, self.username))
+                raise
+            self.add_note('User %s password has been changed.' % self.username)
+
+            self.add_note(
+                'Existing user %s has been given roles %s in project %s.'
+                % (self.username, self.roles, self.project_id))
+
         elif self.action.state == "existing":
             # Existing action: only add roles.
             try:
@@ -604,25 +646,31 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
         id_manager = user_store.IdentityManager()
         user = id_manager.find_user(self.username, self.domain_id)
 
-        if user:
-            if user.email == self.email:
-                valid = True
-                self.action.state = "existing"
-                self.action.need_token = False
-                self.add_note("Existing user '%s' with matching email." %
-                              self.email)
-            else:
-                valid = False
-                self.add_note("Existing user '%s' with non-matching email." %
-                              self.username)
-        else:
-            valid = True
+        if not user:
             self.action.need_token = True
             self.set_token_fields(["password"])
             self.add_note("No user present with username '%s'." %
                           self.username)
+            return True
 
-        return valid
+        if user.email != self.email:
+            self.add_note("Existing user '%s' with non-matching email." %
+                          self.username)
+            return False
+
+        if not user.enabled:
+            self.action.state = "disabled"
+            self.action.need_token = True
+            self.add_note(
+                "Existing disabled user '%s' with matching email." %
+                self.email)
+            return True
+        else:
+            self.action.state = "existing"
+            self.action.need_token = False
+            self.add_note("Existing user '%s' with matching email." %
+                          self.email)
+            return True
 
     def _validate_user_submit(self):
         user_id = self.get_cache('user_id')
@@ -667,16 +715,19 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
 
         # User validation and checks
         user_id = self.get_cache('user_id')
-        if user_id:
+        roles_granted = self.get_cache('roles_granted')
+        if user_id and roles_granted:
             self.action.task.cache['user_id'] = user_id
-            self.add_note("User already created.")
-        else:
+            self.add_note("User already setup.")
+        elif not user_id:
             self.action.valid = self._validate_user()
             self.action.save()
 
             if not self.valid:
                 return
 
+            self._create_user_for_project()
+        elif not roles_granted:
             self._create_user_for_project()
 
     def _create_user_for_project(self):
@@ -691,10 +742,17 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
                 # Generate a temporary password:
                 password = uuid4().hex + uuid4().hex
 
-                user = id_manager.create_user(
-                    name=self.username, password=password,
-                    email=self.email, domain=self.domain_id,
-                    created_on=str(timezone.now()))
+                user_id = self.get_cache('user_id')
+                if not user_id:
+                    user = id_manager.create_user(
+                        name=self.username, password=password,
+                        email=self.email, domain=self.domain_id,
+                        created_on=str(timezone.now()))
+                    self.set_cache('user_id', user.id)
+                else:
+                    user = id_manager.get_user(user_id)
+                # put user_id into action cache:
+                self.action.task.cache['user_id'] = user.id
 
                 self._grant_roles(user, default_roles, project_id)
             except Exception as e:
@@ -703,28 +761,77 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
                     (e, self.username, default_roles))
                 raise
 
-            # put user_id into action cache:
-            self.action.task.cache['user_id'] = user.id
-            self.set_cache('user_id', user.id)
+            self.set_cache('roles_granted', True)
             self.add_note(
                 "New user '%s' created for project %s with roles: %s" %
                 (self.username, project_id, default_roles))
         elif self.action.state == "existing":
             try:
-                user = id_manager.find_user(
-                    self.username, self.domain_id)
+                user_id = self.get_cache('user_id')
+                if not user_id:
+                    user = id_manager.find_user(
+                        self.username, self.domain_id)
+                    self.set_cache('user_id', user.id)
+                else:
+                    user = id_manager.get_user(user_id)
+                self.action.task.cache['user_id'] = user.id
 
                 self._grant_roles(user, default_roles, project_id)
             except Exception as e:
                 self.add_note(
-                    "Error: '%s' while attaching user: %s with roles: %s" %
-                    (e, self.username, default_roles))
+                    "Error: '%s' while granting roles: %s to user: %s" %
+                    (e, default_roles, self.username))
                 raise
 
-            # put user_id into action cache:
+            self.set_cache('roles_granted', True)
+            self.add_note(("Existing user '%s' setup on project %s" +
+                          " with roles: %s")
+                          % (self.username, project_id,
+                             default_roles))
+        elif self.action.state == "disabled":
+            user_id = self.get_cache('user_id')
+            if not user_id:
+                # first re-enable user
+                try:
+                    user = id_manager.find_user(self.username, self.domain_id)
+                    id_manager.enable_user(user)
+                except Exception as e:
+                    self.add_note(
+                        "Error: '%s' while re-enabling user: %s" %
+                        (e, self.username))
+                    raise
+
+                # and now update their password
+                # Generate a temporary password:
+                password = uuid4().hex + uuid4().hex
+                try:
+                    id_manager.update_user_password(user, password)
+                except Exception as e:
+                    self.add_note(
+                        "Error: '%s' while changing password for user: %s" %
+                        (e, self.username))
+                    raise
+                self.add_note(
+                    'User %s password has been changed.' % self.username)
+
+                self.set_cache('user_id', user.id)
+            else:
+                user = id_manager.get_user(user_id)
             self.action.task.cache['user_id'] = user.id
-            self.set_cache('user_id', user.id)
-            self.add_note(("Existing user '%s' attached to project %s" +
+
+            # now add their roles
+            roles_granted = self.get_cache('roles_granted')
+            if not roles_granted:
+                try:
+                    self._grant_roles(user, default_roles, project_id)
+                except Exception as e:
+                    self.add_note(
+                        "Error: '%s' while granting user: %s roles: %s" %
+                        (e, self.username, default_roles))
+                    raise
+                self.set_cache('roles_granted', True)
+
+            self.add_note(("Existing user '%s' setup on project %s" +
                           " with roles: %s")
                           % (self.username, project_id,
                              default_roles))
@@ -748,7 +855,7 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
         self.action.task.cache['user_id'] = user_id
         id_manager = user_store.IdentityManager()
 
-        if self.action.state == "default":
+        if self.action.state in ["default", "disabled"]:
             user = id_manager.get_user(user_id)
             try:
                 id_manager.update_user_password(

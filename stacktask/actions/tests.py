@@ -129,6 +129,67 @@ class ActionTests(TestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
+    def test_new_user_disabled(self):
+        """
+        Disabled user, valid tenant, no role.
+        """
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id_1'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.enabled = False
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
+
+        data = {
+            'email': 'test@example.com',
+            'project_id': 'test_project_id',
+            'roles': ['_member_'],
+            'domain_id': 'default',
+        }
+
+        action = NewUserAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
+        token_data = {'password': '123456'}
+        action.submit(token_data)
+        self.assertEquals(action.valid, True)
+        self.assertEquals(len(tests.temp_cache['users']), 2)
+        # The new user id in this case will be "user_id_1"
+        self.assertEquals(
+            tests.temp_cache['users']["user_id_1"].email,
+            'test@example.com')
+        self.assertEquals(
+            tests.temp_cache['users']["user_id_1"].password,
+            '123456')
+        self.assertEquals(
+            tests.temp_cache['users']["user_id_1"].enabled,
+            True)
+
+        self.assertEquals(project.roles["user_id_1"], ['_member_'])
+
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_new_user_existing_role(self):
         """
         Existing user, valid tenant, has role.
@@ -502,7 +563,65 @@ class ActionTests(TestCase):
             'test_project')
         self.assertEquals(
             task.cache,
-            {'project_id': 'project_id_1', 'user_id': 'user_id_1'})
+            {'user_id': 'user_id_1', 'project_id': 'project_id_1'})
+
+        token_data = {'password': '123456'}
+        action.submit(token_data)
+        self.assertEquals(action.valid, True)
+
+        self.assertEquals(
+            tests.temp_cache['users'][user.id].email,
+            'test@example.com')
+        project = tests.temp_cache['projects']['test_project']
+        self.assertEquals(
+            sorted(project.roles[user.id]),
+            sorted(['_member_', 'project_admin',
+                    'project_mod', 'heat_stack_owner']))
+
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
+    def test_new_project_disabled_user(self):
+        """
+        Create a project for a user that is disabled.
+        """
+
+        user = mock.Mock()
+        user.id = 'user_id_1'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.enabled = False
+
+        setup_temp_cache({}, {user.id: user})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
+
+        data = {
+            'domain_id': 'default',
+            'parent_id': None,
+            'email': 'test@example.com',
+            'project_name': 'test_project',
+        }
+
+        action = NewProjectWithUserAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+        self.assertEquals(
+            tests.temp_cache['projects']['test_project'].name,
+            'test_project')
+        self.assertEquals(
+            task.cache,
+            {'user_id': 'user_id_1', 'project_id': 'project_id_1'})
 
         token_data = {'password': '123456'}
         action.submit(token_data)

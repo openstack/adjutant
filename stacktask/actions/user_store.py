@@ -104,6 +104,12 @@ class IdentityManager(object):
             default_project=default_project, created_on=created_on)
         return user
 
+    def enable_user(self, user):
+        self.ks_client.users.update(user, enabled=True)
+
+    def disable_user(self, user):
+        self.ks_client.users.update(user, enabled=False)
+
     def update_user_password(self, user, password):
         self.ks_client.users.update(user, password=password)
 

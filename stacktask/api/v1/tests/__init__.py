@@ -134,6 +134,14 @@ class FakeManager(object):
         user = self._user_from_id(user)
         user.password = password
 
+    def enable_user(self, user):
+        user = self._user_from_id(user)
+        user.enabled = True
+
+    def disable_user(self, user):
+        user = self._user_from_id(user)
+        user.enabled = False
+
     def find_role(self, name):
         global temp_cache
         if temp_cache['roles'].get(name, None):
