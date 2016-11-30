@@ -210,7 +210,7 @@ ACTION_SETTINGS:
             - project_mod
             - heat_stack_owner
             - _member_
-    ResetUserAction:
+    ResetUserPasswordAction:
         blacklisted_roles:
             - admin
     NewDefaultNetworkAction:

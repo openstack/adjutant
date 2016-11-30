@@ -438,7 +438,7 @@ class ResetPassword(TaskView):
 
     task_type = "reset_password"
 
-    default_actions = ['ResetUserAction', ]
+    default_actions = ['ResetUserPasswordAction', ]
 
     def post(self, request, format=None):
         """

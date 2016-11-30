@@ -767,8 +767,7 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
                     user_id, project_id))
 
 
-# TODO: rename to ResetUserPasswordAction
-class ResetUserAction(UserNameAction, UserMixin):
+class ResetUserPasswordAction(UserNameAction, UserMixin):
     """
     Simple action to reset a password for a given user.
     """
@@ -783,7 +782,7 @@ class ResetUserAction(UserNameAction, UserMixin):
     ]
 
     blacklist = settings.ACTION_SETTINGS.get(
-        'ResetUserAction', {}).get("blacklisted_roles", {})
+        'ResetUserPasswordAction', {}).get("blacklisted_roles", {})
 
     def _validate_user_roles(self):
         id_manager = user_store.IdentityManager()
@@ -976,5 +975,5 @@ def register_action_class(action_class, serializer_class):
 register_action_class(NewUserAction, serializers.NewUserSerializer)
 register_action_class(
     NewProjectWithUserAction, serializers.NewProjectWithUserSerializer)
-register_action_class(ResetUserAction, serializers.ResetUserSerializer)
+register_action_class(ResetUserPasswordAction, serializers.ResetUserSerializer)
 register_action_class(EditUserRolesAction, serializers.EditUserRolesSerializer)

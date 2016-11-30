@@ -18,7 +18,7 @@ import mock
 
 from stacktask.actions.models import (
     EditUserRolesAction, NewProjectWithUserAction, NewUserAction,
-    ResetUserAction)
+    ResetUserPasswordAction)
 from stacktask.api.models import Task
 from stacktask.api.v1 import tests
 from stacktask.api.v1.tests import FakeManager, setup_temp_cache
@@ -615,7 +615,7 @@ class ActionTests(TestCase):
             'project_name': 'test_project',
         }
 
-        action = ResetUserAction(data, task=task, order=1)
+        action = ResetUserPasswordAction(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, True)
@@ -654,7 +654,7 @@ class ActionTests(TestCase):
             'project_name': 'test_project',
         }
 
-        action = ResetUserAction(data, task=task, order=1)
+        action = ResetUserPasswordAction(data, task=task, order=1)
 
         action.pre_approve()
         self.assertEquals(action.valid, False)

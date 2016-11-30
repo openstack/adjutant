@@ -167,7 +167,7 @@ ACTION_SETTINGS = {
     'NewUserAction': {
         'allowed_roles': ['project_mod', 'project_admin', "_member_"]
     },
-    'ResetUserAction': {
+    'ResetUserPasswordAction': {
         'blacklisted_roles': ['admin']
     },
     'NewDefaultNetworkAction': {
