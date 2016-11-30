@@ -51,13 +51,5 @@ def admin(func, *args, **kwargs):
     """
     endpoints setup with this decorator require the admin role.
     """
-    request = args[1]
-    if not request.keystone_user.get('authenticated', False):
-        return Response({'errors': ["Credentials incorrect or none given."]},
-                        401)
-
-    roles = request.keystone_user.get('roles', [])
-    if "admin" in roles:
-        return func(*args, **kwargs)
-
-    return Response({'errors': ["Must be admin."]}, 403)
+    return require_roles(
+        {'admin'}, func, *args, **kwargs)
