@@ -12,14 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from jsonfield import JSONField
 from logging import getLogger
 from uuid import uuid4
 
 from django.conf import settings
 from django.db import models
 from django.utils import timezone
-
-from jsonfield import JSONField
 
 from stacktask.actions import serializers
 from stacktask.actions import user_store
@@ -215,17 +214,19 @@ class ResourceMixin(object):
 
     def _validate_domain_name(self):
         id_manager = user_store.IdentityManager()
-
         self.domain = id_manager.find_domain(self.domain_name)
         if not self.domain:
             self.add_note('Domain does not exist.')
             return False
+        # also store the domain_id separately for later use
+        self.domain_id = self.domain.id
         return True
 
 
 class UserMixin(ResourceMixin):
     """Mixin with functions for users."""
 
+    # Accessors
     def _validate_username_exists(self):
         id_manager = user_store.IdentityManager()
 
@@ -234,19 +235,6 @@ class UserMixin(ResourceMixin):
             self.add_note('No user present with username')
             return False
         return True
-
-    def _grant_roles(self, user, roles, project_id):
-        id_manager = user_store.IdentityManager()
-        ks_roles = []
-        for role in roles:
-            ks_role = id_manager.find_role(role)
-            if ks_role:
-                ks_roles.append(ks_role)
-            else:
-                raise TypeError("Keystone missing role: %s" % role)
-
-        for role in ks_roles:
-            id_manager.add_user_role(user, role, project_id)
 
     def _validate_role_permissions(self):
         keystone_user = self.action.task.keystone_user
@@ -269,6 +257,82 @@ class UserMixin(ResourceMixin):
         intersection = set(managable_roles) & requested_roles
         # if all requested roles match, we can proceed
         return intersection == requested_roles
+
+    def find_user(self):
+        id_manager = user_store.IdentityManager()
+        return id_manager.find_user(self.username, self.domain_id)
+
+    # Mutators
+    def grant_roles(self, user, roles, project_id):
+        return self._user_roles_edit(user, roles, project_id, remove=False)
+
+    def remove_roles(self, user, roles, project_id):
+        return self._user_roles_edit(user, roles, project_id, remove=True)
+
+    # Helper function to add or remove roles
+    def _user_roles_edit(self, user, roles, project_id, remove=False):
+        id_manager = user_store.IdentityManager()
+        if not remove:
+            action_fn = id_manager.add_user_role
+            action_string = "granting"
+        else:
+            action_fn = id_manager.remove_user_role
+            action_string = "removing"
+        ks_roles = []
+        try:
+            for role in roles:
+                ks_role = id_manager.find_role(role)
+                if ks_role:
+                    ks_roles.append(ks_role)
+                else:
+                    raise TypeError("Keystone missing role: %s" % role)
+
+            for role in ks_roles:
+                action_fn(user, role, project_id)
+        except Exception as e:
+            self.add_note(
+                "Error: '%s' while %s the roles: %s on user: %s " %
+                (e, action_string, self.roles, user))
+            raise
+
+    def enable_user(self, user=None):
+        id_manager = user_store.IdentityManager()
+        try:
+            if not user:
+                user = self.find_user()
+            id_manager.enable_user(user)
+        except Exception as e:
+            self.add_note(
+                "Error: '%s' while re-enabling user: %s with roles: %s" %
+                (e, self.username, self.roles))
+            raise
+
+    def create_user(self, password):
+        id_manager = user_store.IdentityManager()
+        try:
+            user = id_manager.create_user(
+                name=self.username, password=password,
+                email=self.email, domain=self.domain_id,
+                created_on=str(timezone.now()))
+        except Exception as e:
+            # TODO: Narrow the Exceptions caught to a relevant set.
+            self.add_note(
+                "Error: '%s' while creating user: %s with roles: %s" %
+                (e, self.username, self.roles))
+            raise
+        return user
+
+    def update_password(self, password, user=None):
+        id_manager = user_store.IdentityManager()
+        try:
+            if not user:
+                user = self.find_user()
+            id_manager.update_user_password(user, password)
+        except Exception as e:
+            self.add_note(
+                "Error: '%s' while changing password for user: %s" %
+                (e, self.username))
+            raise
 
 
 class ProjectMixin(ResourceMixin):
@@ -375,7 +439,7 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
         'domain_id',
     ]
 
-    def _validate_targer_user(self):
+    def _validate_target_user(self):
         id_manager = user_store.IdentityManager()
 
         # check if user exists and is valid
@@ -434,7 +498,7 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
             self._validate_keystone_user() and
             self._validate_domain_id() and
             self._validate_project_id() and
-            self._validate_targer_user()
+            self._validate_target_user()
         )
         self.action.save()
 
@@ -450,70 +514,33 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
         if not self.valid:
             return
 
-        id_manager = user_store.IdentityManager()
-
         if self.action.state == "default":
             # default action: Create a new user in the tenant and add roles
-            try:
-                user = id_manager.create_user(
-                    name=self.username, password=token_data['password'],
-                    email=self.email, domain=self.domain_id,
-                    created_on=str(timezone.now()))
-
-                self._grant_roles(user, self.roles, self.project_id)
-            except Exception as e:
-                self.add_note(
-                    "Error: '%s' while creating user: %s with roles: %s" %
-                    (e, self.username, self.roles))
-                raise
+            user = self.create_user(token_data['password'])
+            self.grant_roles(user, self.roles, self.project_id)
 
             self.add_note(
                 'User %s has been created, with roles %s in project %s.'
                 % (self.username, self.roles, self.project_id))
+
         elif self.action.state == "disabled":
             # first re-enable user
-            try:
-                user = id_manager.find_user(self.username, self.domain_id)
-                id_manager.enable_user(user)
-            except Exception as e:
-                self.add_note(
-                    "Error: '%s' while re-enabling user: %s with roles: %s" %
-                    (e, self.username, self.roles))
-                raise
-            # now add their roles
-            try:
-                self._grant_roles(user, self.roles, self.project_id)
-            except Exception as e:
-                self.add_note(
-                    "Error: '%s' while attaching user: %s with roles: %s" %
-                    (e, self.username, self.roles))
-                raise
-            # and now update their password
-            try:
-                id_manager.update_user_password(
-                    user, token_data['password'])
-            except Exception as e:
-                self.add_note(
-                    "Error: '%s' while changing password for user: %s" %
-                    (e, self.username))
-                raise
+            user = self.find_user()
+            self.enable_user(user)
+            self.grant_roles(user, self.roles, self.project_id)
+            self.update_password(token_data['password'])
+
             self.add_note('User %s password has been changed.' % self.username)
 
             self.add_note(
-                'Existing user %s has been given roles %s in project %s.'
+                'Existing user %s has been re-enabled and given roles %s'
+                ' in project %s.'
                 % (self.username, self.roles, self.project_id))
 
         elif self.action.state == "existing":
             # Existing action: only add roles.
-            try:
-                user = id_manager.find_user(self.username, self.domain_id)
-
-                self._grant_roles(user, self.roles, self.project_id)
-            except Exception as e:
-                self.add_note(
-                    "Error: '%s' while attaching user: %s with roles: %s" %
-                    (e, self.username, self.roles))
-                raise
+            user = self.find_user()
+            self.grant_roles(user, self.roles, self.project_id)
 
             self.add_note(
                 'Existing user %s has been given roles %s in project %s.'
@@ -600,7 +627,7 @@ class NewProjectAction(BaseAction, ProjectMixin, UserMixin):
                 id_manager = user_store.IdentityManager()
                 user = id_manager.get_user(keystone_user['user_id'])
 
-                self._grant_roles(user, default_roles, project_id)
+                self.grant_roles(user, default_roles, project_id)
             except Exception as e:
                 self.add_note(
                     ("Error: '%s' while adding roles %s "
@@ -766,7 +793,7 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
                 # put user_id into action cache:
                 self.action.task.cache['user_id'] = user.id
 
-                self._grant_roles(user, default_roles, project_id)
+                self.grant_roles(user, default_roles, project_id)
             except Exception as e:
                 self.add_note(
                     "Error: '%s' while creating user: %s with roles: %s" %
@@ -788,7 +815,7 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
                     user = id_manager.get_user(user_id)
                 self.action.task.cache['user_id'] = user.id
 
-                self._grant_roles(user, default_roles, project_id)
+                self.grant_roles(user, default_roles, project_id)
             except Exception as e:
                 self.add_note(
                     "Error: '%s' while granting roles: %s to user: %s" %
@@ -835,7 +862,7 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
             roles_granted = self.get_cache('roles_granted')
             if not roles_granted:
                 try:
-                    self._grant_roles(user, default_roles, project_id)
+                    self.grant_roles(user, default_roles, project_id)
                 except Exception as e:
                     self.add_note(
                         "Error: '%s' while granting user: %s roles: %s" %
@@ -948,14 +975,7 @@ class ResetUserPasswordAction(UserNameAction, UserMixin):
         if not self.valid:
             return
 
-        id_manager = user_store.IdentityManager()
-        try:
-            id_manager.update_user_password(self.user, token_data['password'])
-        except Exception as e:
-            self.add_note(
-                "Error: '%s' while changing password for user: %s" %
-                (e, self.username))
-            raise
+        self.update_password(token_data['password'])
         self.add_note('User %s password has been changed.' % self.username)
 
 
@@ -1035,34 +1055,10 @@ class EditUserRolesAction(UserIdAction, ProjectMixin, UserMixin):
         if not self.valid:
             return
 
-        id_manager = user_store.IdentityManager()
-
         if self.action.state == "default":
-            try:
-                user = self._get_target_user()
-
-                roles = []
-                for role in self.roles:
-                    roles.append(id_manager.find_role(role))
-
-                if self.remove:
-                    for role in roles:
-                        id_manager.remove_user_role(
-                            user, role, self.project_id)
-                else:
-                    for role in roles:
-                        id_manager.add_user_role(
-                            user, role, self.project_id)
-            except Exception as e:
-                if self.remove:
-                    self.add_note(
-                        "Error: '%s' removing roles: %s from user: %s" %
-                        (e, self.roles, self.user_id))
-                else:
-                    self.add_note(
-                        "Error: '%s' adding roles: %s to user: %s" %
-                        (e, self.roles, self.user_id))
-                raise
+            user = self._get_target_user()
+            self._user_roles_edit(user, self.roles, self.project_id,
+                                  remove=self.remove)
 
             if self.remove:
                 self.add_note(

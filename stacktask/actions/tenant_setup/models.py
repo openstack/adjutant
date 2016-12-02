@@ -273,7 +273,7 @@ class AddDefaultUsersToProjectAction(BaseAction, ProjectMixin, UserMixin):
                 for user in self.users:
                     ks_user = id_manager.find_user(user, self.domain_id)
 
-                    self._grant_roles(ks_user, self.roles, self.project_id)
+                    self.grant_roles(ks_user, self.roles, self.project_id)
                     self.add_note(
                         'User: "%s" given roles: %s on project: %s.' %
                         (ks_user.name, self.roles, self.project_id))

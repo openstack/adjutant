@@ -555,8 +555,8 @@ class ActionTests(TestCase):
             raise FakeException
         # We swap out the old grant function and keep
         # it for later.
-        old_grant_function = action._grant_roles
-        action._grant_roles = fail_grant
+        old_grant_function = action.grant_roles
+        action.grant_roles = fail_grant
 
         # Now we expect the failure
         self.assertRaises(FakeException, action.post_approve)
@@ -571,7 +571,7 @@ class ActionTests(TestCase):
         self.assertFalse("user_id_1" in project.roles)
 
         # And then swap back the correct function
-        action._grant_roles = old_grant_function
+        action.grant_roles = old_grant_function
         # and try again, it should work this time
         action.post_approve()
         self.assertEquals(action.valid, True)
