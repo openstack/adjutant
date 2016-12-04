@@ -41,7 +41,7 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
             return False
 
         id_manager = user_store.IdentityManager()
-        region = id_manager.find_region(self.region)
+        region = id_manager.get_region(self.region)
         if not region:
             self.add_note('ERROR: Region does not exist.')
             return False

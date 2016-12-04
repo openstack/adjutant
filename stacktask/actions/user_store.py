@@ -205,13 +205,6 @@ class IdentityManager(object):
         except ks_exceptions.NotFound:
             return None
 
-    def find_region(self, region_name):
-        try:
-            region = self.ks_client.regions.find(name=region_name)
-        except ks_exceptions.NotFound:
-            region = None
-        return region
-
     def get_region(self, region_id):
         try:
             region = self.ks_client.regions.get(region_id)
