@@ -131,7 +131,7 @@ class ActionTests(TestCase):
                 FakeManager)
     def test_new_user_disabled(self):
         """
-        Disabled user, valid tenant, no role.
+        Disabled user, valid existing tenant, no role.
         """
         project = mock.Mock()
         project.id = 'test_project_id'
@@ -421,11 +421,8 @@ class ActionTests(TestCase):
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
-            keystone_user={
-                'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id',
-                'project_domain_id': 'default',
-            })
+            keystone_user={}
+        )
 
         data = {
             'domain_id': 'default',
@@ -473,11 +470,8 @@ class ActionTests(TestCase):
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
-            keystone_user={
-                'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id',
-                'project_domain_id': 'default',
-            })
+            keystone_user={}
+        )
 
         data = {
             'domain_id': 'default',
@@ -526,6 +520,76 @@ class ActionTests(TestCase):
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)
+    def test_new_project_reapprove_failure(self):
+        """
+        Project created at post_approve step, failure at role grant.
+
+        Ensure reapprove correctly finishes.
+        """
+
+        setup_temp_cache({}, {})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={}
+        )
+
+        data = {
+            'domain_id': 'default',
+            'parent_id': None,
+            'email': 'test@example.com',
+            'project_name': 'test_project',
+        }
+
+        action = NewProjectWithUserAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        # NOTE(adrian): We need the code to fail at the
+        # grant roles step so we can attempt reapproving it
+        class FakeException(Exception):
+            pass
+
+        def fail_grant(user, default_roles, project_id):
+            raise FakeException
+        # We swap out the old grant function and keep
+        # it for later.
+        old_grant_function = action._grant_roles
+        action._grant_roles = fail_grant
+
+        # Now we expect the failure
+        self.assertRaises(FakeException, action.post_approve)
+
+        # No roles_granted yet, but user created
+        self.assertTrue("user_id" in action.action.cache)
+        self.assertFalse("roles_granted" in action.action.cache)
+        self.assertEquals(
+            tests.temp_cache['users']["user_id_1"].email,
+            'test@example.com')
+        project = tests.temp_cache['projects']['test_project']
+        self.assertFalse("user_id_1" in project.roles)
+
+        # And then swap back the correct function
+        action._grant_roles = old_grant_function
+        # and try again, it should work this time
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+        # roles_granted in cache
+        self.assertTrue("roles_granted" in action.action.cache)
+
+        token_data = {'password': '123456'}
+        action.submit(token_data)
+        self.assertEquals(action.valid, True)
+
+        project = tests.temp_cache['projects']['test_project']
+        self.assertEquals(
+            sorted(project.roles["user_id_1"]),
+            sorted(['_member_', 'project_admin',
+                    'project_mod', 'heat_stack_owner']))
+
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
     def test_new_project_existing_user(self):
         """
         Create a project for a user that already exists.
@@ -541,11 +605,8 @@ class ActionTests(TestCase):
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
-            keystone_user={
-                'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id',
-                'project_domain_id': 'default',
-            })
+            keystone_user={}
+        )
 
         data = {
             'domain_id': 'default',
@@ -596,15 +657,13 @@ class ActionTests(TestCase):
         user.domain = 'default'
         user.enabled = False
 
+        # create disabled user
         setup_temp_cache({}, {user.id: user})
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
-            keystone_user={
-                'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id',
-                'project_domain_id': 'default',
-            })
+            keystone_user={}
+        )
 
         data = {
             'domain_id': 'default',
@@ -613,6 +672,7 @@ class ActionTests(TestCase):
             'project_name': 'test_project',
         }
 
+        # Sign up, approve
         action = NewProjectWithUserAction(data, task=task, order=1)
 
         action.pre_approve()
@@ -625,21 +685,97 @@ class ActionTests(TestCase):
             'test_project')
         self.assertEquals(
             task.cache,
-            {'user_id': 'user_id_1', 'project_id': 'project_id_1',
+            {'user_id': 'user_id_1',
+             'project_id': 'project_id_1',
              'user_state': 'disabled'})
 
+        # submit password reset
         token_data = {'password': '123456'}
         action.submit(token_data)
         self.assertEquals(action.valid, True)
 
+        # check that user has been created correctly
         self.assertEquals(
             tests.temp_cache['users'][user.id].email,
             'test@example.com')
+        self.assertEquals(
+            tests.temp_cache['users'][user.id].enabled,
+            True)
+
+        # Check user has correct roles in new project
         project = tests.temp_cache['projects']['test_project']
         self.assertEquals(
             sorted(project.roles[user.id]),
             sorted(['_member_', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
+
+    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
+                FakeManager)
+    def test_new_project_user_disabled_during_signup(self):
+        """
+        Create a project for a user that is created and disabled during signup.
+
+        This exercises the tasks ability to correctly act based on changed
+        circumstances between two states.
+        """
+
+        # Start with nothing created
+        setup_temp_cache({}, {})
+
+        # Sign up for the project+user, validate.
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={}
+        )
+
+        data = {
+            'domain_id': 'default',
+            'parent_id': None,
+            'email': 'test@example.com',
+            'project_name': 'test_project',
+        }
+
+        # Sign up
+        action = NewProjectWithUserAction(data, task=task, order=1)
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        # Create the disabled user directly with the Identity Manager.
+        fm = FakeManager()
+        user = fm.create_user(
+            name="test@example.com",
+            password='origpass',
+            email="test@example.com",
+            created_on=None,
+            domain='default',
+            default_project=None
+        )
+        fm.disable_user(user.id)
+
+        # approve previous signup
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+        project = tests.temp_cache['projects']['test_project']
+        self.assertEquals(
+            project.name,
+            'test_project')
+        self.assertEquals(
+            task.cache,
+            {'user_id': user.id,
+             'project_id': project.id,
+             'user_state': 'disabled'})
+
+        # check that user has been re-enabled with a generated password.
+        self.assertEquals(user.enabled, True)
+        self.assertNotEquals(user.password, 'origpass')
+
+        # submit password reset
+        token_data = {'password': '123456'}
+        action.submit(token_data)
+        self.assertEquals(action.valid, True)
+
+        # Ensure user has new password:
+        self.assertEquals(user.password, '123456')
 
     @mock.patch('stacktask.actions.models.user_store.IdentityManager',
                 FakeManager)

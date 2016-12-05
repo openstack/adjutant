@@ -115,7 +115,7 @@ class FakeManager(object):
 
     def create_user(self, name, password, email, created_on,
                     domain='default', default_project=None):
-        domain = self._project_from_id(domain)
+        domain = self._domain_from_id(domain)
         default_project = self._project_from_id(default_project)
         global temp_cache
         user = mock.Mock()
@@ -123,7 +123,7 @@ class FakeManager(object):
         user.name = name
         user.password = password
         user.email = email
-        user.domain = domain
+        user.domain = domain.id
         user.default_project = default_project
         temp_cache['users'][user.id] = user
 
