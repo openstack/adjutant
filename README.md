@@ -243,13 +243,13 @@ Provided you have tox and its requirements installed running tests is very simpl
 ```
 $ tox
 ```
-To run a single test:
+To run just action unit tests:
 ```
-$ virtualenv venv
-$ source venv/bin/activate
-$ pip install -r requirements.txt -r test-requirements.txt
-$ python setup.py develop
-$ stacktask-api test stacktask.api.v1.tests.test_api_taskview.TaskViewTests.test_duplicate_tasks_new_user
+$ tox stacktask.actions
+```
+To run a single api test:
+```
+$ tox stacktask.api.v1.tests.test_api_taskview.TaskViewTests.test_duplicate_tasks_new_user
 ```
 
 ### Adding Actions:
