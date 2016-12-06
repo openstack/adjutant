@@ -239,7 +239,6 @@ class FakeManager(object):
         global temp_cache
         return temp_cache['domains'].get(domain_id, None)
 
-
     def get_region(self, region_id):
         global temp_cache
         return temp_cache['regions'].get(region_id, None)

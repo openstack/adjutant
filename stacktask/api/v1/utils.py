@@ -65,7 +65,7 @@ def send_email(task, email_conf, token=None):
         email = act.get_email()
         if email:
             emails.add(email)
-            actions[unicode(act)] = act
+            actions[str(act)] = act
 
     if not emails:
         return

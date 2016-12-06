@@ -72,7 +72,7 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
             self._validate_project_id() and
             self._validate_defaults() and
             self._validate_keystone_user()
-            )
+        )
         self.action.save()
 
     def _create_network(self):
@@ -195,7 +195,7 @@ class NewProjectDefaultNetworkAction(NewDefaultNetworkAction):
         self.action.valid = (
             self._validate_region() and
             self._validate_defaults()
-            )
+        )
         self.action.save()
 
     def _validate(self):
@@ -203,7 +203,7 @@ class NewProjectDefaultNetworkAction(NewDefaultNetworkAction):
             self._validate_region() and
             self._validate_project_id() and
             self._validate_defaults()
-            )
+        )
         self.action.save()
 
     def _pre_approve(self):
@@ -257,7 +257,7 @@ class AddDefaultUsersToProjectAction(BaseAction, ProjectMixin, UserMixin):
         self.action.valid = (
             self._validate_users() and
             self._validate_project_id()
-            )
+        )
         self.action.save()
 
     def _pre_approve(self):
@@ -295,9 +295,7 @@ class SetProjectQuotaAction(BaseAction):
 
     class ServiceQuotaFunctor(object):
         def __call__(self, project_id, values):
-            self.client.quotas.update(
-                    project_id,
-                    **values)
+            self.client.quotas.update(project_id, **values)
 
     class ServiceQuotaCinderFunctor(ServiceQuotaFunctor):
         def __init__(self, region_name):
@@ -318,9 +316,7 @@ class SetProjectQuotaAction(BaseAction):
             body = {
                 'quota': values
             }
-            self.client.update_quota(
-                    project_id,
-                    body)
+            self.client.update_quota(project_id, body)
 
     _quota_updaters = {
         'cinder': ServiceQuotaCinderFunctor,
@@ -386,7 +382,8 @@ class SetProjectQuotaAction(BaseAction):
                 # functor for the service+region
                 service_functor = updater_class(region_name)
                 service_functor(self.project_id, values)
-            self.add_note("Project quota for region %s set to %s" % (
+            self.add_note(
+                "Project quota for region %s set to %s" % (
                     region_name, quota_size))
 
         self.action.state = "completed"

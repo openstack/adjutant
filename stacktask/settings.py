@@ -100,8 +100,8 @@ if 'test' in sys.argv:
 else:
     config_file = "/etc/stacktask/conf.yaml"
     if not os.path.isfile(config_file):
-        print ("%s does not exist. Reverting to default config file." %
-               config_file)
+        print("%s does not exist. Reverting to default config file." %
+              config_file)
         config_file = "conf/conf.yaml"
     with open(config_file) as f:
         CONFIG = yaml.load(f)

@@ -25,6 +25,7 @@ def register_taskview_class(url, taskview_class):
         'url': url}
     settings.TASKVIEW_CLASSES.update(data)
 
+
 register_taskview_class(r'^actions/CreateProject/?$', tasks.CreateProject)
 register_taskview_class(r'^actions/InviteUser/?$', tasks.InviteUser)
 register_taskview_class(r'^actions/ResetPassword/?$', tasks.ResetPassword)

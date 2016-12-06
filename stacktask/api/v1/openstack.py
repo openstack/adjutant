@@ -204,8 +204,7 @@ class UserRoles(tasks.TaskView):
         request.data['user_id'] = user_id
 
         self.logger.info("(%s) - New EditUser %s request." % (
-            timezone.now(), request.method
-            ))
+            timezone.now(), request.method))
         processed, status = self.process_actions(request)
 
         errors = processed.get('errors', None)

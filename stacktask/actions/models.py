@@ -148,7 +148,7 @@ class BaseAction(object):
         self.logger.info("(%s) - %s" % (timezone.now(), note))
         note = "%s - (%s)" % (note, timezone.now())
         self.action.task.add_action_note(
-            unicode(self), note)
+            str(self), note)
 
     def pre_approve(self):
         return self._pre_approve()
@@ -168,7 +168,7 @@ class BaseAction(object):
     def _submit(self, token_data):
         raise NotImplementedError
 
-    def __unicode__(self):
+    def __str__(self):
         return self.__class__.__name__
 
 
@@ -435,7 +435,7 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
             self._validate_domain_id() and
             self._validate_project_id() and
             self._validate_targer_user()
-            )
+        )
         self.action.save()
 
     def _pre_approve(self):
@@ -933,7 +933,7 @@ class ResetUserPasswordAction(UserNameAction, UserMixin):
             self._validate_domain_name() and
             self._validate_username_exists() and
             self._validate_user_roles()
-            )
+        )
         self.action.save()
 
     def _pre_approve(self):
@@ -1020,7 +1020,7 @@ class EditUserRolesAction(UserIdAction, ProjectMixin, UserMixin):
             self._validate_project_id() and
             self._validate_target_user() and
             self._validate_user_roles()
-            )
+        )
         self.action.save()
 
     def _pre_approve(self):
@@ -1089,6 +1089,7 @@ def register_action_class(action_class, serializer_class):
     data = {}
     data[action_class.__name__] = (action_class, serializer_class)
     settings.ACTION_CLASSES.update(data)
+
 
 # Register each action model
 register_action_class(NewUserAction, serializers.NewUserSerializer)

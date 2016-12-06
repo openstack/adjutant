@@ -654,7 +654,7 @@ class TokenDetail(APIViewWithLogger):
                 if field not in required_fields:
                     required_fields.append(field)
 
-        return Response({'actions': [unicode(act) for act in actions],
+        return Response({'actions': [str(act) for act in actions],
                          'required_fields': required_fields})
 
     def post(self, request, id, format=None):
