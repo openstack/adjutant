@@ -13,6 +13,7 @@
 #    under the License.
 
 import mock
+import six
 
 
 temp_cache = {}
@@ -226,6 +227,13 @@ class FakeManager(object):
         project.domain = domain
         project.roles = {}
         temp_cache['projects'][project_name] = project
+        return project
+
+    def update_project(self, project, **kwargs):
+        project = self._project_from_id(project)
+        for key, arg in six.iteritems(kwargs):
+            if arg is not None:
+                setattr(project, key, arg)
         return project
 
     def find_domain(self, domain_name):
