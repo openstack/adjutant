@@ -94,29 +94,29 @@ DEFAULT_TASK_SETTINGS:
             template: completed.txt
             # html_template: completed.txt
     notifications:
-        standard:
-            EmailNotification:
+        EmailNotification:
+            standard:
                 emails:
                     - example@example.com
                 reply: no-reply@example.com
                 from: bounce+%(task_uuid)s@example.com
                 template: notification.txt
                 # html_template: completed.txt
-            RTNotification:
+            error:
+                emails:
+                    - example@example.com
+                reply: no-reply@example.com
+                from: bounce+%(task_uuid)s@example.com
+                template: notification.txt
+                # html_template: completed.txt
+        RTNotification:
+            standard:
                 url: http://localhost/rt/REST/1.0/
                 queue: helpdesk
                 username: example@example.com
                 password: password
                 template: notification.txt
-        error:
-            EmailNotification:
-                emails:
-                    - example@example.com
-                reply: no-reply@example.com
-                from: bounce+%(task_uuid)s@example.com
-                template: notification.txt
-                # html_template: completed.txt
-            RTNotification:
+            error:
                 url: http://localhost/rt/REST/1.0/
                 queue: errors
                 username: example@example.com
@@ -149,17 +149,17 @@ TASK_SETTINGS:
                 subject: Your OpenStack signup has been completed
                 template: signup_completed.txt
         notifications:
-            standard:
-                EmailNotification:
+            EmailNotification:
+                standard:
                     emails:
                         - signups@example.com
-                RTNotification:
+                error:
+                    emails:
+                        - signups@example.com
+            RTNotification:
+                standard:
                     queue: signups
-            error:
-                EmailNotification:
-                    emails:
-                        - signups@example.com
-                RTNotification:
+                error:
                     queue: signups
         default_region: RegionOne
         # If 'None' (null in yaml), will default to domain as parent.

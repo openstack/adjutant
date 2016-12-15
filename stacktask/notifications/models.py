@@ -13,7 +13,7 @@
 #    under the License.
 
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
 from django.template import loader
 from smtplib import SMTPException
 from stacktask.api.models import Notification
@@ -40,43 +40,73 @@ class EmailNotification(NotificationEngine):
     Example conf:
         <TaskView>:
             notifications:
-                standard:
-                    EmailNotification:
+                EmailNotification:
+                    standard:
                         emails:
                             - example@example.com
                         reply: no-reply@example.com
                         template: notification.txt
                         html_template: completed.txt
-                error:
-                    EmailNotification:
+                    error:
                         emails:
                             - errors@example.com
                         reply: no-reply@example.com
                         template: notification.txt
                         html_template: completed.txt
-                <other notification>:
+                <other notification engine>:
                     ...
     """
 
     def _notify(self, task, notification):
-        template = loader.get_template(self.conf['template'])
-        html_template = loader.get_template(self.conf['html_template'])
+        template = loader.get_template(
+            self.conf['template'],
+            using='include_etc_templates')
+        html_template = self.conf.get('html_template', None)
+        if html_template:
+            html_template = loader.get_template(
+                html_template,
+                using='include_etc_templates')
 
         context = {
             'task': task, 'notification': notification}
 
-        # NOTE(adriant): Error handling?
-        message = template.render(context)
-        html_message = html_template.render(context)
         if notification.error:
             subject = "Error - %s notification" % task.task_type
         else:
             subject = "%s notification" % task.task_type
         try:
-            send_mail(
-                subject, message, self.conf['reply'],
-                self.conf['emails'], fail_silently=False,
-                html_message=html_message)
+            message = template.render(context)
+
+            # from_email is the return-path and is distinct from the
+            # message headers
+            from_email = self.conf.get('from')
+            if not from_email:
+                from_email = self.conf['reply']
+            elif "%(task_uuid)s" in from_email:
+                from_email = from_email % {'task_uuid': task.uuid}
+
+            # these are the message headers which will be visible to
+            # the email client.
+            headers = {
+                'X-StackTask-Task-UUID': task.uuid,
+                # From needs to be set to be disctinct from return-path
+                'From': self.conf['reply'],
+                'Reply-To': self.conf['reply'],
+            }
+
+            email = EmailMultiAlternatives(
+                subject,
+                message,
+                from_email,
+                self.conf['emails'],
+                headers=headers,
+            )
+
+            if html_template:
+                email.attach_alternative(
+                    html_template.render(context), "text/html")
+
+            email.send(fail_silently=False)
             if not notification.error:
                 notification.acknowledge = True
                 notification.save()

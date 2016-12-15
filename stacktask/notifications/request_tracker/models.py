@@ -52,7 +52,6 @@ class RTNotification(NotificationEngine):
         tracker = RTResource(
             self.conf['url'], self.conf['username'], self.conf['password'],
             CookieAuthenticator)
-        tracker.login()
         self.tracker = tracker
 
     def _notify(self, task, notification):
@@ -60,7 +59,6 @@ class RTNotification(NotificationEngine):
 
         context = {'task': task, 'notification': notification}
 
-        # NOTE(adriant): Error handling?
         message = template.render(context)
 
         if notification.error:
@@ -79,8 +77,8 @@ class RTNotification(NotificationEngine):
         try:
             self.tracker.post(path='ticket/new', payload=content)
             if not notification.error:
-                    notification.acknowledged = True
-                    notification.save()
+                notification.acknowledged = True
+                notification.save()
         except RTResourceError as e:
             notes = {
                 'errors':
