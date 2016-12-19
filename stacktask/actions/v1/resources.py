@@ -49,8 +49,7 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
         return True
 
     def _validate_defaults(self):
-        defaults = settings.ACTION_SETTINGS.get(
-            'NewDefaultNetworkAction', {}).get(self.region, {})
+        defaults = self.settings.get(self.region, {})
 
         if not defaults:
             self.add_note('ERROR: No default settings for region %s.' %
@@ -76,8 +75,7 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
 
     def _create_network(self):
         neutron = openstack_clients.get_neutronclient(region=self.region)
-        defaults = settings.ACTION_SETTINGS.get(
-            'NewDefaultNetworkAction', {}).get(self.region, {})
+        defaults = self.settings.get(self.region, {})
 
         if not self.get_cache('network_id'):
             try:
@@ -289,8 +287,7 @@ class SetProjectQuotaAction(BaseAction):
             return
 
         # update quota for each openstack service
-        regions_dict = settings.ACTION_SETTINGS.get(
-            'SetProjectQuotaAction', {}).get('regions', {})
+        regions_dict = self.settings.get('regions', {})
         for region_name, region_settings in six.iteritems(regions_dict):
             quota_size = region_settings.get('quota_size')
             quota_settings = settings.PROJECT_QUOTA_SIZES.get(quota_size, {})

@@ -26,20 +26,21 @@ def dict_merge(a, b):
     result = deepcopy(a)
     for k, v in b.iteritems():
         if k in result and isinstance(result[k], dict):
-                result[k] = dict_merge(result[k], v)
+            result[k] = dict_merge(result[k], v)
         else:
             result[k] = deepcopy(v)
     return result
 
 
-def setup_task_settings(default, task_settings):
+def setup_task_settings(task_defaults, action_defaults, task_settings):
     """
     Cascading merge of the default settings, and the
     settings for each task_type.
     """
     new_task_settings = {}
-
     for task, settings in task_settings.iteritems():
-        new_task_settings[task] = dict_merge(default, settings)
+        task_setting = deepcopy(task_defaults)
+        task_setting['action_settings'] = deepcopy(action_defaults)
+        new_task_settings[task] = dict_merge(task_setting, settings)
 
     return new_task_settings

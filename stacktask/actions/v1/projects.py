@@ -14,7 +14,6 @@
 
 from uuid import uuid4
 
-from django.conf import settings
 from django.utils import timezone
 
 from stacktask.actions import user_store
@@ -87,8 +86,7 @@ class NewProjectAction(BaseAction, ProjectMixin, UserMixin):
             self.action.task.cache['user_id'] = user_id
             self.add_note("User already given roles.")
         else:
-            default_roles = settings.ACTION_SETTINGS.get(
-                'NewProjectAction', {}).get("default_roles", {})
+            default_roles = self.settings.get("default_roles", {})
 
             project_id = self.get_cache('project_id')
             keystone_user = self.action.task.keystone_user
@@ -241,8 +239,7 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
 
     def _create_user_for_project(self):
         id_manager = user_store.IdentityManager()
-        default_roles = settings.ACTION_SETTINGS.get(
-            'NewProjectAction', {}).get("default_roles", {})
+        default_roles = self.settings.get("default_roles", {})
 
         project_id = self.get_cache('project_id')
 
@@ -396,11 +393,9 @@ class AddDefaultUsersToProjectAction(BaseAction, ProjectMixin, UserMixin):
     ]
 
     def __init__(self, *args, **kwargs):
-        self.users = settings.ACTION_SETTINGS.get(
-            'AddDefaultUsersToProjectAction', {}).get('default_users', [])
-        self.roles = settings.ACTION_SETTINGS.get(
-            'AddDefaultUsersToProjectAction', {}).get('default_roles', [])
         super(AddDefaultUsersToProjectAction, self).__init__(*args, **kwargs)
+        self.users = self.settings.get('default_users', [])
+        self.roles = self.settings.get('default_roles', [])
 
     def _validate_users(self):
         id_manager = user_store.IdentityManager()

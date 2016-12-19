@@ -16,7 +16,7 @@ from rest_framework import serializers
 from django.conf import settings
 
 
-role_options = settings.ACTION_SETTINGS.get("NewUserAction", {}).get(
+role_options = settings.DEFAULT_ACTION_SETTINGS.get("NewUserAction", {}).get(
     "allowed_roles", [])
 
 

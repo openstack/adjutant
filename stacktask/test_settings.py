@@ -108,6 +108,63 @@ DEFAULT_TASK_SETTINGS = {
     }
 }
 
+DEFAULT_ACTION_SETTINGS = {
+    'NewProjectAction': {
+        'default_roles': {
+            "project_admin", "project_mod", "_member_", "heat_stack_owner"
+        },
+    },
+    'NewProjectWithUserAction': {
+        'default_roles': {
+            "project_admin", "project_mod", "_member_", "heat_stack_owner"
+        },
+    },
+    'NewUserAction': {
+        'allowed_roles': ['project_mod', 'project_admin', "_member_"]
+    },
+    'ResetUserPasswordAction': {
+        'blacklisted_roles': ['admin']
+    },
+    'NewDefaultNetworkAction': {
+        'RegionOne': {
+            'DNS_NAMESERVERS': ['193.168.1.2', '193.168.1.3'],
+            'SUBNET_CIDR': '192.168.1.0/24',
+            'network_name': 'somenetwork',
+            'public_network': '3cb50f61-5bce-4c03-96e6-8e262e12bb35',
+            'router_name': 'somerouter',
+            'subnet_name': 'somesubnet'
+        },
+    },
+    'NewProjectDefaultNetworkAction': {
+        'RegionOne': {
+            'DNS_NAMESERVERS': ['193.168.1.2', '193.168.1.3'],
+            'SUBNET_CIDR': '192.168.1.0/24',
+            'network_name': 'somenetwork',
+            'public_network': '3cb50f61-5bce-4c03-96e6-8e262e12bb35',
+            'router_name': 'somerouter',
+            'subnet_name': 'somesubnet'
+        },
+    },
+    'AddDefaultUsersToProjectAction': {
+        'default_users': [
+            'admin',
+        ],
+        'default_roles': [
+            'admin',
+        ],
+    },
+    'SetProjectQuotaAction': {
+        'regions': {
+            'RegionOne': {
+                'quota_size': 'small'
+            },
+            'RegionTwo': {
+                'quota_size': 'large'
+            }
+        },
+    },
+}
+
 TASK_SETTINGS = {
     'invite_user': {
         'emails': {
@@ -170,49 +227,6 @@ TASK_SETTINGS = {
             }
         }
     }
-}
-
-ACTION_SETTINGS = {
-    'NewProjectAction': {
-        'default_roles': {
-            "project_admin", "project_mod", "_member_", "heat_stack_owner"
-        },
-    },
-    'NewUserAction': {
-        'allowed_roles': ['project_mod', 'project_admin', "_member_"]
-    },
-    'ResetUserPasswordAction': {
-        'blacklisted_roles': ['admin']
-    },
-    'NewDefaultNetworkAction': {
-        'RegionOne': {
-            'DNS_NAMESERVERS': ['193.168.1.2', '193.168.1.3'],
-            'SUBNET_CIDR': '192.168.1.0/24',
-            'network_name': 'somenetwork',
-            'public_network': '3cb50f61-5bce-4c03-96e6-8e262e12bb35',
-            'router_name': 'somerouter',
-            'subnet_name': 'somesubnet'
-        },
-    },
-    'AddDefaultUsersToProjectAction': {
-        'default_users': [
-            'admin',
-        ],
-        'default_roles': [
-            'admin',
-        ],
-    },
-    'SetProjectQuotaAction': {
-        'regions': {
-            'RegionOne': {
-                'quota_size': 'small'
-            },
-            'RegionTwo': {
-                'quota_size': 'large'
-            }
-        },
-    },
-
 }
 
 ROLES_MAPPING = {
@@ -280,7 +294,7 @@ conf_dict = {
     "ACTIVE_TASKVIEWS": ACTIVE_TASKVIEWS,
     "DEFAULT_TASK_SETTINGS": DEFAULT_TASK_SETTINGS,
     "TASK_SETTINGS": TASK_SETTINGS,
-    "ACTION_SETTINGS": ACTION_SETTINGS,
+    "DEFAULT_ACTION_SETTINGS": DEFAULT_ACTION_SETTINGS,
     "TOKEN_SUBMISSION_URL": TOKEN_SUBMISSION_URL,
     "TOKEN_EXPIRE_TIME": TOKEN_EXPIRE_TIME,
     "ROLES_MAPPING": ROLES_MAPPING,

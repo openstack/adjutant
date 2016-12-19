@@ -123,6 +123,20 @@ class BaseAction(object):
         self.action.task.add_action_note(
             str(self), note)
 
+    @property
+    def settings(self):
+        """Get my settings.
+
+        Returns a dict of the settings for this action.
+        """
+        try:
+            task_conf = settings.TASK_SETTINGS[self.action.task.task_type]
+            return task_conf['action_settings'].get(
+                self.__class__.__name__, {})
+        except KeyError:
+            return settings.DEFAULT_ACTION_SETTINGS.get(
+                self.__class__.__name__, {})
+
     def pre_approve(self):
         return self._pre_approve()
 

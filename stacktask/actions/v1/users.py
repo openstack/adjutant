@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.conf import settings
 from django.db import models
 
 from stacktask.actions import user_store
@@ -163,8 +162,9 @@ class ResetUserPasswordAction(UserNameAction, UserMixin):
         'email'
     ]
 
-    blacklist = settings.ACTION_SETTINGS.get(
-        'ResetUserPasswordAction', {}).get("blacklisted_roles", {})
+    def __init__(self, *args, **kwargs):
+        super(ResetUserPasswordAction, self).__init__(*args, **kwargs)
+        self.blacklist = self.settings.get("blacklisted_roles", {})
 
     def _validate_user_roles(self):
         id_manager = user_store.IdentityManager()
