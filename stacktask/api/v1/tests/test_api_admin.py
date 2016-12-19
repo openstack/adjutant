@@ -29,6 +29,8 @@ from stacktask.api.models import Task, Token
 from stacktask.api.v1.tests import FakeManager, setup_temp_cache
 
 
+@mock.patch('stacktask.actions.user_store.IdentityManager',
+            FakeManager)
 class AdminAPITests(APITestCase):
     """
     Tests to ensure the admin api endpoints work as expected within
@@ -57,11 +59,6 @@ class AdminAPITests(APITestCase):
             response.data,
             {'errors': ['This token does not exist or has expired.']})
 
-    @mock.patch(
-        'stacktask.actions.models.user_store.IdentityManager', FakeManager)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
     def test_task_get(self):
         """
         Test the basic task detail view.
@@ -122,8 +119,6 @@ class AdminAPITests(APITestCase):
         self.assertEqual(
             response.data, {'errors': ['No task with this id.']})
 
-    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
-                FakeManager)
     def test_token_expired_post(self):
         """
         Expired token should do nothing, then delete itself.
@@ -158,8 +153,6 @@ class AdminAPITests(APITestCase):
             {'errors': ['This token does not exist or has expired.']})
         self.assertEqual(0, Token.objects.count())
 
-    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
-                FakeManager)
     def test_token_expired_get(self):
         """
         Expired token should do nothing, then delete itself.
@@ -193,11 +186,6 @@ class AdminAPITests(APITestCase):
             {'errors': ['This token does not exist or has expired.']})
         self.assertEqual(0, Token.objects.count())
 
-    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
-                FakeManager)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
     def test_task_complete(self):
         """
         Can't approve a completed task.
@@ -228,11 +216,6 @@ class AdminAPITests(APITestCase):
             response.data,
             {'errors': ['This task has already been completed.']})
 
-    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
-                FakeManager)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
     def test_task_update(self):
         """
         Creates a invalid task.
@@ -287,11 +270,6 @@ class AdminAPITests(APITestCase):
             response.data,
             {'notes': ['created token']})
 
-    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
-                FakeManager)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
     def test_notification_acknowledge(self):
         """
         Test that you can acknowledge a notification.
@@ -339,11 +317,6 @@ class AdminAPITests(APITestCase):
         )
         self.assertEqual(response.data, {'notifications': []})
 
-    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
-                FakeManager)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
     def test_notification_acknowledge_list(self):
         """
         Test that you can acknowledge a list of notifications.
@@ -389,8 +362,6 @@ class AdminAPITests(APITestCase):
         )
         self.assertEqual(response.data, {'notifications': []})
 
-    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
-                FakeManager)
     def test_token_expired_delete(self):
         """
         test deleting of expired tokens.
@@ -451,8 +422,6 @@ class AdminAPITests(APITestCase):
                          {'notes': ['Deleted all expired tokens.']})
         self.assertEqual(Token.objects.count(), 1)
 
-    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
-                FakeManager)
     def test_token_reissue(self):
         """
         test for reissue of tokens
@@ -499,8 +468,6 @@ class AdminAPITests(APITestCase):
         new_token = Token.objects.all()[0]
         self.assertNotEquals(new_token.token, uuid)
 
-    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
-                FakeManager)
     def test_token_reissue_non_admin(self):
         """
         test for reissue of tokens for non-admin
@@ -553,11 +520,6 @@ class AdminAPITests(APITestCase):
         self.assertEqual(response.data,
                          {'errors': ['No task with this id.']})
 
-    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
-                FakeManager)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
     def test_cancel_task(self):
         """
         Ensure the ability to cancel a task.
@@ -592,11 +554,6 @@ class AdminAPITests(APITestCase):
                                    headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
-                FakeManager)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
     def test_cancel_task_sent_token(self):
         """
         Ensure the ability to cancel a task after the token is sent.
@@ -633,11 +590,6 @@ class AdminAPITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
-                FakeManager)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
     def test_task_update_unapprove(self):
         """
         Ensure task update doesn't work for approved actions.
@@ -678,11 +630,6 @@ class AdminAPITests(APITestCase):
                                    headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @mock.patch(
-        'stacktask.actions.models.user_store.IdentityManager', FakeManager)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
     def test_cancel_task_own(self):
         """
         Ensure the ability to cancel your own task.
@@ -726,11 +673,6 @@ class AdminAPITests(APITestCase):
                                    headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @mock.patch(
-        'stacktask.actions.models.user_store.IdentityManager', FakeManager)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
     def test_cancel_task_own_fail(self):
         """
         Ensure the ability to cancel ONLY your own task.
@@ -766,8 +708,6 @@ class AdminAPITests(APITestCase):
                                       headers=headers)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
-    @mock.patch(
-        'stacktask.actions.models.user_store.IdentityManager', FakeManager)
     def test_task_list(self):
         """
         """
@@ -814,8 +754,6 @@ class AdminAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['tasks']), 3)
 
-    @mock.patch(
-        'stacktask.actions.models.user_store.IdentityManager', FakeManager)
     def test_task_list_ordering(self):
         """
         Test that tasks returns in the default sort.
@@ -870,11 +808,6 @@ class AdminAPITests(APITestCase):
         for i, task in enumerate(sorted_list):
             self.assertEqual(task, response.data['tasks'][i])
 
-    @mock.patch(
-        'stacktask.actions.models.user_store.IdentityManager', FakeManager)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
     def test_task_list_filter(self):
         """
         """
@@ -944,8 +877,6 @@ class AdminAPITests(APITestCase):
     # TODO(adriant): enable this test again when filters are properly
     # blacklisted.
     @skip("Does not apply yet.")
-    @mock.patch(
-        'stacktask.actions.models.user_store.IdentityManager', FakeManager)
     def test_task_list_filter_cross_project(self):
         """
         Ensure you can't override the initial project_id filter if
@@ -1003,8 +934,6 @@ class AdminAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data['tasks']), 0)
 
-    @mock.patch(
-        'stacktask.actions.models.user_store.IdentityManager', FakeManager)
     def test_task_list_filter_formating(self):
         """
         """
@@ -1093,11 +1022,6 @@ class AdminAPITests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @mock.patch(
-        'stacktask.actions.models.user_store.IdentityManager', FakeManager)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
     def test_reset_admin(self):
         """
         Ensure that you cannot issue a password reset for an

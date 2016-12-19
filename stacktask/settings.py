@@ -124,6 +124,10 @@ for app in CONFIG['ADDITIONAL_APPS']:
     INSTALLED_APPS = list(INSTALLED_APPS)
     INSTALLED_APPS.append(app)
 
+# NOTE(adriant): Because the order matters, we want this import to be last
+# so the startup checks run after everything is imported.
+INSTALLED_APPS.append("stacktask.startup")
+
 DATABASES = CONFIG['DATABASES']
 
 LOGGING = CONFIG['LOGGING']

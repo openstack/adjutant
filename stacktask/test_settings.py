@@ -12,11 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-SECRET_KEY = '+er!!4olta#17a=n%uotcazg2ncpl==yjog%1*o-(cr%zys-)!'
+SECRET_KEY = '+er!4olta#17a=n%uotcazg2ncpl==yjog%1*o-(cr%zys-)!'
 
 ADDITIONAL_APPS = [
     'stacktask.api.v1',
-    'stacktask.actions.tenant_setup'
+    'stacktask.actions.v1',
 ]
 
 DATABASES = {

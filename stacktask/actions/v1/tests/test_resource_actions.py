@@ -16,120 +16,32 @@ from django.test import TestCase
 
 import mock
 
-from stacktask.actions.tenant_setup.models import (
+from stacktask.actions.v1.resources import (
     NewDefaultNetworkAction, NewProjectDefaultNetworkAction,
-    AddDefaultUsersToProjectAction, SetProjectQuotaAction)
+    SetProjectQuotaAction)
 from stacktask.api.models import Task
-from stacktask.api.v1 import tests
 from stacktask.api.v1.tests import FakeManager, setup_temp_cache
+from stacktask.actions.v1.tests import (
+    get_fake_neutron, get_fake_novaclient, get_fake_cinderclient,
+    setup_neutron_cache, neutron_cache, cinder_cache, nova_cache)
 
 
-neutron_cache = {}
-nova_cache = {}
-cinder_cache = {}
-
-
-class FakeOpenstackClient(object):
-    class Quotas(object):
-        """ Stub class for testing quotas """
-        def __init__(self, service):
-            self.service = service
-
-        def update(self, project_id, **kwargs):
-            self.service.update_quota(project_id, **kwargs)
-
-    def __init__(self, region, cache):
-        self.region = region
-        self._cache = cache
-        self.quotas = FakeOpenstackClient.Quotas(self)
-
-    def update_quota(self, project_id, **kwargs):
-        if self.region not in self._cache:
-            self._cache[self.region] = {}
-        if project_id not in self._cache[self.region]:
-            self._cache[self.region][project_id] = {
-                'quota': {}
-            }
-        quota = self._cache[self.region][project_id]['quota']
-        quota.update(kwargs)
-
-
-class FakeNeutronClient(object):
-
-    def create_network(self, body):
-        global neutron_cache
-        net = {'network': {'id': 'net_id_%s' % neutron_cache['i'],
-                           'body': body}}
-        neutron_cache['networks'][net['network']['id']] = net
-        neutron_cache['i'] += 1
-        return net
-
-    def create_subnet(self, body):
-        global neutron_cache
-        subnet = {'subnet': {'id': 'subnet_id_%s' % neutron_cache['i'],
-                             'body': body}}
-        neutron_cache['subnets'][subnet['subnet']['id']] = subnet
-        neutron_cache['i'] += 1
-        return subnet
-
-    def create_router(self, body):
-        global neutron_cache
-        router = {'router': {'id': 'router_id_%s' % neutron_cache['i'],
-                             'body': body}}
-        neutron_cache['routers'][router['router']['id']] = router
-        neutron_cache['i'] += 1
-        return router
-
-    def add_interface_router(self, router_id, body):
-        global neutron_cache
-        router = neutron_cache['routers'][router_id]
-        router['router']['interface'] = body
-        return router
-
-    def update_quota(self, project_id, body):
-        global neutron_cache
-        if project_id not in neutron_cache:
-            neutron_cache[project_id] = {}
-        if 'quota' not in neutron_cache[project_id]:
-            neutron_cache[project_id]['quota'] = {}
-
-        quota = neutron_cache[project_id]['quota']
-        quota.update(body['quota'])
-
-
-def setup_neutron_cache():
-    global neutron_cache
-    neutron_cache = {
-        'i': 0,
-        'networks': {},
-        'subnets': {},
-        'routers': {},
-    }
-
-
-def get_fake_neutron(region):
-    return FakeNeutronClient()
-
-
-def get_fake_novaclient(region):
-    global nova_cache
-    return FakeOpenstackClient(region, nova_cache)
-
-
-def get_fake_cinderclient(region):
-    global cinder_cache
-    return FakeOpenstackClient(region, cinder_cache)
-
-
+@mock.patch('stacktask.actions.user_store.IdentityManager',
+            FakeManager)
+@mock.patch(
+    'stacktask.actions.v1.resources.' +
+    'openstack_clients.get_neutronclient',
+    get_fake_neutron)
+@mock.patch(
+    'stacktask.actions.v1.resources.' +
+    'openstack_clients.get_novaclient',
+    get_fake_novaclient)
+@mock.patch(
+    'stacktask.actions.v1.resources.' +
+    'openstack_clients.get_cinderclient',
+    get_fake_cinderclient)
 class ProjectSetupActionTests(TestCase):
 
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.' +
-        'openstack_clients.get_neutronclient',
-        get_fake_neutron)
     def test_network_setup(self):
         """
         Base case, setup a new network , no issues.
@@ -176,13 +88,6 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(len(neutron_cache['routers']), 1)
         self.assertEquals(len(neutron_cache['subnets']), 1)
 
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.' +
-        'openstack_clients.get_neutronclient',
-        get_fake_neutron)
     def test_network_setup_no_setup(self):
         """
         Told not to setup, should do nothing.
@@ -224,13 +129,6 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(len(neutron_cache['routers']), 0)
         self.assertEquals(len(neutron_cache['subnets']), 0)
 
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.' +
-        'openstack_clients.get_neutronclient',
-        get_fake_neutron)
     def test_network_setup_fail(self):
         """
         Should fail, but on re_approve will continue where it left off.
@@ -296,13 +194,6 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(len(neutron_cache['routers']), 1)
         self.assertEquals(len(neutron_cache['subnets']), 1)
 
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.' +
-        'openstack_clients.get_neutronclient',
-        get_fake_neutron)
     def test_new_project_network_setup(self):
         """
         Base case, setup network after a new project, no issues.
@@ -349,13 +240,6 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(len(neutron_cache['routers']), 1)
         self.assertEquals(len(neutron_cache['subnets']), 1)
 
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.' +
-        'openstack_clients.get_neutronclient',
-        get_fake_neutron)
     def test_new_project_network_setup_no_id(self):
         """
         No project id given, should do nothing.
@@ -385,13 +269,6 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(len(neutron_cache['routers']), 0)
         self.assertEquals(len(neutron_cache['subnets']), 0)
 
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.' +
-        'openstack_clients.get_neutronclient',
-        get_fake_neutron)
     def test_new_project_network_setup_no_setup(self):
         """
         Told not to setup, should do nothing.
@@ -433,13 +310,6 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(len(neutron_cache['routers']), 0)
         self.assertEquals(len(neutron_cache['subnets']), 0)
 
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.' +
-        'openstack_clients.get_neutronclient',
-        get_fake_neutron)
     def test_new_project_network_setup_fail(self):
         """
         Should fail, but on re_approve will continue where it left off.
@@ -505,129 +375,6 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(len(neutron_cache['routers']), 1)
         self.assertEquals(len(neutron_cache['subnets']), 1)
 
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
-    def test_add_default_users(self):
-        """
-        Base case, adds admin user with admin role to project.
-
-        NOTE(adriant): both the lists of users, and the roles to add
-        come from test_settings. This test assumes the conf setting of:
-        default_users = ['admin']
-        default_roles = ['admin']
-        """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        setup_temp_cache({'test_project': project}, {})
-
-        task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
-
-        task.cache = {'project_id': "test_project_id"}
-
-        action = AddDefaultUsersToProjectAction(
-            {'domain_id': 'default'}, task=task, order=1)
-
-        action.pre_approve()
-        self.assertEquals(action.valid, True)
-
-        action.post_approve()
-        self.assertEquals(action.valid, True)
-
-        project = tests.temp_cache['projects']['test_project']
-        self.assertEquals(project.roles['user_id_0'], ['admin'])
-
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
-    def test_add_default_users_invalid_project(self):
-        """Add default users to a project that doesn't exist.
-
-        Action should become invalid at the post_approve state, it's ok if
-        the project isn't created yet during pre_approve.
-        """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        setup_temp_cache({'test_project': project}, {})
-
-        task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
-
-        task.cache = {'project_id': "invalid_project_id"}
-
-        action = AddDefaultUsersToProjectAction(
-            {'domain_id': 'default'}, task=task, order=1)
-
-        action.pre_approve()
-        # No need to test project yet - it's ok if it doesn't exist
-        self.assertEquals(action.valid, True)
-
-        action.post_approve()
-        # Now the missing project should make the action invalid
-        self.assertEquals(action.valid, False)
-
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
-    def test_add_default_users_reapprove(self):
-        """
-        Ensure nothing happens or changes during rerun of approve.
-        """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        setup_temp_cache({'test_project': project}, {})
-
-        task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
-
-        task.cache = {'project_id': "test_project_id"}
-
-        action = AddDefaultUsersToProjectAction(
-            {'domain_id': 'default'}, task=task, order=1)
-
-        action.pre_approve()
-        self.assertEquals(action.valid, True)
-
-        action.post_approve()
-        self.assertEquals(action.valid, True)
-
-        project = tests.temp_cache['projects']['test_project']
-        self.assertEquals(project.roles['user_id_0'], ['admin'])
-
-        action.post_approve()
-        self.assertEquals(action.valid, True)
-
-        project = tests.temp_cache['projects']['test_project']
-        self.assertEquals(project.roles['user_id_0'], ['admin'])
-
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.user_store.IdentityManager',
-        FakeManager)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.' +
-        'openstack_clients.get_neutronclient',
-        get_fake_neutron)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.' +
-        'openstack_clients.get_novaclient',
-        get_fake_novaclient)
-    @mock.patch(
-        'stacktask.actions.tenant_setup.models.' +
-        'openstack_clients.get_cinderclient',
-        get_fake_cinderclient)
     def test_set_quota(self):
         """
         Base case, sets quota on all services of the cached project id.

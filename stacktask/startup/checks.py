@@ -1,5 +1,6 @@
 from django.apps import AppConfig
 from django.conf import settings
+
 from stacktask.exceptions import ActionNotFound, TaskViewNotFound
 
 
@@ -38,17 +39,16 @@ def check_configured_actions():
             "Configured actions are unregistered: %s" % missing_actions)
 
 
-class APIConfig(AppConfig):
-    name = 'stacktask.api'
+class StartUpConfig(AppConfig):
+    name = "stacktask.startup"
 
     def ready(self):
-        """A pre-startup function for the api.
+        """A pre-startup function for the api
 
         Code run here will occur before the API is up and active but after
         all models have been loaded.
 
         Useful for any start up checks.
-
         """
 
         # First check that all expect taskviews are present

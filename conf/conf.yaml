@@ -8,7 +8,7 @@ ALLOWED_HOSTS:
 
 ADDITIONAL_APPS:
     - stacktask.api.v1
-    - stacktask.actions.tenant_setup
+    - stacktask.actions.v1
     - stacktask.notifications.request_tracker
 
 DATABASES:

@@ -68,3 +68,22 @@ class EditUserRolesSerializer(BaseUserIdSerializer):
     remove = serializers.BooleanField(default=False)
     project_id = serializers.CharField(max_length=64)
     domain_id = serializers.CharField(max_length=64, default='default')
+
+
+class NewDefaultNetworkSerializer(serializers.Serializer):
+    setup_network = serializers.BooleanField(default=True)
+    project_id = serializers.CharField(max_length=64)
+    region = serializers.CharField(max_length=100)
+
+
+class NewProjectDefaultNetworkSerializer(serializers.Serializer):
+    setup_network = serializers.BooleanField(default=False)
+    region = serializers.CharField(max_length=100)
+
+
+class AddDefaultUsersToProjectSerializer(serializers.Serializer):
+    domain_id = serializers.CharField(max_length=64, default='default')
+
+
+class SetProjectQuotaSerializer(serializers.Serializer):
+    pass

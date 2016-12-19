@@ -21,6 +21,8 @@ from stacktask.api.models import Token
 from stacktask.api.v1.tests import FakeManager, setup_temp_cache
 
 
+@mock.patch('stacktask.actions.user_store.IdentityManager',
+            FakeManager)
 class OpenstackAPITests(APITestCase):
     """
     TaskView tests specific to the openstack style urls.
@@ -29,8 +31,6 @@ class OpenstackAPITests(APITestCase):
     unique TaskViews need testing.
     """
 
-    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
-                FakeManager)
     def test_new_user(self):
         """
         Ensure the new user workflow goes as expected.
@@ -65,8 +65,6 @@ class OpenstackAPITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @mock.patch('stacktask.actions.models.user_store.IdentityManager',
-                FakeManager)
     def test_user_list(self):
         """
         """
@@ -110,8 +108,6 @@ class OpenstackAPITests(APITestCase):
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @mock.patch(
-        'stacktask.actions.models.user_store.IdentityManager', FakeManager)
     def test_force_reset_password(self):
         """
         Ensure the force password endpoint works as expected,
@@ -158,8 +154,6 @@ class OpenstackAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(user.password, 'new_test_password')
 
-    @mock.patch(
-        'stacktask.actions.models.user_store.IdentityManager', FakeManager)
     def test_remove_user_role(self):
         """ Remove all roles on a user from our project """
         project = mock.Mock()

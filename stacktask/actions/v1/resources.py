@@ -12,8 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from stacktask.actions.models import BaseAction, ProjectMixin, UserMixin
-from stacktask.actions.tenant_setup import serializers
+from stacktask.actions.v1.base import BaseAction, ProjectMixin
 from django.conf import settings
 from stacktask.actions import openstack_clients, user_store
 import six
@@ -217,79 +216,6 @@ class NewProjectDefaultNetworkAction(NewDefaultNetworkAction):
             self._create_network()
 
 
-class AddDefaultUsersToProjectAction(BaseAction, ProjectMixin, UserMixin):
-    """
-    The purpose of this action is to add a given set of users after
-    the creation of a new Project. This is mainly for administrative
-    purposes, and for users involved with migrations, monitoring, and
-    general admin tasks that should be present by default.
-    """
-
-    required = [
-        'domain_id',
-    ]
-
-    def __init__(self, *args, **kwargs):
-        self.users = settings.ACTION_SETTINGS.get(
-            'AddDefaultUsersToProjectAction', {}).get('default_users', [])
-        self.roles = settings.ACTION_SETTINGS.get(
-            'AddDefaultUsersToProjectAction', {}).get('default_roles', [])
-        super(AddDefaultUsersToProjectAction, self).__init__(*args, **kwargs)
-
-    def _validate_users(self):
-        id_manager = user_store.IdentityManager()
-        all_found = True
-        for user in self.users:
-            ks_user = id_manager.find_user(user, self.domain_id)
-            if ks_user:
-                self.add_note('User: %s exists.' % user)
-            else:
-                self.add_note('ERROR: User: %s does not exist.' % user)
-                all_found = False
-
-        return all_found
-
-    def _pre_validate(self):
-        self.action.valid = self._validate_users()
-        self.action.save()
-
-    def _validate(self):
-        self.action.valid = (
-            self._validate_users() and
-            self._validate_project_id()
-        )
-        self.action.save()
-
-    def _pre_approve(self):
-        self._pre_validate()
-
-    def _post_approve(self):
-        id_manager = user_store.IdentityManager()
-        self.project_id = self.action.task.cache.get('project_id', None)
-        self._validate()
-
-        if self.valid and not self.action.state == "completed":
-            try:
-                for user in self.users:
-                    ks_user = id_manager.find_user(user, self.domain_id)
-
-                    self.grant_roles(ks_user, self.roles, self.project_id)
-                    self.add_note(
-                        'User: "%s" given roles: %s on project: %s.' %
-                        (ks_user.name, self.roles, self.project_id))
-            except Exception as e:
-                self.add_note(
-                    "Error: '%s' while adding users to project: %s" %
-                    (e, self.project_id))
-                raise
-            self.action.state = "completed"
-            self.action.save()
-            self.add_note("All users added.")
-
-    def _submit(self, token_data):
-        pass
-
-
 class SetProjectQuotaAction(BaseAction):
     """ Updates quota for a given project to a configured quota level """
 
@@ -391,21 +317,3 @@ class SetProjectQuotaAction(BaseAction):
 
     def _submit(self, token_data):
         pass
-
-
-action_classes = {
-    'NewDefaultNetworkAction':
-        (NewDefaultNetworkAction,
-         serializers.NewDefaultNetworkSerializer),
-    'NewProjectDefaultNetworkAction':
-        (NewProjectDefaultNetworkAction,
-         serializers.NewProjectDefaultNetworkSerializer),
-    'AddDefaultUsersToProjectAction':
-        (AddDefaultUsersToProjectAction,
-         serializers.AddDefaultUsersToProjectSerializer),
-    'SetProjectQuotaAction':
-        (SetProjectQuotaAction,
-         serializers.SetProjectQuotaSerializer)
-}
-
-settings.ACTION_CLASSES.update(action_classes)
