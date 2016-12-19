@@ -286,6 +286,20 @@ class UserSetPassword(tasks.ResetPassword):
         return super(UserSetPassword, self).post(request)
 
 
+class UserUpdateEmail(tasks.UpdateEmail):
+    """
+    The openstack endpoint for a user to update their own email.
+    ---
+    """
+
+    def get(self, request):
+        """
+        The EmailUpdate endpoint does not support GET.
+        This returns a 404.
+        """
+        return Response(status=404)
+
+
 class SignUp(tasks.CreateProject):
     """
     The openstack endpoint for signups.

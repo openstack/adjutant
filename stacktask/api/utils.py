@@ -53,3 +53,16 @@ def admin(func, *args, **kwargs):
     """
     return require_roles(
         {'admin'}, func, *args, **kwargs)
+
+
+@decorator
+def authenticated(func, *args, **kwargs):
+    """
+    endpoints setup with this decorator require the user to be signed in
+    """
+    request = args[1]
+    if not request.keystone_user.get('authenticated', False):
+        return Response({'errors': ["Credentials incorrect or none given."]},
+                        401)
+
+    return func(*args, **kwargs)

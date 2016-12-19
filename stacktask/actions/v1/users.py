@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from django.conf import settings
 from django.db import models
 
 from stacktask.actions import user_store
@@ -325,3 +326,67 @@ class EditUserRolesAction(UserIdAction, ProjectMixin, UserMixin):
                 self.add_note(
                     "User %s didn't have roles %s in project %s."
                     % (self.user_id, self.roles, self.project_id))
+
+
+class UpdateUserEmailAction(UserIdAction, UserMixin):
+    """
+    Simple action to update a users email address for a given user.
+    """
+
+    required = [
+        'user_id',
+        'new_email',
+    ]
+
+    def _get_email(self):
+        # Sending to new email address
+        return self.new_email
+
+    def _validate(self):
+        self.action.valid = (self._validate_user() and
+                             self._validate_email_not_in_use())
+        self.action.save()
+
+    def _validate_user(self):
+        self.user = self._get_target_user()
+        if self.user:
+            return True
+        return False
+
+    def _validate_email_not_in_use(self):
+        if settings.USERNAME_IS_EMAIL:
+            self.domain_id = self.action.task.keystone_user[
+                'project_domain_id']
+
+            id_manager = user_store.IdentityManager()
+
+            if id_manager.find_user(self.new_email, self.domain_id):
+                self.add_note("User with same username already exists")
+                return False
+            self.add_note("No user with same username")
+        return True
+
+    def _pre_approve(self):
+        self._validate()
+        self.set_auto_approve(True)
+
+    def _post_approve(self):
+        self._validate()
+        self.action.need_token = True
+        self.set_token_fields(["confirm"])
+
+    def _submit(self, token_data):
+        self._validate()
+
+        if not self.valid:
+            return
+
+        if token_data["confirm"]:
+            self.old_username = str(self.user.name)
+            self.update_email(self.new_email, user=self.user)
+
+            if settings.USERNAME_IS_EMAIL:
+                self.update_user_name(self.new_email, user=self.user)
+
+            self.add_note('The email for user %s has been changed to %s.'
+                          % (self.old_username, self.new_email))

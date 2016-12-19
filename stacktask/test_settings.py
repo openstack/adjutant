@@ -86,6 +86,7 @@ ACTIVE_TASKVIEWS = [
     'InviteUser',
     'ResetPassword',
     'EditUser',
+    'UpdateEmail'
 ]
 
 DEFAULT_TASK_SETTINGS = {
@@ -230,7 +231,12 @@ TASK_SETTINGS = {
                 'subject': 'Setup Your OpenStack Password'
             }
         }
-    }
+    },
+    'update_email': {
+        'emails': {
+            'initial': None,
+        },
+    },
 }
 
 ROLES_MAPPING = {

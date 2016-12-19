@@ -1,0 +1,13 @@
+Hello,
+
+We have received a request to update your Openstack email to this account.
+
+Please click the link below to update your email:
+{{ tokenurl }}{{ token }}
+
+This link will expire automatically after 24 hours. If expired, you will need to request another email update.
+
+If you did not request this email update, please get in touch with your systems administrator to report suspicious activity and secure your account.
+
+Kind regards,
+The Openstack team

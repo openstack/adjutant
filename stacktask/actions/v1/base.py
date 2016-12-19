@@ -331,6 +331,30 @@ class UserMixin(ResourceMixin):
                 (e, self.username))
             raise
 
+    def update_email(self, email, user=None):
+        id_manager = user_store.IdentityManager()
+        try:
+            if not user:
+                user = self.find_user()
+            id_manager.update_user_email(user, email)
+        except Exception as e:
+            self.add_note(
+                "Error: '%s' while changing email for user: %s" %
+                (e, self.username))
+            raise
+
+    def update_user_name(self, username, user=None):
+        id_manager = user_store.IdentityManager()
+        try:
+            if not user:
+                user = self.find_user()
+            id_manager.update_user_name(user, username)
+        except Exception as e:
+            self.add_note(
+                "Error: '%s' while changing username for user: %s" %
+                (e, self.username))
+            raise
+
 
 class ProjectMixin(ResourceMixin):
     """Mixin with functions for projects."""

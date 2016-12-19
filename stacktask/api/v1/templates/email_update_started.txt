@@ -1,6 +1,6 @@
 Hello,
 
-We have had an email address change request from you. We have sent a confirmation email to your new email: {{ actions.UpdateUserEmailAction.new_email }}
+We have had an email address change request from you. A confirmation email will be sent to '{{ actions.UpdateUserEmailAction.new_email }}'.
 
 If this was not you please get in touch with an administrator immediately.
 

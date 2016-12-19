@@ -30,6 +30,8 @@ register_taskview_class(r'^actions/CreateProject/?$', tasks.CreateProject)
 register_taskview_class(r'^actions/InviteUser/?$', tasks.InviteUser)
 register_taskview_class(r'^actions/ResetPassword/?$', tasks.ResetPassword)
 register_taskview_class(r'^actions/EditUser/?$', tasks.EditUser)
+register_taskview_class(r'^actions/UpdateEmail/?$', tasks.UpdateEmail)
+
 
 register_taskview_class(
     r'^openstack/users/?$', openstack.UserList)
@@ -43,5 +45,7 @@ register_taskview_class(
     r'^openstack/users/password-reset/?$', openstack.UserResetPassword)
 register_taskview_class(
     r'^openstack/users/password-set/?$', openstack.UserSetPassword)
+register_taskview_class(
+    r'^openstack/users/email-update/?$', openstack.UserUpdateEmail)
 register_taskview_class(
     r'^openstack/sign-up/?$', openstack.SignUp)

@@ -17,7 +17,8 @@ import mock
 from django.test.utils import override_settings
 
 from stacktask.actions.v1.users import (
-    EditUserRolesAction, NewUserAction, ResetUserPasswordAction)
+    EditUserRolesAction, NewUserAction, ResetUserPasswordAction,
+    UpdateUserEmailAction)
 from stacktask.api.models import Task
 from stacktask.api.v1 import tests
 from stacktask.api.v1.tests import (FakeManager, setup_temp_cache,
@@ -754,7 +755,7 @@ class UserActionTests(StacktaskTestCase):
         action.pre_approve()
         self.assertEquals(action.valid, True)
 
-        # Remove role from ROLES_MAPPING
+        # Change settings
         with self.modify_dict_settings(ROLES_MAPPING={
                 'key_list': ['project_mod'],
                 'operation': "remove",
@@ -785,7 +786,6 @@ class UserActionTests(StacktaskTestCase):
         Tests that the role mappings do come from settings and a new role
         added there will be allowed.
         """
-
         project = mock.Mock()
         project.id = 'test_project_id'
         project.name = 'test_project'
@@ -800,7 +800,6 @@ class UserActionTests(StacktaskTestCase):
 
         setup_temp_cache({'test_project': project}, {user.id: user})
 
-        # Add a new role to the temp cache
         tests.temp_cache['roles']['new_role'] = 'new_role'
 
         task = Task.objects.create(
@@ -911,7 +910,7 @@ class UserActionTests(StacktaskTestCase):
         task = Task.objects.create(
             ip_address="0.0.0.0",
             keystone_user={
-                'roles': ['admin', 'project_mod'],
+                'roles': ['project_mod'],
                 'project_id': 'test_project_id',
                 'project_domain_id': 'default',
             })
@@ -944,3 +943,202 @@ class UserActionTests(StacktaskTestCase):
         self.assertEquals(
             tests.temp_cache['users'][user.id].email,
             'test@example.com')
+
+    @override_settings(USERNAME_IS_EMAIL=True)
+    def test_update_email(self):
+        """
+        Base test case for user updating email address.
+        """
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id_1'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={
+                'roles': ['project_mod'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
+
+        data = {
+            'new_email': 'new_test@example.com',
+            'user_id': user.id,
+        }
+
+        action = UpdateUserEmailAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
+        token_data = {'confirm': True}
+
+        action.submit(token_data)
+        self.assertEquals(action.valid, True)
+
+        self.assertEquals(
+            tests.temp_cache['users']["user_id_1"].email,
+            'new_test@example.com')
+
+        self.assertEquals(
+            tests.temp_cache['users']["user_id_1"].name,
+            'new_test@example.com')
+
+    @override_settings(USERNAME_IS_EMAIL=True)
+    def test_update_email_invalid_user(self):
+        """
+        Test case for an invalid user being updated.
+        """
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id_1'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+
+        setup_temp_cache({'test_project': project}, {})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={
+                'roles': ['project_mod'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
+
+        data = {
+            'new_email': 'new_test@example.com',
+            'user_id': "non_user_id",
+        }
+
+        action = UpdateUserEmailAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, False)
+
+        action.post_approve()
+        self.assertEquals(action.valid, False)
+
+        token_data = {'confirm': True}
+
+        action.submit(token_data)
+        self.assertEquals(action.valid, False)
+
+    @override_settings(USERNAME_IS_EMAIL=True)
+    def test_update_email_invalid_email(self):
+        """
+        Test case for a user attempting to update with an invalid email.
+        """
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id_1'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={
+                'roles': ['project_mod'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
+
+        data = {
+            'new_email': 'new_testexample.com',
+            'user_id': "non_user_id",
+        }
+
+        action = UpdateUserEmailAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, False)
+
+        action.post_approve()
+        self.assertEquals(action.valid, False)
+
+        action.submit({'confirm': True})
+        self.assertEquals(action.valid, False)
+
+        self.assertEquals(
+            tests.temp_cache['users']["user_id_1"].email,
+            'test@example.com')
+        self.assertEquals(
+            tests.temp_cache['users']["user_id_1"].name,
+            'test@example.com')
+
+    @override_settings(USERNAME_IS_EMAIL=False)
+    def test_update_email_username_not_email(self):
+        """
+        Test case for a user attempting to update with an invalid email.
+        """
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id_1'
+        user.name = "test_user"
+        user.email = "test@example.com"
+        user.domain = 'default'
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={
+                'roles': ['project_mod'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
+
+        data = {
+            'new_email': 'new_testexample.com',
+            'user_id': "user_id_1",
+        }
+
+        action = UpdateUserEmailAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
+        action.submit({'confirm': True})
+        self.assertEquals(action.valid, True)
+
+        self.assertEquals(
+            tests.temp_cache['users']["user_id_1"].email,
+            'new_testexample.com')
+
+        self.assertEquals(
+            tests.temp_cache['users']["user_id_1"].name,
+            'test_user')

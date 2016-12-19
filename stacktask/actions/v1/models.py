@@ -18,7 +18,8 @@ from stacktask.actions.v1 import serializers
 from stacktask.actions.v1.projects import (
     NewProjectWithUserAction, AddDefaultUsersToProjectAction)
 from stacktask.actions.v1.users import (
-    EditUserRolesAction, NewUserAction, ResetUserPasswordAction)
+    EditUserRolesAction, NewUserAction, ResetUserPasswordAction,
+    UpdateUserEmailAction)
 from stacktask.actions.v1.resources import (
     NewDefaultNetworkAction, NewProjectDefaultNetworkAction,
     SetProjectQuotaAction)
@@ -44,6 +45,8 @@ register_action_class(
 register_action_class(NewUserAction, serializers.NewUserSerializer)
 register_action_class(ResetUserPasswordAction, serializers.ResetUserSerializer)
 register_action_class(EditUserRolesAction, serializers.EditUserRolesSerializer)
+register_action_class(
+    UpdateUserEmailAction, serializers.UpdateUserEmailSerializer)
 
 # Register Resource actions:
 register_action_class(

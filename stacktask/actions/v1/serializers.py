@@ -91,3 +91,7 @@ class SetProjectQuotaSerializer(serializers.Serializer):
 
 class SendAdditionalEmailSerializer(serializers.Serializer):
     pass
+
+
+class UpdateUserEmailSerializer(BaseUserIdSerializer):
+    new_email = serializers.EmailField()

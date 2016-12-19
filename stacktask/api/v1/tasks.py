@@ -580,3 +580,29 @@ class EditUser(TaskView):
         add_task_id_for_roles(request, processed, response_dict, ['admin'])
 
         return Response(response_dict, status=status)
+
+
+class UpdateEmail(TaskView):
+    task_type = "update_email"
+
+    default_actions = ["UpdateUserEmailAction", ]
+
+    @utils.authenticated
+    def post(self, request, format=None):
+        """
+        Endpoint bound to the update email action.
+        This will submit and approve an update email action.
+        """
+
+        request.data['user_id'] = request.keystone_user['user_id']
+
+        processed, status = self.process_actions(request)
+
+        errors = processed.get('errors', None)
+        if errors:
+            self.logger.info("(%s) - Validation errors with task." %
+                             timezone.now())
+            return Response(errors, status=status)
+
+        response_dict = {'notes': processed['notes']}
+        return Response(response_dict, status=status)

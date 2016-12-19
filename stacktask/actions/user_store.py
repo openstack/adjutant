@@ -113,6 +113,12 @@ class IdentityManager(object):
     def update_user_password(self, user, password):
         self.ks_client.users.update(user, password=password)
 
+    def update_user_email(self, user, email):
+        self.ks_client.users.update(user, email=email)
+
+    def update_user_name(self, user, name):
+        self.ks_client.users.update(user, name=name)
+
     def find_role(self, name):
         try:
             role = self.ks_client.roles.find(name=name)

@@ -125,6 +125,14 @@ Basic default endpoints for the TaskViews.
   * unauthenticated endpoint
   * auto-approved
   * issue a uri+token to user email to reset password
+* ../v1/actions/UpdateEmail - GET
+  * return a json describing the actions and required fields for the endpoint.
+* ../v1/actions/UpdateEmail - POST
+  * Authenticated but open to any user
+  * auto-approved
+  * takes an email address
+  * issue a uri+token to new email to update to that email
+
 
 #### OpenStack Style TaskView Endpoints:
 

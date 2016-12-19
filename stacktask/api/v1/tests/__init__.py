@@ -143,6 +143,14 @@ class FakeManager(object):
         user = self._user_from_id(user)
         user.password = password
 
+    def update_user_name(self, user, username):
+        user = self._user_from_id(user)
+        user.name = username
+
+    def update_user_email(self, user, email):
+        user = self._user_from_id(user)
+        user.email = email
+
     def enable_user(self, user):
         user = self._user_from_id(user)
         user.enabled = True

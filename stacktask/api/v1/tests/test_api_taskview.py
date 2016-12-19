@@ -654,7 +654,210 @@ class TaskViewTests(StacktaskAPITestCase):
 
         self.assertFalse(response.data.get('task'))
 
-    # Positive tests for when USERNAME_IS_EMAIL=False
+    def test_update_email_task(self):
+        """
+        Ensure the update email workflow goes as expected.
+        Create task, create token, submit token.
+        """
+
+        user = mock.Mock()
+        user.id = 'test_user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+
+        setup_temp_cache({}, {user.id: user})
+
+        url = "/v1/actions/UpdateEmail"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        data = {'new_email': "new_test@example.com"}
+        response = self.client.post(url, data, format='json', headers=headers)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        new_token = Token.objects.all()[0]
+        url = "/v1/tokens/" + new_token.token
+
+        data = {'confirm': True}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEquals(user.name, 'new_test@example.com')
+
+    def test_update_email_task_invalid_email(self):
+
+        user = mock.Mock()
+        user.id = 'test_user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+
+        setup_temp_cache({}, {user.id: user})
+
+        url = "/v1/actions/UpdateEmail"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        data = {'new_email': "new_test@examplecom"}
+        response = self.client.post(url, data, format='json', headers=headers)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data,
+                         {'new_email': [u'Enter a valid email address.']})
+
+    @override_settings(USERNAME_IS_EMAIL=True)
+    def test_update_email_pre_existing_user_with_email(self):
+
+        user = mock.Mock()
+        user.id = 'test_user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+
+        user2 = mock.Mock()
+        user2.id = 'new_user_id'
+        user2.name = "new_test@example.com"
+        user2.email = "new_test@example.com"
+        user2.domain = 'default'
+
+        setup_temp_cache({}, {user.id: user, user2.id: user2})
+
+        url = "/v1/actions/UpdateEmail"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True,
+            'project_domain_id': 'default',
+        }
+
+        data = {'new_email': "new_test@example.com"}
+        response = self.client.post(url, data, format='json', headers=headers)
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, ['actions invalid'])
+        self.assertEqual(len(Token.objects.all()), 0)
+
+        self.assertEqual(len(mail.outbox), 0)
+
+    @override_settings(USERNAME_IS_EMAIL=False)
+    def test_update_email_user_with_email_username_not_email(self):
+
+        user = mock.Mock()
+        user.id = 'test_user_id'
+        user.name = "test"
+        user.email = "test@example.com"
+        user.domain = 'Default'
+
+        user2 = mock.Mock()
+        user2.id = 'new_user_id'
+        user2.name = "new_test"
+        user2.email = "new_test@example.com"
+        user2.domain = 'Default'
+
+        setup_temp_cache({}, {user.id: user, user2.id: user})
+
+        url = "/v1/actions/UpdateEmail"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        data = {'new_email': "new_test@example.com"}
+        response = self.client.post(url, data, format='json', headers=headers)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        self.assertEqual(len(mail.outbox), 1)
+
+        new_token = Token.objects.all()[0]
+        url = "/v1/tokens/" + new_token.token
+
+        data = {'confirm': True}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEquals(user.email, 'new_test@example.com')
+
+    def test_update_email_task_not_authenticated(self):
+        """
+        Ensure that an unauthenticated user cant access the endpoint.
+        """
+
+        user = mock.Mock()
+        user.id = 'test_user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+
+        setup_temp_cache({}, {user.id: user})
+
+        url = "/v1/actions/UpdateEmail"
+        headers = {
+        }
+
+        data = {'new_email': "new_test@examplecom"}
+        response = self.client.post(url, data, format='json', headers=headers)
+
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    @override_settings(USERNAME_IS_EMAIL=False)
+    def test_update_email_task_username_not_email(self):
+
+        user = mock.Mock()
+        user.id = 'test_user_id'
+        user.name = "test_user"
+        user.email = "test@example.com"
+        user.domain = 'default'
+
+        setup_temp_cache({}, {user.id: user})
+
+        url = "/v1/actions/UpdateEmail"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test_user",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        data = {'new_email': "new_test@example.com"}
+        response = self.client.post(url, data, format='json', headers=headers)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        new_token = Token.objects.all()[0]
+        url = "/v1/tokens/" + new_token.token
+
+        data = {'confirm': True}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEquals(user.name, "test_user")
+        self.assertEquals(user.email, 'new_test@example.com')
+
+    # Tests for USERNAME_IS_EMAIL=False
     @override_settings(USERNAME_IS_EMAIL=False)
     def test_invite_user_email_not_username(self):
         """

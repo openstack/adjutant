@@ -70,6 +70,7 @@ ACTIVE_TASKVIEWS:
     - UserList
     - RoleList
     - SignUp
+    - UserUpdateEmail
 
 DEFAULT_TASK_SETTINGS:
     emails:
@@ -297,6 +298,24 @@ TASK_SETTINGS:
             token: null
         role_blacklist:
             - admin
+    update_email:
+        duplicate_policy: cancel
+        additional_actions:
+            - SendAdditionalEmailAction
+        emails:
+            initial: null
+            token:
+                subject: Confirm OpenStack Email Update
+                template: email_update_token.txt
+            completed:
+                subject: OpenStack Email Updated
+                template: email_update_completed.txt
+        action_settings:
+            SendAdditionalEmailAction:
+                initial:
+                    subject: OpenStack Email Update Requested
+                    template: email_update_started.txt
+                    email_current_user: True
 
 # mapping between roles and managable roles
 ROLES_MAPPING:
