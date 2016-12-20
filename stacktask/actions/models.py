@@ -292,7 +292,7 @@ class UserMixin(ResourceMixin):
         except Exception as e:
             self.add_note(
                 "Error: '%s' while %s the roles: %s on user: %s " %
-                (e, action_string, self.roles, user))
+                (e, action_string, roles, user))
             raise
 
     def enable_user(self, user=None):
@@ -303,8 +303,8 @@ class UserMixin(ResourceMixin):
             id_manager.enable_user(user)
         except Exception as e:
             self.add_note(
-                "Error: '%s' while re-enabling user: %s with roles: %s" %
-                (e, self.username, self.roles))
+                "Error: '%s' while re-enabling user: %s" %
+                (e, self.username))
             raise
 
     def create_user(self, password):

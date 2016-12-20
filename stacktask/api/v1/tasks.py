@@ -188,18 +188,17 @@ class TaskView(APIViewWithLogger):
             try:
                 action_instance.pre_approve()
             except Exception as e:
+                import traceback
+                trace = traceback.format_exc()
+                self.logger.critical((
+                    "(%s) - Exception escaped! %s\nTrace: \n%s") % (
+                        timezone.now(), e, trace))
                 notes = {
                     'errors':
                         [("Error: '%s' while setting up task. " +
                           "See task itself for details.") % e]
                 }
                 create_notification(task, notes, error=True)
-
-                import traceback
-                trace = traceback.format_exc()
-                self.logger.critical(("(%s) - Exception escaped! %s\n" +
-                                      "Trace: \n%s") %
-                                     (timezone.now(), e, trace))
 
                 response_dict = {
                     'errors':
@@ -226,6 +225,11 @@ class TaskView(APIViewWithLogger):
             send_email(task, email_conf, token)
             return {'notes': ['created token']}, 200
         except KeyError as e:
+            import traceback
+            trace = traceback.format_exc()
+            self.logger.critical((
+                "(%s) - Exception escaped! %s\nTrace: \n%s") % (
+                    timezone.now(), e, trace))
             notes = {
                 'errors':
                     [("Error: '%s' while sending " +
@@ -233,12 +237,6 @@ class TaskView(APIViewWithLogger):
                       "itself for details.") % e]
             }
             create_notification(task, notes, error=True)
-
-            import traceback
-            trace = traceback.format_exc()
-            self.logger.critical(("(%s) - Exception escaped!" +
-                                  " %s\n Trace: \n%s") %
-                                 (timezone.now(), e, trace))
 
             response_dict = {
                 'errors':
@@ -275,18 +273,17 @@ class TaskView(APIViewWithLogger):
             try:
                 action.post_approve()
             except Exception as e:
+                import traceback
+                trace = traceback.format_exc()
+                self.logger.critical((
+                    "(%s) - Exception escaped! %s\nTrace: \n%s") % (
+                        timezone.now(), e, trace))
                 notes = {
                     'errors':
                         [("Error: '%s' while approving task. " +
                           "See task itself for details.") % e]
                 }
                 create_notification(task, notes, error=True)
-
-                import traceback
-                trace = traceback.format_exc()
-                self.logger.critical(("(%s) - Exception escaped! %s\n" +
-                                      "Trace: \n%s") %
-                                     (timezone.now(), e, trace))
 
                 response_dict = {
                     'errors':
@@ -308,6 +305,11 @@ class TaskView(APIViewWithLogger):
             try:
                 action.submit({})
             except Exception as e:
+                import traceback
+                trace = traceback.format_exc()
+                self.logger.critical((
+                    "(%s) - Exception escaped! %s\nTrace: \n%s") % (
+                        timezone.now(), e, trace))
                 notes = {
                     'errors':
                         [("Error: '%s' while submitting " +
@@ -315,12 +317,6 @@ class TaskView(APIViewWithLogger):
                           "itself for details.") % e]
                 }
                 create_notification(task, notes, error=True)
-
-                import traceback
-                trace = traceback.format_exc()
-                self.logger.critical(("(%s) - Exception escaped!" +
-                                      " %s\n Trace: \n%s") %
-                                     (timezone.now(), e, trace))
 
                 response_dict = {
                     'errors':
