@@ -23,7 +23,8 @@ from stacktask.api.models import Task
 from stacktask.api.v1.tests import FakeManager, setup_temp_cache
 from stacktask.actions.v1.tests import (
     get_fake_neutron, get_fake_novaclient, get_fake_cinderclient,
-    setup_neutron_cache, neutron_cache, cinder_cache, nova_cache)
+    setup_neutron_cache, neutron_cache, cinder_cache, nova_cache,
+    setup_mock_caches)
 
 
 @mock.patch('stacktask.actions.user_store.IdentityManager',
@@ -46,7 +47,7 @@ class ProjectSetupActionTests(TestCase):
         """
         Base case, setup a new network , no issues.
         """
-        setup_neutron_cache()
+        setup_neutron_cache('RegionOne', 'test_project_id')
         task = Task.objects.create(
             ip_address="0.0.0.0",
             keystone_user={
@@ -84,15 +85,18 @@ class ProjectSetupActionTests(TestCase):
         )
 
         global neutron_cache
-        self.assertEquals(len(neutron_cache['networks']), 1)
-        self.assertEquals(len(neutron_cache['routers']), 1)
-        self.assertEquals(len(neutron_cache['subnets']), 1)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['networks']), 1)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['routers']), 1)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['subnets']), 1)
 
     def test_network_setup_no_setup(self):
         """
         Told not to setup, should do nothing.
         """
-        setup_neutron_cache()
+        setup_neutron_cache('RegionOne', 'test_project_id')
         task = Task.objects.create(
             ip_address="0.0.0.0",
             keystone_user={
@@ -125,15 +129,18 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(action.action.cache, {})
 
         global neutron_cache
-        self.assertEquals(len(neutron_cache['networks']), 0)
-        self.assertEquals(len(neutron_cache['routers']), 0)
-        self.assertEquals(len(neutron_cache['subnets']), 0)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['networks']), 0)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['routers']), 0)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['subnets']), 0)
 
     def test_network_setup_fail(self):
         """
         Should fail, but on re_approve will continue where it left off.
         """
-        setup_neutron_cache()
+        setup_neutron_cache('RegionOne', 'test_project_id')
         global neutron_cache
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -161,7 +168,7 @@ class ProjectSetupActionTests(TestCase):
         action.pre_approve()
         self.assertEquals(action.valid, True)
 
-        neutron_cache['routers'] = []
+        neutron_cache['RegionOne']['test_project_id']['routers'] = []
 
         try:
             action.post_approve()
@@ -175,11 +182,14 @@ class ProjectSetupActionTests(TestCase):
              'subnet_id': 'subnet_id_1'}
         )
 
-        self.assertEquals(len(neutron_cache['networks']), 1)
-        self.assertEquals(len(neutron_cache['subnets']), 1)
-        self.assertEquals(len(neutron_cache['routers']), 0)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['networks']), 1)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['subnets']), 1)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['routers']), 0)
 
-        neutron_cache['routers'] = {}
+        neutron_cache['RegionOne']['test_project_id']['routers'] = {}
 
         action.post_approve()
 
@@ -190,15 +200,18 @@ class ProjectSetupActionTests(TestCase):
              'subnet_id': 'subnet_id_1'}
         )
 
-        self.assertEquals(len(neutron_cache['networks']), 1)
-        self.assertEquals(len(neutron_cache['routers']), 1)
-        self.assertEquals(len(neutron_cache['subnets']), 1)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['networks']), 1)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['routers']), 1)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['subnets']), 1)
 
     def test_new_project_network_setup(self):
         """
         Base case, setup network after a new project, no issues.
         """
-        setup_neutron_cache()
+        setup_neutron_cache('RegionOne', 'test_project_id')
         task = Task.objects.create(
             ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
 
@@ -236,15 +249,18 @@ class ProjectSetupActionTests(TestCase):
         )
 
         global neutron_cache
-        self.assertEquals(len(neutron_cache['networks']), 1)
-        self.assertEquals(len(neutron_cache['routers']), 1)
-        self.assertEquals(len(neutron_cache['subnets']), 1)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['networks']), 1)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['routers']), 1)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['subnets']), 1)
 
     def test_new_project_network_setup_no_id(self):
         """
         No project id given, should do nothing.
         """
-        setup_neutron_cache()
+        setup_neutron_cache('RegionOne', 'test_project_id')
         task = Task.objects.create(
             ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
 
@@ -265,15 +281,18 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(action.action.cache, {})
 
         global neutron_cache
-        self.assertEquals(len(neutron_cache['networks']), 0)
-        self.assertEquals(len(neutron_cache['routers']), 0)
-        self.assertEquals(len(neutron_cache['subnets']), 0)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['networks']), 0)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['routers']), 0)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['subnets']), 0)
 
     def test_new_project_network_setup_no_setup(self):
         """
         Told not to setup, should do nothing.
         """
-        setup_neutron_cache()
+        setup_neutron_cache('RegionOne', 'test_project_id')
         task = Task.objects.create(
             ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
 
@@ -306,15 +325,18 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(action.action.cache, {})
 
         global neutron_cache
-        self.assertEquals(len(neutron_cache['networks']), 0)
-        self.assertEquals(len(neutron_cache['routers']), 0)
-        self.assertEquals(len(neutron_cache['subnets']), 0)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['networks']), 0)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['routers']), 0)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['subnets']), 0)
 
     def test_new_project_network_setup_fail(self):
         """
         Should fail, but on re_approve will continue where it left off.
         """
-        setup_neutron_cache()
+        setup_neutron_cache('RegionOne', 'test_project_id')
         global neutron_cache
         task = Task.objects.create(
             ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
@@ -330,7 +352,7 @@ class ProjectSetupActionTests(TestCase):
         action.pre_approve()
         self.assertEquals(action.valid, True)
 
-        neutron_cache['routers'] = []
+        neutron_cache['RegionOne']['test_project_id']['routers'] = []
 
         # Now we add the project data as this is where the project
         # would be created:
@@ -356,11 +378,14 @@ class ProjectSetupActionTests(TestCase):
              'subnet_id': 'subnet_id_1'}
         )
 
-        self.assertEquals(len(neutron_cache['networks']), 1)
-        self.assertEquals(len(neutron_cache['subnets']), 1)
-        self.assertEquals(len(neutron_cache['routers']), 0)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['networks']), 1)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['subnets']), 1)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['routers']), 0)
 
-        neutron_cache['routers'] = {}
+        neutron_cache['RegionOne']['test_project_id']['routers'] = {}
 
         action.post_approve()
 
@@ -371,9 +396,12 @@ class ProjectSetupActionTests(TestCase):
              'subnet_id': 'subnet_id_1'}
         )
 
-        self.assertEquals(len(neutron_cache['networks']), 1)
-        self.assertEquals(len(neutron_cache['routers']), 1)
-        self.assertEquals(len(neutron_cache['subnets']), 1)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['networks']), 1)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['routers']), 1)
+        self.assertEquals(len(
+            neutron_cache['RegionOne']['test_project_id']['subnets']), 1)
 
     def test_set_quota(self):
         """
@@ -386,7 +414,7 @@ class ProjectSetupActionTests(TestCase):
         project.roles = {}
 
         setup_temp_cache({'test_project': project}, {})
-        setup_neutron_cache()
+        setup_mock_caches('RegionOne', 'test_project_id')
 
         task = Task.objects.create(
             ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
@@ -407,7 +435,7 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(cinderquota['gigabytes'], 5000)
         novaquota = nova_cache['RegionOne']['test_project_id']['quota']
         self.assertEquals(novaquota['ram'], 65536)
-        neutronquota = neutron_cache['test_project_id']['quota']
+        neutronquota = neutron_cache['RegionOne']['test_project_id']['quota']
         self.assertEquals(neutronquota['network'], 3)
 
         # RegionTwo, cinder only
