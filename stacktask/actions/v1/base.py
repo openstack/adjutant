@@ -114,6 +114,15 @@ class BaseAction(object):
         self.action.cache["token_fields"] = token_fields
         self.action.save()
 
+    @property
+    def auto_approve(self):
+        return self.action.auto_approve
+
+    def set_auto_approve(self, can_approve=True):
+        self.add_note("Auto approve set to %s." % can_approve)
+        self.action.auto_approve = can_approve
+        self.action.save()
+
     def add_note(self, note):
         """
         Logs the note, and also adds it to the task action notes.

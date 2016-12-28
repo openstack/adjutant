@@ -138,6 +138,10 @@ class TaskView(APIViewWithLogger):
         a Task and the linked actions, attaching notes
         based on running of the the pre_approve validation
         function on all the actions.
+
+        If during the pre_approve step at least one of the actions
+        sets auto_approve to True, and none of them set it to False
+        the approval steps will also be run.
         """
         class_conf = settings.TASK_SETTINGS.get(
             self.task_type, settings.DEFAULT_TASK_SETTINGS)
@@ -210,6 +214,29 @@ class TaskView(APIViewWithLogger):
         # send initial confirmation email:
         email_conf = class_conf.get('emails', {}).get('initial', None)
         send_email(task, email_conf)
+
+        action_models = task.actions
+        approve_list = [act.get_action().auto_approve for act in action_models]
+
+        # TODO(amelia): It would be nice to explicitly test this, however
+        #               currently we don't have the right combinations of
+        #               actions to allow for it.
+        if False in approve_list:
+            can_auto_approve = False
+        elif True in approve_list:
+            can_auto_approve = True
+        else:
+            can_auto_approve = False
+
+        if can_auto_approve:
+            task_name = self.__class__.__name__
+            self.logger.info("(%s) - AutoApproving %s request."
+                             % (timezone.now(), task_name))
+            approval_data, status = self.approve(request, task)
+            # Additional information that would be otherwise expected
+            approval_data['task'] = task
+            approval_data['auto_approved'] = True
+            return approval_data, status
 
         return {'task': task}, 200
 
@@ -417,13 +444,12 @@ class InviteUser(TaskView):
         if errors:
             self.logger.info("(%s) - Validation errors with task." %
                              timezone.now())
-            return Response(errors, status=status)
 
-        task = processed['task']
-        self.logger.info("(%s) - AutoApproving AttachUser request."
-                         % timezone.now())
+            if isinstance(errors, dict):
+                return Response(errors, status=status)
+            return Response({'errors': errors}, status=status)
 
-        response_dict, status = self.approve(request, task)
+        response_dict = {'notes': processed['notes']}
 
         add_task_id_for_roles(request, processed, response_dict, ['admin'])
 
@@ -472,6 +498,8 @@ class ResetPassword(TaskView):
         self.logger.info("(%s) - AutoApproving Resetuser request."
                          % timezone.now())
 
+        # NOTE(amelia): Not using auto approve due to security implications
+        # as it will return all errors including whether the user exists
         self.approve(request, task)
         response_dict = {'notes': [
             "If user with email exists, reset token will be issued."]}
@@ -548,11 +576,7 @@ class EditUser(TaskView):
                              timezone.now())
             return Response(errors, status=status)
 
-        task = processed['task']
-        self.logger.info("(%s) - AutoApproving EditUser request."
-                         % timezone.now())
-        response_dict, status = self.approve(request, task)
-
+        response_dict = {'notes': processed.get('notes')}
         add_task_id_for_roles(request, processed, response_dict, ['admin'])
 
         return Response(response_dict, status=status)

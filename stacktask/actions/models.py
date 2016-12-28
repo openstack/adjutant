@@ -30,9 +30,16 @@ class Action(models.Model):
     valid = models.BooleanField(default=False)
     need_token = models.BooleanField(default=False)
     task = models.ForeignKey('api.Task')
-
+    # NOTE(amelia): Auto approve is technically a ternary operator
+    #               If all in a task are None it will not auto approve
+    #               However if at least one action has it set to True it
+    #               will auto approve. If any are set to False this will
+    #               override all of them.
+    #               Can be thought of in terms of priority, None has the
+    #               lowest priority, then True with False having the
+    #               highest priority
+    auto_approve = models.NullBooleanField(default=None)
     order = models.IntegerField()
-
     created = models.DateTimeField(default=timezone.now)
 
     def get_action(self):

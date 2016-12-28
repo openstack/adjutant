@@ -100,6 +100,7 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
 
     def _pre_approve(self):
         self._validate()
+        self.set_auto_approve()
 
     def _post_approve(self):
         self._validate()
@@ -291,6 +292,7 @@ class EditUserRolesAction(UserIdAction, ProjectMixin, UserMixin):
 
     def _pre_approve(self):
         self._validate()
+        self.set_auto_approve()
 
     def _post_approve(self):
         self._validate()

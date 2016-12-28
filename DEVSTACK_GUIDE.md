@@ -221,3 +221,8 @@ EMAIL_SETTINGS:
 ```
 
 Once the service has reset, it should now send emails via that server rather than print them to console.
+
+## Updating stacktask
+
+Stacktask doesn't have a typical manage.py file, instead this functionality is installed into the virtual enviroment when stacktask is installed.
+All of the expected Django functionality can be used using the 'stacktask-api' cli.

@@ -218,10 +218,7 @@ class UserRoles(tasks.TaskView):
                              timezone.now())
             return Response(errors, status=status)
 
-        task = processed['task']
-        self.logger.info("(%s) - AutoApproving EditUser request."
-                         % timezone.now())
-        response_dict, status = self.approve(request, task)
+        response_dict = {'notes': processed.get('notes')}
 
         add_task_id_for_roles(request, processed, response_dict, ['admin'])
 
