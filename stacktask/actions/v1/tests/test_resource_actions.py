@@ -20,7 +20,8 @@ from stacktask.actions.v1.resources import (
     NewDefaultNetworkAction, NewProjectDefaultNetworkAction,
     SetProjectQuotaAction)
 from stacktask.api.models import Task
-from stacktask.api.v1.tests import FakeManager, setup_temp_cache
+from stacktask.api.v1.tests import (FakeManager, setup_temp_cache,
+                                    modify_dict_settings)
 from stacktask.actions.v1.tests import (
     get_fake_neutron, get_fake_novaclient, get_fake_cinderclient,
     setup_neutron_cache, neutron_cache, cinder_cache, nova_cache,
@@ -207,6 +208,17 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(len(
             neutron_cache['RegionOne']['test_project_id']['subnets']), 1)
 
+    @modify_dict_settings(DEFAULT_ACTION_SETTINGS={
+        'operation': 'override',
+        'key_list': ['NewDefaultNetworkAction'],
+        'value': {'RegionOne': {
+            'DNS_NAMESERVERS': ['193.168.1.2', '193.168.1.3'],
+            'SUBNET_CIDR': '192.168.1.0/24',
+            'network_name': 'somenetwork',
+            'public_network': '3cb50f61-5bce-4c03-96e6-8e262e12bb35',
+            'router_name': 'somerouter',
+            'subnet_name': 'somesubnet'
+        }}})
     def test_new_project_network_setup(self):
         """
         Base case, setup network after a new project, no issues.

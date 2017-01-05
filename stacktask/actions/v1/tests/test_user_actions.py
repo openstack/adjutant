@@ -12,20 +12,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.test import TestCase
-
 import mock
 
 from stacktask.actions.v1.users import (
     EditUserRolesAction, NewUserAction, ResetUserPasswordAction)
 from stacktask.api.models import Task
 from stacktask.api.v1 import tests
-from stacktask.api.v1.tests import FakeManager, setup_temp_cache
+from stacktask.api.v1.tests import (FakeManager, setup_temp_cache,
+                                    modify_dict_settings, StacktaskTestCase)
 
 
 @mock.patch('stacktask.actions.user_store.IdentityManager',
             FakeManager)
-class UserActionTests(TestCase):
+class UserActionTests(StacktaskTestCase):
 
     def test_new_user(self):
         """
@@ -711,3 +710,125 @@ class UserActionTests(TestCase):
 
         self.assertEquals(
             project.roles[user.id], ['_member_', 'project_admin'])
+
+    def test_edit_user_roles_modified_settings(self):
+        """
+        Tests that the role mappings do come from settings and that they
+        are enforced.
+        """
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {'user_id': ['project_mod']}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={
+                'roles': ['project_mod'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
+
+        data = {
+            'domain_id': 'default',
+            'user_id': 'user_id',
+            'project_id': 'test_project_id',
+            'roles': ['heat_stack_owner'],
+            'remove': False
+        }
+
+        action = EditUserRolesAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        # Remove role from ROLES_MAPPING
+        with self.modify_dict_settings(ROLES_MAPPING={
+                'key_list': ['project_mod'],
+                'operation': "remove",
+                'value': 'heat_stack_owner'}):
+            action.post_approve()
+            self.assertEquals(action.valid, False)
+
+            token_data = {}
+            action.submit(token_data)
+            self.assertEquals(action.valid, False)
+
+        # After Settings Reset
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
+        token_data = {}
+        action.submit(token_data)
+        self.assertEquals(action.valid, True)
+
+        self.assertEquals(len(project.roles[user.id]), 2)
+        self.assertEquals(set(project.roles[user.id]),
+                          set(['project_mod', 'heat_stack_owner']))
+
+    @modify_dict_settings(ROLES_MAPPING={'key_list': ['project_mod'],
+                          'operation': "append", 'value': 'new_role'})
+    def test_edit_user_roles_modified_settings_add(self):
+        """
+        Tests that the role mappings do come from settings and a new role
+        added there will be allowed.
+        """
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {'user_id': ['project_mod']}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+
+        # Add a new role to the temp cache
+        tests.temp_cache['roles']['new_role'] = 'new_role'
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={
+                'roles': ['project_mod'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
+
+        data = {
+            'domain_id': 'default',
+            'user_id': 'user_id',
+            'project_id': 'test_project_id',
+            'roles': ['new_role'],
+            'remove': False
+        }
+
+        action = EditUserRolesAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
+        token_data = {}
+        action.submit(token_data)
+        self.assertEquals(action.valid, True)
+
+        self.assertEquals(len(project.roles[user.id]), 2)
+        self.assertEquals(set(project.roles[user.id]),
+                          set(['project_mod', 'new_role']))

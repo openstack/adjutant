@@ -122,9 +122,6 @@ DEFAULT_ACTION_SETTINGS = {
     'NewUserAction': {
         'allowed_roles': ['project_mod', 'project_admin', "_member_"]
     },
-    'ResetUserPasswordAction': {
-        'blacklisted_roles': ['admin']
-    },
     'NewDefaultNetworkAction': {
         'RegionOne': {
             'DNS_NAMESERVERS': ['193.168.1.2', '193.168.1.3'],
@@ -144,14 +141,6 @@ DEFAULT_ACTION_SETTINGS = {
             'router_name': 'somerouter',
             'subnet_name': 'somesubnet'
         },
-    },
-    'AddDefaultUsersToProjectAction': {
-        'default_users': [
-            'admin',
-        ],
-        'default_roles': [
-            'admin',
-        ],
     },
     'SetProjectQuotaAction': {
         'regions': {

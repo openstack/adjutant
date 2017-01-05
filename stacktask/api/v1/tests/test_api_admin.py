@@ -26,7 +26,8 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from stacktask.api.models import Task, Token
-from stacktask.api.v1.tests import FakeManager, setup_temp_cache
+from stacktask.api.v1.tests import (FakeManager, setup_temp_cache,
+                                    modify_dict_settings)
 
 
 @mock.patch('stacktask.actions.user_store.IdentityManager',
@@ -1022,6 +1023,12 @@ class AdminAPITests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    @modify_dict_settings(TASK_SETTINGS={
+        'key_list': ['reset_password', 'action_settings',
+                     'ResetUserPasswordAction', 'blacklisted_roles'],
+        'operation': 'append',
+        'value': ['admin']
+    })
     def test_reset_admin(self):
         """
         Ensure that you cannot issue a password reset for an

@@ -20,7 +20,8 @@ from stacktask.actions.v1.projects import (
     NewProjectWithUserAction, AddDefaultUsersToProjectAction)
 from stacktask.api.models import Task
 from stacktask.api.v1 import tests
-from stacktask.api.v1.tests import FakeManager, setup_temp_cache
+from stacktask.api.v1.tests import (FakeManager, setup_temp_cache,
+                                    modify_dict_settings)
 
 
 @mock.patch('stacktask.actions.user_store.IdentityManager',
@@ -449,6 +450,11 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, False)
 
+    @modify_dict_settings(DEFAULT_ACTION_SETTINGS={
+                          'key_list': ['AddDefaultUsersToProjectAction'],
+                          'operation': 'override',
+                          'value': {'default_users': ['admin', ],
+                                    'default_roles': ['admin', ]}})
     def test_add_default_users(self):
         """
         Base case, adds admin user with admin role to project.
@@ -512,6 +518,11 @@ class ProjectActionTests(TestCase):
         # Now the missing project should make the action invalid
         self.assertEquals(action.valid, False)
 
+    @modify_dict_settings(DEFAULT_ACTION_SETTINGS={
+                          'key_list': ['AddDefaultUsersToProjectAction'],
+                          'operation': 'override',
+                          'value': {'default_users': ['admin', ],
+                                    'default_roles': ['admin', ]}})
     def test_add_default_users_reapprove(self):
         """
         Ensure nothing happens or changes during rerun of approve.

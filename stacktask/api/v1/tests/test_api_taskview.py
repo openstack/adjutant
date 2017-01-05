@@ -15,15 +15,15 @@
 import mock
 
 from rest_framework import status
-from rest_framework.test import APITestCase
 
 from stacktask.api.models import Task, Token
-from stacktask.api.v1.tests import FakeManager, setup_temp_cache
+from stacktask.api.v1.tests import (FakeManager, setup_temp_cache,
+                                    StacktaskAPITestCase)
 
 
 @mock.patch('stacktask.actions.user_store.IdentityManager',
             FakeManager)
-class TaskViewTests(APITestCase):
+class TaskViewTests(StacktaskAPITestCase):
     """
     Tests to ensure the approval/token workflow does what is
     expected with the given TaskViews. These test don't check
