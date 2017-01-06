@@ -14,6 +14,8 @@
 
 import mock
 
+from django.test.utils import override_settings
+
 from stacktask.actions.v1.users import (
     EditUserRolesAction, NewUserAction, ResetUserPasswordAction)
 from stacktask.api.models import Task
@@ -832,3 +834,113 @@ class UserActionTests(StacktaskTestCase):
         self.assertEquals(len(project.roles[user.id]), 2)
         self.assertEquals(set(project.roles[user.id]),
                           set(['project_mod', 'new_role']))
+
+    # Simple positive tests for when USERNAME_IS_EMAIL=False
+    @override_settings(USERNAME_IS_EMAIL=False)
+    def test_create_user_email_not_username(self):
+        """
+        Test the default case, all valid.
+        No existing user, valid tenant.
+        Different username from email address
+        """
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
+
+        data = {
+            'username': 'test_user',
+            'email': 'test@example.com',
+            'project_id': 'test_project_id',
+            'roles': ['_member_'],
+            'domain_id': 'default',
+        }
+
+        action = NewUserAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
+        token_data = {'password': '123456'}
+        action.submit(token_data)
+        self.assertEquals(action.valid, True)
+        self.assertEquals(len(tests.temp_cache['users']), 2)
+        # The new user id in this case will be "user_id_1"
+        self.assertEquals(
+            tests.temp_cache['users']["user_id_1"].email,
+            'test@example.com')
+        self.assertEquals(
+            tests.temp_cache['users']["user_id_1"].name,
+            'test_user')
+        self.assertEquals(
+            tests.temp_cache['users']["user_id_1"].password,
+            '123456')
+
+        self.assertEquals(project.roles["user_id_1"], ['_member_'])
+
+    @override_settings(USERNAME_IS_EMAIL=False)
+    def test_reset_user_email_not_username(self):
+        """
+        Base case, existing user.
+        Username not email address
+        """
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test_user"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "gibberish"
+
+        setup_temp_cache({}, {user.id: user})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
+
+        data = {
+            'username': "test_user",
+            'domain_name': 'Default',
+            'email': 'test@example.com',
+            'project_name': 'test_project',
+        }
+
+        action = ResetUserPasswordAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
+        token_data = {'password': '123456'}
+        action.submit(token_data)
+        self.assertEquals(action.valid, True)
+
+        self.assertEquals(
+            tests.temp_cache['users'][user.id].password,
+            '123456')
+        self.assertEquals(
+            tests.temp_cache['users'][user.id].name,
+            'test_user')
+        self.assertEquals(
+            tests.temp_cache['users'][user.id].email,
+            'test@example.com')

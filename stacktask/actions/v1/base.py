@@ -397,6 +397,8 @@ class UserNameAction(BaseAction):
 
     def __init__(self, *args, **kwargs):
         if settings.USERNAME_IS_EMAIL:
+            # NOTE(amelia): Make a copy to avoid editing it globally.
+            self.required = list(self.required)
             try:
                 self.required.remove('username')
             except ValueError:

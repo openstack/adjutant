@@ -17,6 +17,8 @@ import mock
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from django.test.utils import override_settings
+
 from stacktask.api.models import Token
 from stacktask.api.v1.tests import FakeManager, setup_temp_cache
 
@@ -239,3 +241,38 @@ class OpenstackAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data,
                          {'notes': ['Task completed successfully.']})
+
+    @override_settings(USERNAME_IS_EMAIL=False)
+    def test_new_user_username_not_email(self):
+        """
+        Ensure the new user workflow goes as expected.
+        Create task, create token, submit token.
+        """
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
+
+        url = "/v1/openstack/users"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        data = {'email': "test@example.com", 'roles': ["_member_"],
+                'project_id': 'test_project_id', 'username': 'user_name'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        new_token = Token.objects.all()[0]
+        url = "/v1/tokens/" + new_token.token
+        data = {'password': 'testpassword'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

@@ -193,6 +193,7 @@ TASK_SETTINGS = {
     'reset_password': {
         'duplicate_policy': 'cancel',
         'emails': {
+            'initial': None,
             'token': {
                 'template': 'password_reset_token.txt',
                 'subject': 'Password Reset for OpenStack'

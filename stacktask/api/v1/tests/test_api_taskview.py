@@ -19,6 +19,10 @@ from rest_framework import status
 from stacktask.api.models import Task, Token
 from stacktask.api.v1.tests import (FakeManager, setup_temp_cache,
                                     StacktaskAPITestCase)
+from stacktask.api.v1 import tests
+
+from django.core import mail
+from django.test.utils import override_settings
 
 
 @mock.patch('stacktask.actions.user_store.IdentityManager',
@@ -95,11 +99,18 @@ class TaskViewTests(StacktaskAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {'notes': ['created token']})
 
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject, 'invite_user')
+
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
         data = {'password': 'testpassword'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertEquals(
+            tests.temp_cache['users']["user_id_1"].name,
+            'test@example.com')
 
     def test_new_user_no_project(self):
         """
@@ -642,3 +653,125 @@ class TaskViewTests(StacktaskAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         self.assertFalse(response.data.get('task'))
+
+    # Positive tests for when USERNAME_IS_EMAIL=False
+    @override_settings(USERNAME_IS_EMAIL=False)
+    def test_invite_user_email_not_username(self):
+        """
+        Invites a user where the email is different to the username.
+        """
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        setup_temp_cache({'test_project': project}, {})
+
+        url = "/v1/actions/InviteUser"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "user",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        data = {'username': 'new_user', 'email': "new@example.com",
+                'roles': ["_member_"], 'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEquals(mail.outbox[0].subject, 'invite_user')
+        self.assertEquals(mail.outbox[0].to[0], 'new@example.com')
+
+        new_token = Token.objects.all()[0]
+        url = "/v1/tokens/" + new_token.token
+        data = {'password': 'testpassword'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 2)
+
+        self.assertEquals(
+            tests.temp_cache['users']["user_id_1"].name,
+            'new_user')
+
+    @override_settings(USERNAME_IS_EMAIL=False)
+    def test_reset_user_username_not_email(self):
+        """
+        Ensure the reset user workflow goes as expected.
+        Create task + create token, submit token.
+        """
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test_user"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_temp_cache({}, {user.id: user})
+
+        url = "/v1/actions/ResetPassword"
+        # NOTE(amelia): Requiring both username and email here may be
+        #               a slight issue for various UIs as typically a
+        #               forgotten password screen only asks for the
+        #               email address, however there isn't a very
+        #               good way to address this as keystone doesn't
+        #               store emails in their own field
+        #               Currently this is an issue for the forked stacktask
+        #               horizon
+        data = {'email': "test@example.com", 'username': 'test_user'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data['notes'],
+            ['If user with email exists, reset token will be issued.'])
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject,
+                         'Password Reset for OpenStack')
+        self.assertEqual(mail.outbox[0].to[0], 'test@example.com')
+
+        new_token = Token.objects.all()[0]
+        url = "/v1/tokens/" + new_token.token
+        data = {'password': 'new_test_password'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(user.password, 'new_test_password')
+
+    @override_settings(USERNAME_IS_EMAIL=False)
+    def test_new_project_username_not_email(self):
+        setup_temp_cache({}, {})
+
+        url = "/v1/actions/CreateProject"
+        data = {'project_name': "test_project", 'email': "test@example.com",
+                'username': 'test'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        new_task = Task.objects.all()[0]
+        url = "/v1/tasks/" + new_task.uuid
+        response = self.client.post(url, {'approved': True}, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data,
+            {'notes': ['created token']}
+        )
+
+        new_token = Token.objects.all()[0]
+        url = "/v1/tokens/" + new_token.token
+        data = {'password': 'testpassword'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)

@@ -13,6 +13,7 @@
 #    under the License.
 
 from django.test import TestCase
+from django.test.utils import override_settings
 
 import mock
 
@@ -449,6 +450,60 @@ class ProjectActionTests(TestCase):
 
         action.post_approve()
         self.assertEquals(action.valid, False)
+
+        @override_settings(USERNAME_IS_EMAIL=False)
+        def test_new_project_email_not_username(self):
+            """
+            Base case, no project, no user.
+
+            Project and user created at post_approve step,
+            user password at submit step.
+            """
+
+            setup_temp_cache({}, {})
+
+            task = Task.objects.create(
+                ip_address="0.0.0.0",
+                keystone_user={}
+            )
+
+            data = {
+                'domain_id': 'default',
+                'parent_id': None,
+                'email': 'test@example.com',
+                'username': 'test_user',
+                'project_name': 'test_project',
+            }
+
+            action = NewProjectWithUserAction(data, task=task, order=1)
+
+            action.pre_approve()
+            self.assertEquals(action.valid, True)
+
+            action.post_approve()
+            self.assertEquals(action.valid, True)
+            self.assertEquals(
+                tests.temp_cache['projects']['test_project'].name,
+                'test_project')
+            self.assertEquals(
+                task.cache,
+                {'project_id': 'project_id_1', 'user_id': 'user_id_1',
+                 'user_state': 'default'})
+
+            token_data = {'password': '123456'}
+            action.submit(token_data)
+            self.assertEquals(action.valid, True)
+            self.assertEquals(
+                tests.temp_cache['users']["user_id_1"].email,
+                'test@example.com')
+            self.assertEquals(
+                tests.temp_cache['users']["user_id_1"].name,
+                'test_user')
+            project = tests.temp_cache['projects']['test_project']
+            self.assertEquals(
+                sorted(project.roles["user_id_1"]),
+                sorted(['_member_', 'project_admin',
+                        'project_mod', 'heat_stack_owner']))
 
     @modify_dict_settings(DEFAULT_ACTION_SETTINGS={
                           'key_list': ['AddDefaultUsersToProjectAction'],
