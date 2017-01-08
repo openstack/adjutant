@@ -514,6 +514,9 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
         if not self.valid:
             return
 
+        # add to cache to use in template
+        self.action.task.cache['user_state'] = self.action.state
+
         if self.action.state == "default":
             # default action: Create a new user in the tenant and add roles
             user = self.create_user(token_data['password'])
@@ -887,6 +890,9 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
 
         if not self.valid:
             return
+
+        # add to cache to use in template
+        self.action.task.cache['user_state'] = self.action.state
 
         project_id = self.get_cache('project_id')
         self.action.task.cache['project_id'] = project_id
