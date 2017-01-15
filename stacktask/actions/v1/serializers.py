@@ -87,3 +87,7 @@ class AddDefaultUsersToProjectSerializer(serializers.Serializer):
 
 class SetProjectQuotaSerializer(serializers.Serializer):
     pass
+
+
+class SendAdditionalEmailSerializer(serializers.Serializer):
+    pass

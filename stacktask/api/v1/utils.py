@@ -44,7 +44,7 @@ def create_token(task):
     return token
 
 
-def send_email(task, email_conf, token=None):
+def send_stage_email(task, email_conf, token=None):
     if not email_conf:
         return
 

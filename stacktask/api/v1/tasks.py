@@ -19,7 +19,7 @@ from django.utils import timezone
 from stacktask.api import utils
 from stacktask.api.v1.views import APIViewWithLogger
 from stacktask.api.v1.utils import (
-    send_email, create_notification, create_token, create_task_hash,
+    send_stage_email, create_notification, create_token, create_task_hash,
     add_task_id_for_roles)
 from stacktask.exceptions import SerializerMissingException
 
@@ -213,7 +213,7 @@ class TaskView(APIViewWithLogger):
 
         # send initial confirmation email:
         email_conf = class_conf.get('emails', {}).get('initial', None)
-        send_email(task, email_conf)
+        send_stage_email(task, email_conf)
 
         action_models = task.actions
         approve_list = [act.get_action().auto_approve for act in action_models]
@@ -249,7 +249,7 @@ class TaskView(APIViewWithLogger):
             # will throw a key error if the token template has not
             # been specified
             email_conf = class_conf['emails']['token']
-            send_email(task, email_conf, token)
+            send_stage_email(task, email_conf, token)
             return {'notes': ['created token']}, 200
         except KeyError as e:
             import traceback
@@ -361,7 +361,7 @@ class TaskView(APIViewWithLogger):
             self.task_type, settings.DEFAULT_TASK_SETTINGS)
         email_conf = class_conf.get(
             'emails', {}).get('completed', None)
-        send_email(task, email_conf)
+        send_stage_email(task, email_conf)
         return {'notes': ["Task completed successfully."]}, 200
 
 

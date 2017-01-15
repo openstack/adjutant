@@ -186,6 +186,34 @@ DEFAULT_ACTION_SETTINGS:
         regions:
             RegionOne:
                 quota_size: small
+    SendAdditionalEmailAction:
+      initial:
+          email_current_user: false
+          reply: no-reply@example.com
+          from: bounce+%(task_uuid)s@example.com
+          subject: "Openstack Email Notification"
+          template: null
+      token:
+          email_current_user: false
+          reply: no-reply@example.com
+          from: bounce+%(task_uuid)s@example.com
+          subject: "Openstack Email Notification"
+          template: null
+      completed:
+          email_current_user: false
+          reply: no-reply@example.com
+          from: bounce+%(task_uuid)s@example.com
+          subject: "Openstack Email Notification"
+          template: null
+          # A null template will cause the email not to send
+          # Also emails to the given roles on the project
+          # email_roles:
+          #   - project_admin
+          # Or sends to an email set in the task cache
+          # email_in_task_cache: true
+          # Or sends to an arbitrary admin email
+          # email_additional_addresses:
+          #   - admin@example.org
 
 # These are cascading overrides for the default settings:
 TASK_SETTINGS:

@@ -292,6 +292,7 @@ class modify_dict_settings(override_settings):
 
     Available operations:
     Standard operations:
+    - 'update': A dict on dict operation to update final dict with value.
     - 'override': Either overrides or adds the value to the dictionary.
     - 'delete': Removes the value from the dictionary.
 
@@ -365,6 +366,8 @@ class modify_dict_settings(override_settings):
                     holding_dict[final_key] = operation['value']
                 elif op_type == "delete":
                     del holding_dict[final_key]
+                elif op_type == "update":
+                    holding_dict[final_key].update(operation['value'])
                 else:
                     val = holding_dict.get(final_key, [])
                     items = operation['value']

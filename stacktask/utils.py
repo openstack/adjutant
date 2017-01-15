@@ -20,6 +20,7 @@ def dict_merge(a, b):
     Recursively merges two dicts.
     If both a and b have a key who's value is a dict then dict_merge is called
     on both values and the result stored in the returned dictionary.
+    B is the override.
     """
     if not isinstance(b, dict):
         return b

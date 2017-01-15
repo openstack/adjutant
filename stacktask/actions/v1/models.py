@@ -22,6 +22,7 @@ from stacktask.actions.v1.users import (
 from stacktask.actions.v1.resources import (
     NewDefaultNetworkAction, NewProjectDefaultNetworkAction,
     SetProjectQuotaAction)
+from stacktask.actions.v1.misc import SendAdditionalEmailAction
 
 
 # Update settings dict with tuples in the format:
@@ -52,3 +53,7 @@ register_action_class(
     serializers.NewProjectDefaultNetworkSerializer)
 register_action_class(
     SetProjectQuotaAction, serializers.SetProjectQuotaSerializer)
+
+# Register Misc actions:
+register_action_class(
+    SendAdditionalEmailAction, serializers.SendAdditionalEmailSerializer)

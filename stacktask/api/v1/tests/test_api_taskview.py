@@ -1,4 +1,4 @@
-# Copyright (C) 2015 Catalyst IT Ltd
+#  Copyright (C) 2015 Catalyst IT Ltd
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -14,15 +14,15 @@
 
 import mock
 
+from django.test.utils import override_settings
+from django.core import mail
+
 from rest_framework import status
 
 from stacktask.api.models import Task, Token
 from stacktask.api.v1.tests import (FakeManager, setup_temp_cache,
-                                    StacktaskAPITestCase)
+                                    StacktaskAPITestCase, modify_dict_settings)
 from stacktask.api.v1 import tests
-
-from django.core import mail
-from django.test.utils import override_settings
 
 
 @mock.patch('stacktask.actions.user_store.IdentityManager',
@@ -752,26 +752,227 @@ class TaskViewTests(StacktaskAPITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+        data = {'email': "new_test@example.com", 'username': "new",
+                'project_name': 'new_project'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['task created']})
+
+        new_task = Task.objects.all()[0]
+        url = "/v1/tasks/" + new_task.uuid
+
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin",
+            'username': "test",
+            'user_id': "test_user_id",
+            'email': "test@example.com",
+            'authenticated': True
+        }
+        response = self.client.post(url, {'approved': True}, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        new_token = Token.objects.all()[0]
+        url = "/v1/tokens/" + new_token.token
+
+        data = {'confirm': True, 'password': '1234'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @modify_dict_settings(
+        TASK_SETTINGS=[
+            {'key_list': ['invite_user', 'additional_actions'],
+             'operation': 'append',
+             'value': ['SendAdditionalEmailAction']},
+            {'key_list': ['invite_user', 'action_settings',
+                          'SendAdditionalEmailAction', 'initial'],
+             'operation': 'update',
+             'value': {
+                'subject': 'email_update_additional',
+                'template': 'email_update_started.txt',
+                'email_roles': ['project_admin'],
+                'email_current_user': False,
+            }
+            }
+        ])
+    def test_additional_emails_roles(self):
+        """
+        Tests the sending of additional emails to a set of roles in a project
+        """
+
+        # NOTE(amelia): sending this email here is probably not the intended
+        # case. It would be more useful in cases such as a quota update or a
+        # child project being created that all the project admins should be
+        # notified of
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+
+        user = mock.Mock()
+        user.id = 'test_user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+
+        user2 = mock.Mock()
+        user2.id = 'test_user_id_2'
+        user2.name = "test2@example.com"
+        user2.email = "test2@example.com"
+        user2.domain = 'default'
+
+        user3 = mock.Mock()
+        user3.id = 'test_user_id_3'
+        user3.name = "test3@example.com"
+        user3.email = "test3@example.com"
+        user3.domain = 'default'
+
+        project.roles = {user.id: ['project_admin', '_member_'],
+                         user2.id: ['project_admin', '_member_'],
+                         user3.id: ['project_mod', '_member_']}
+
+        setup_temp_cache({'test_project': project},
+                         {user.id: user, user2.id: user2, user3.id: user3})
+
+        url = "/v1/actions/InviteUser"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        new_task = Task.objects.all()[0]
-        url = "/v1/tasks/" + new_task.uuid
-        response = self.client.post(url, {'approved': True}, format='json',
-                                    headers=headers)
+
+        data = {'email': "new_test@example.com",
+                'roles': ['_member_']}
+        response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            response.data,
-            {'notes': ['created token']}
-        )
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        self.assertEqual(len(mail.outbox), 2)
+
+        self.assertEqual(len(mail.outbox[0].to), 2)
+        self.assertEqual(set(mail.outbox[0].to),
+                         set([user.email, user2.email]))
+        self.assertEqual(mail.outbox[0].subject, 'email_update_additional')
+
+        # Test that the token email gets sent to the other addresses
+        self.assertEqual(mail.outbox[1].to[0], 'new_test@example.com')
+
+        new_token = Token.objects.all()[0]
+        url = "/v1/tokens/" + new_token.token
+
+        data = {'confirm': True, 'password': '1234'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @modify_dict_settings(
+        TASK_SETTINGS=[
+            {'key_list': ['invite_user', 'additional_actions'],
+             'operation': 'override',
+             'value': ['SendAdditionalEmailAction']},
+            {'key_list': ['invite_user', 'action_settings',
+                          'SendAdditionalEmailAction', 'initial'],
+             'operation': 'update',
+             'value':{
+                'subject': 'invite_user_additional',
+                'template': 'email_update_started.txt',
+                'email_additional_addresses': ['admin@example.com'],
+                'email_current_user': False,
+            }
+            }
+        ])
+    def test_email_additional_addresses(self):
+        """
+        Tests the sending of additional emails an admin email set in
+        the conf
+        """
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+
+        user = mock.Mock()
+        user.id = 'test_user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+
+        project.roles = {user.id: ['project_admin', '_member_']}
+        setup_temp_cache({'test_project': project}, {user.id: user, })
+
+        url = "/v1/actions/InviteUser"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        data = {'email': "new_test@example.com", 'roles': ['_member_']}
+        response = self.client.post(url, data, format='json', headers=headers)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        self.assertEqual(len(mail.outbox), 2)
+
+        self.assertEqual(set(mail.outbox[0].to),
+                         set(['admin@example.com']))
+        self.assertEqual(mail.outbox[0].subject, 'invite_user_additional')
+
+        # Test that the token email gets sent to the other addresses
+        self.assertEqual(mail.outbox[1].to[0], 'new_test@example.com')
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
         data = {'password': 'testpassword'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @modify_dict_settings(
+        TASK_SETTINGS=[
+            {'key_list': ['invite_user', 'additional_actions'],
+             'operation': 'override',
+             'value': ['SendAdditionalEmailAction']},
+            {'key_list': ['invite_user', 'action_settings',
+                          'SendAdditionalEmailAction', 'initial'],
+             'operation': 'update',
+             'value':{
+                'subject': 'invite_user_additional',
+                'template': 'email_update_started.txt',
+                'email_additional_addresses': ['admin@example.com'],
+                'email_current_user': False,
+            }
+            }
+        ])
+    def test_email_additional_action_invalid(self):
+        """
+        The additional email actions should not send an email if the
+        action is invalid.
+        """
+
+        setup_temp_cache({}, {})
+
+        url = "/v1/actions/InviteUser"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        data = {'email': "test@example.com", 'roles': ["_member_"],
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {'errors': ['actions invalid']})
+        self.assertEqual(len(mail.outbox), 0)

@@ -152,6 +152,20 @@ DEFAULT_ACTION_SETTINGS = {
             }
         },
     },
+    'SendAdditionalEmailAction': {
+        'initial': {
+            'reply': 'no-reply@example.com',
+            'from': 'bounce+%(task_uuid)s@example.com'
+        },
+        'token': {
+            'reply': 'no-reply@example.com',
+            'from': 'bounce+%(task_uuid)s@example.com'
+        },
+        'completed': {
+            'reply': 'no-reply@example.com',
+            'from': 'bounce+%(task_uuid)s@example.com'
+        },
+    },
 }
 
 TASK_SETTINGS = {

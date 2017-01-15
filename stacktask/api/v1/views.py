@@ -25,7 +25,7 @@ from rest_framework.views import APIView
 from stacktask.api import utils
 from stacktask.api.models import Notification, Task, Token
 from stacktask.api.v1.utils import (
-    create_notification, create_token, parse_filters, send_email)
+    create_notification, create_token, parse_filters, send_stage_email)
 
 
 class APIViewWithLogger(APIView):
@@ -437,7 +437,7 @@ class TaskDetail(APIViewWithLogger):
                     # will throw a key error if the token template has not
                     # been specified
                     email_conf = class_conf['emails']['token']
-                    send_email(task, email_conf, token)
+                    send_stage_email(task, email_conf, token)
                     return Response({'notes': ['created token']},
                                     status=200)
                 except KeyError as e:
@@ -493,7 +493,7 @@ class TaskDetail(APIViewWithLogger):
                     task.task_type, settings.DEFAULT_TASK_SETTINGS)
                 email_conf = class_conf.get(
                     'emails', {}).get('completed', None)
-                send_email(task, email_conf)
+                send_stage_email(task, email_conf)
 
                 return Response(
                     {'notes': ["Task completed successfully."]},
@@ -610,7 +610,7 @@ class TokenList(APIViewWithLogger):
             # will throw a key error if the token template has not
             # been specified
             email_conf = class_conf['emails']['token']
-            send_email(task, email_conf, token)
+            send_stage_email(task, email_conf, token)
         except KeyError as e:
             notes = {
                 'errors': [
@@ -786,7 +786,7 @@ class TokenDetail(APIViewWithLogger):
             token.task.task_type, settings.DEFAULT_TASK_SETTINGS)
         email_conf = class_conf.get(
             'emails', {}).get('completed', None)
-        send_email(token.task, email_conf)
+        send_stage_email(token.task, email_conf)
 
         return Response(
             {'notes': ["Token submitted successfully."]},
