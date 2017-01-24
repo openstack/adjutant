@@ -104,14 +104,15 @@ class FakeManager(object):
         roles = temp_cache['projects'][project.name].roles
         users = []
 
-        for user_id, roles in roles.iteritems():
+        for user_id, user_roles in roles.iteritems():
             user = self.get_user(user_id)
             user.roles = []
 
-            for role in roles:
+            for role in user_roles:
                 r = mock.Mock()
                 r.name = role
                 user.roles.append(r)
+            users.append(user)
         return users
 
     def create_user(self, name, password, email, created_on,

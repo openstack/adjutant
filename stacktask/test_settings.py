@@ -234,10 +234,10 @@ ROLES_MAPPING = {
         'project_admin', 'project_mod', '_member_', 'heat_stack_owner'
     ],
     'project_admin': [
-        'project_mod', '_member_', 'heat_stack_owner'
+        'project_mod', '_member_', 'heat_stack_owner', 'project_admin',
     ],
     'project_mod': [
-        '_member_', 'heat_stack_owner'
+        '_member_', 'heat_stack_owner', 'project_mod',
     ],
 }
 

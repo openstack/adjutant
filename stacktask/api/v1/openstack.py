@@ -37,6 +37,9 @@ class UserList(tasks.InviteUser):
         project_id = request.keystone_user['project_id']
         project = id_manager.get_project(project_id)
 
+        can_manage_roles = user_store.get_managable_roles(
+            request.keystone_user['roles'])
+
         active_emails = set()
         for user in id_manager.list_users(project):
             skip = False
@@ -53,13 +56,15 @@ class UserList(tasks.InviteUser):
             enabled = getattr(user, 'enabled')
             user_status = 'Active' if enabled else 'Account Disabled'
             active_emails.add(email)
-            user_list.append({'id': user.id,
-                              'name': user.name,
-                              'email': email,
-                              'roles': roles,
-                              'cohort': 'Member',
-                              'status': user_status
-                              })
+            user_list.append({
+                'id': user.id,
+                'name': user.name,
+                'email': email,
+                'roles': roles,
+                'cohort': 'Member',
+                'status': user_status,
+                'manageable': set(can_manage_roles).issuperset(roles),
+            })
 
         # Get my active tasks for this project:
         project_tasks = models.Task.objects.filter(

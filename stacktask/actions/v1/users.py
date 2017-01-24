@@ -244,6 +244,16 @@ class EditUserRolesAction(UserIdAction, ProjectMixin, UserMixin):
         # user roles
         current_roles = id_manager.get_roles(user, project)
         current_role_names = {role.name for role in current_roles}
+
+        # NOTE(adriant): Only allow someone to edit roles if all roles from
+        # the target user can be managed by editor.
+        can_manage_roles = user_store.get_managable_roles(
+            self.action.task.keystone_user['roles'])
+        if not set(can_manage_roles).issuperset(current_role_names):
+            self.add_note(
+                'Not all target user roles are manageable.')
+            return False
+
         if self.remove:
             remaining = set(current_role_names) & set(self.roles)
             if not remaining:

@@ -668,3 +668,46 @@ class UserActionTests(TestCase):
         self.assertEquals(action.valid, True)
 
         self.assertEquals(project.roles[user.id], ['_member_'])
+
+    def test_edit_user_roles_can_manage_all(self):
+        """
+        Confirm that you cannot edit a user unless all their roles
+        can be managed by you.
+        """
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {user.id: ['_member_', 'project_admin']}
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={
+                'roles': ['project_mod'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
+
+        data = {
+            'domain_id': 'default',
+            'user_id': 'user_id',
+            'project_id': 'test_project_id',
+            'roles': ['project_mod'],
+            'remove': False
+        }
+
+        action = EditUserRolesAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, False)
+
+        self.assertEquals(
+            project.roles[user.id], ['_member_', 'project_admin'])

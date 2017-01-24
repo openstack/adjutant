@@ -107,6 +107,56 @@ class OpenstackAPITests(APITestCase):
 
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['users']), 2)
+
+    def test_user_list_managable(self):
+        """
+        Confirm that the manageable value is set correctly.
+        """
+        user = mock.Mock()
+        user.id = 'user_id_1'
+        user.name = "test1@example.com"
+        user.email = "test1@example.com"
+        user.domain = 'default'
+
+        user2 = mock.Mock()
+        user2.id = 'user_id_2'
+        user2.name = "test2@example.com"
+        user2.email = "test2@example.com"
+        user2.domain = 'default'
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {
+            user.id: ['_member_', 'project_admin'],
+            user2.id: ['_member_', 'project_mod']}
+
+        setup_temp_cache(
+            {'test_project': project},
+            {user.id: user, user2.id: user2})
+
+        url = "/v1/openstack/users"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        url = "/v1/openstack/users"
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['users']), 2)
+
+        for st_user in response.data['users']:
+            if st_user['id'] == user.id:
+                self.assertFalse(st_user['manageable'])
+            if st_user['id'] == user2.id:
+                self.assertTrue(st_user['manageable'])
 
     def test_force_reset_password(self):
         """
