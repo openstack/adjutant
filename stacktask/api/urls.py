@@ -15,11 +15,12 @@
 from django.conf.urls import url, include
 from django.conf import settings
 
-from stacktask.api import docs
+from rest_framework_swagger.views import get_swagger_view
 
 urlpatterns = [
     url(r'^v1/', include('stacktask.api.v1.urls')),
 ]
 
 if settings.DEBUG:
-    urlpatterns.append(url(r'^docs/', docs.docs_view))
+    schema_view = get_swagger_view(title='StackTask API')
+    urlpatterns.append(url(r'^docs/', schema_view))
