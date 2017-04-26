@@ -41,14 +41,17 @@ Creation and management of Tasks, Tokens, and Notifications is not modular and i
 
 Endpoints for the management of tasks, tokens, and notifications. Most of these are limited by roles, and are for admin use only.
 
-* ../v1/task - GET
+* ../v1/tasks - GET
   * A json containing all tasks.
-    * This will be updated to take parameters to refine the list.
-* ../v1/task/<uuid> - GET
+    * Possible parameters are:
+    * filters (specified below)
+    * tasks_per_page, defaults to 25
+    * page, page number to access (starts at 1)
+* ../v1/tasks/<uuid> - GET
   * Get details for a specific task.
-* ../v1/task/<uuid> - PUT
+* ../v1/tasks/<uuid> - PUT
   * Update a task and retrigger pre_approve.
-* ../v1/task/<uuid> - POST
+* ../v1/tasks/<uuid> - POST
   * approve a task
 * ../v1/token - GET
   * A json containing all tokens.
