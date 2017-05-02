@@ -96,12 +96,16 @@ class UserList(tasks.InviteUser):
             # than it helps. May uncomment once different duplication checking
             # measures are in place.
             # if task['task_data']['email'] not in active_emails:
-            user_list.append({'id': task['uuid'],
-                              'name': task['task_data']['email'],
-                              'email': task['task_data']['email'],
-                              'roles': task['task_data']['roles'],
-                              'cohort': 'Invited',
-                              'status': task['status']})
+            user = {'id': task['uuid'],
+                    'name': task['task_data']['email'],
+                    'email': task['task_data']['email'],
+                    'roles': task['task_data']['roles'],
+                    'cohort': 'Invited',
+                    'status': task['status']}
+            if not settings.USERNAME_IS_EMAIL:
+                user['name'] = task['task_data']['username']
+
+            user_list.append(user)
 
         return Response({'users': user_list})
 
