@@ -18,6 +18,7 @@ from django.conf import settings
 from django.utils import timezone
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
+from rest_framework.exceptions import ParseError
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -350,7 +351,12 @@ class TaskDetail(APIViewWithLogger):
                 {'errors': ['No task with this id.']},
                 status=404)
 
-        if request.data.get('approved') is not True:
+        try:
+            if request.data.get('approved') is not True:
+                return Response(
+                    {'approved': ["this is a required boolean field."]},
+                    status=400)
+        except ParseError:
             return Response(
                 {'approved': ["this is a required boolean field."]},
                 status=400)
