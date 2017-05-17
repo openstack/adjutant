@@ -1,0 +1,27 @@
+{% if notification.error %} 1
+An error has occur in the adjutant service that needs attention.
+{% else %}
+There is a task that needs some attention.
+{% endif %}
+
+Related Task:
+uuid: {{ task.uuid }}
+ip_address: {{ task.ip_address }}
+keystone_user: {{ task.keystone_user }}
+project_id: {{ task.project_id }}
+task_type: {{ task.task_type }}
+cancelled: {{ task.cancelled }}
+approved: {{ task.approved }}
+completed: {{ task.completed }}
+created_on: {{ task.created_on }}
+approved_on: {{ task.approved_on }}
+completed_on: {{ task.completed_on }}
+action_notes:
+{% for action, notes in task.action_notes.iteritems %}- {{ action }}
+{% for note in notes %}    - {{ note }}
+{% endfor %}{% endfor %}
+
+Notification details:
+uuid: {{ notification.uuid }}
+notes:
+{{ notification.notes }}

@@ -7,9 +7,9 @@ ALLOWED_HOSTS:
     - "*"
 
 ADDITIONAL_APPS:
-    - stacktask.api.v1
-    - stacktask.actions.v1
-    - stacktask.notifications.request_tracker
+    - adjutant.api.v1
+    - adjutant.actions.v1
+    - adjutant.notifications.request_tracker
 
 DATABASES:
     default:
@@ -25,7 +25,7 @@ LOGGING:
             class: logging.FileHandler
             filename: reg_log.log
     loggers:
-        stacktask:
+        adjutant:
             handlers:
                 - file
             level: INFO

@@ -6,7 +6,7 @@ python-stacktask (0.1.4) unstable; urgency=medium
 
 python-stacktask (0.1.3) unstable; urgency=medium
 
-  * Renaming cmd to stacktask-api
+  * Renaming cmd to adjutant-api
 
  -- Dale Smith <dale@catalyst-eu.net>  Thu, 10 Mar 2016 10:41:31 +0000
 
@@ -24,7 +24,6 @@ python-stacktask (0.1.1a4) unstable; urgency=medium
 
 python-stacktask (0.1.1a3) unstable; urgency=medium
 
-  * Initial release. 
+  * Initial release.
 
  -- Dale Smith <dale@catalyst-eu.net>  Mon, 14 Dec 2015 15:43:59 +0000
-

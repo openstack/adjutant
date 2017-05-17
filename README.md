@@ -1,4 +1,4 @@
-# StackTask
+# Adjutant
 
 A basic workflow framework built using Django and Django-Rest-Framework to help automate basic Admin tasks within an OpenStack cluster.
 
@@ -234,7 +234,7 @@ While this is a Django application, it does not follow the standard Django folde
 
 Rather than a standard Django application, treat this as a more standard python application in this regard.
 
-Once installed, all the normal manage.py functions can be called directly on the 'stacktask' commandline function.
+Once installed, all the normal manage.py functions can be called directly on the 'adjutant' commandline function.
 
 ### Dev Environment:
 
@@ -256,11 +256,11 @@ $ tox
 ```
 To run just action unit tests:
 ```
-$ tox stacktask.actions
+$ tox adjutant.actions
 ```
 To run a single api test:
 ```
-$ tox stacktask.api.v1.tests.test_api_taskview.TaskViewTests.test_duplicate_tasks_new_user
+$ tox adjutant.api.v1.tests.test_api_taskview.TaskViewTests.test_duplicate_tasks_new_user
 ```
 
 ### Adding Actions:
@@ -294,7 +294,7 @@ Incrementing package version:
 Build the package:
   dpkg-buildpackage -us -uc
 
-Now a debian package has been built that will unpack a virtualenv containing stacktask and all dependencies in a self-contained package, so they do not conflict with other python packages on the system.
+Now a debian package has been built that will unpack a virtualenv containing adjutant and all dependencies in a self-contained package, so they do not conflict with other python packages on the system.
 
 ### Puppet module
 Then a puppet module will be able to install the debian package, setup a database, and run the service via nginx and uwsgi in the virtualenv.
@@ -303,7 +303,7 @@ Then a puppet module will be able to install the debian package, setup a databas
 
 Custom email templates are placed in:
 ```
-/etc/stacktask/templates/
+/etc/adjutant/templates/
 ```
 This is so that adding personalised or deployment specific templates is kept outside of the scope of the service itself and managed by the deployer.
 

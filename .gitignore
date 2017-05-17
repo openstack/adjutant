@@ -2,7 +2,7 @@
 *.sqlite3
 *~
 *.log
-stacktask.egg-info/*
+adjutant.egg-info/*
 dist/*
 .tox/*
 env/*

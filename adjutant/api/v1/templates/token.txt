@@ -1,0 +1,15 @@
+Hello,
+
+Your task with Adjutant is almost complete.
+
+The actions in your task are:
+{% for action in actions %}
+- {{ action }}
+{% endfor %}
+
+Your token to complete these actions is:
+{{ tokenurl }}{{ token }}/
+
+
+Thank you for using our service.
+

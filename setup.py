@@ -7,12 +7,12 @@ with open('package_readme.rst') as file:
     long_description = file.read()
 
 setup(
-    name='stacktask',
+    name='adjutant',
 
     version='0.1.4',
     description='An admin task workflow service for openstack.',
     long_description=long_description,
-    url='https://github.com/catalyst/stacktask',
+    url='https://github.com/catalyst/adjutant',
     author='Adrian Turjak',
     author_email='adriant@catalyst.net.nz',
     license='Apache 2.0',
@@ -29,14 +29,14 @@ setup(
     keywords='openstack keystone users tasks registration workflow',
     packages=find_packages(),
     package_data={
-        'stacktask': [
+        'adjutant': [
             'api/v*/templates/*.txt',
             'notifications/templates/*.txt',
             'notifications/*/templates/*.txt']},
     install_requires=required,
     entry_points={
         'console_scripts': [
-            'stacktask-api = stacktask:management_command',
+            'adjutant-api = adjutant:management_command',
         ],
     }
 )

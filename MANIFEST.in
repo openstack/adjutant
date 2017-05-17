@@ -3,7 +3,7 @@ include test-requirements.txt
 include README.md
 include package_readme.rst
 graft conf
-graft stacktask/api/v*/templates
-graft stacktask/notifications/templates
-graft stacktask/notifications/*/templates
+graft adjutant/api/v*/templates
+graft adjutant/notifications/templates
+graft adjutant/notifications/*/templates
 
