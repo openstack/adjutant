@@ -15,13 +15,15 @@
 from django.conf import settings
 from django.utils import timezone
 
+
 from rest_framework.response import Response
 
 from adjutant.actions import user_store
 from adjutant.api import models
 from adjutant.api import utils
 from adjutant.api.v1 import tasks
-from adjutant.api.v1.utils import add_task_id_for_roles
+from adjutant.api.v1.utils import add_task_id_for_roles, create_notification
+from adjutant.common.quota import QuotaManager
 
 
 class UserList(tasks.InviteUser):
@@ -316,3 +318,158 @@ class SignUp(tasks.CreateProject):
 
     def post(self, request, format=None):
         return super(SignUp, self).post(request)
+
+
+class UpdateProjectQuotas(tasks.TaskView):
+    """
+    The OpenStack endpoint to update the quota of a project in
+    one or more regions
+    """
+
+    task_type = "update_quota"
+    default_actions = ["UpdateProjectQuotasAction", ]
+
+    _number_of_returned_tasks = 5
+
+    def get_region_quota_data(self, region_id):
+        quota_manager = QuotaManager(self.project_id)
+        current_quota = quota_manager.get_current_region_quota(region_id)
+        current_quota_size = quota_manager.get_quota_size(current_quota)
+        change_options = quota_manager.get_quota_change_options(
+            current_quota_size)
+        current_usage = quota_manager.get_current_usage(region_id)
+        return {"region": region_id,
+                "current_quota": current_quota,
+                "current_quota_size": current_quota_size,
+                "quota_change_options": change_options,
+                "current_usage": current_usage
+                }
+
+    def get_active_quota_tasks(self):
+        # Get the 5 last quota tasks.
+        task_list = models.Task.objects.filter(
+            task_type__exact=self.task_type,
+            project_id__exact=self.project_id,
+            cancelled=0,
+        ).order_by('-created_on')[:self._number_of_returned_tasks]
+
+        response_tasks = []
+
+        for task in task_list:
+            status = "Awaiting Approval"
+            if task.completed:
+                status = "Completed"
+
+            task_data = {}
+            for action in task.actions:
+                task_data.update(action.action_data)
+            new_dict = {
+                "id": task.uuid,
+                "regions": task_data['regions'],
+                "size": task_data['size'],
+                "request_user":
+                    task.keystone_user['username'],
+                "task_created": task.created_on,
+                "valid": all([a.valid for a in task.actions]),
+                "status": status
+            }
+            response_tasks.append(new_dict)
+
+        return response_tasks
+
+    def check_region_exists(self, region):
+        # Check that the region actually exists
+        id_manager = user_store.IdentityManager()
+        v_region = id_manager.get_region(region)
+        if not v_region:
+            return False
+        return True
+
+    @utils.mod_or_admin
+    def get(self, request):
+        """
+        This endpoint returns data about what sizes are available
+        as well as the current status of a specified region's quotas.
+        """
+
+        quota_settings = settings.PROJECT_QUOTA_SIZES
+        size_order = settings.QUOTA_SIZES_ASC
+
+        self.project_id = request.keystone_user['project_id']
+        regions = request.query_params.get('regions', None)
+
+        if regions:
+            regions = regions.split(",")
+        else:
+            id_manager = user_store.IdentityManager()
+            # Only get the region id as that is what will be passed from
+            # parameters otherwise
+            regions = (region.id for region in id_manager.list_regions())
+
+        region_quotas = []
+
+        quota_manager = QuotaManager(self.project_id)
+        for region in regions:
+            if self.check_region_exists(region):
+                region_quotas.append(quota_manager.get_region_quota_data(
+                    region))
+            else:
+                return Response(
+                    {"ERROR": ['Region: %s is not valid' % region]}, 400)
+
+        response_tasks = self.get_active_quota_tasks()
+
+        return Response({'regions': region_quotas,
+                         "quota_sizes": quota_settings,
+                         "quota_size_order": size_order,
+                         "active_quota_tasks": response_tasks})
+
+    @utils.mod_or_admin
+    def post(self, request):
+
+        request.data['project_id'] = request.keystone_user['project_id']
+        self.project_id = request.keystone_user['project_id']
+
+        regions = request.data.get('regions', None)
+
+        if not regions:
+            id_manager = user_store.IdentityManager()
+            regions = [region.id for region in id_manager.list_regions()]
+            request.data['regions'] = regions
+
+        self.logger.info("(%s) - New UpdateProjectQuotas request."
+                         % timezone.now())
+
+        processed, status = self.process_actions(request)
+
+        # check the status
+        errors = processed.get('errors', None)
+        if errors:
+            self.logger.info("(%s) - Validation errors with task." %
+                             timezone.now())
+            return Response(errors, status=status)
+
+        if processed.get('auto_approved', False):
+            response_dict = {'notes': processed['notes']}
+            return Response(response_dict, status=status)
+
+        task = processed['task']
+        action_models = task.actions
+        valid = all([act.valid for act in action_models])
+        if not valid:
+            return Response({'errors': ['Actions invalid. You may have usage '
+                                        'above the new quota level.']}, 400)
+
+        # Action needs to be manually approved
+        notes = {
+            'notes':
+                ['New task for UpdateProjectQuotas.']
+        }
+
+        create_notification(processed['task'], notes)
+        self.logger.info("(%s) - Task processed. Awaiting Aprroval"
+                         % timezone.now())
+
+        response_dict = {'notes': ['Task processed. Awaiting Aprroval.']}
+
+        return Response(response_dict, status=202)

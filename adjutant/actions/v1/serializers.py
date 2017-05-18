@@ -14,10 +14,16 @@
 
 from rest_framework import serializers
 from django.conf import settings
+from adjutant.actions import user_store
 
 
 role_options = settings.DEFAULT_ACTION_SETTINGS.get("NewUserAction", {}).get(
     "allowed_roles", [])
+
+
+def get_region_choices():
+    id_manager = user_store.IdentityManager()
+    return (region.id for region in id_manager.list_regions())
 
 
 class BaseUserNameSerializer(serializers.Serializer):
@@ -95,3 +101,26 @@ class SendAdditionalEmailSerializer(serializers.Serializer):
 
 class UpdateUserEmailSerializer(BaseUserIdSerializer):
     new_email = serializers.EmailField()
+
+
+class UpdateProjectQuotasSerializer(serializers.Serializer):
+    project_id = serializers.CharField(max_length=64)
+    size = serializers.CharField(max_length=64)
+
+    def __init__(self, *args, **kwargs):
+        super(UpdateProjectQuotasSerializer, self).__init__(*args, **kwargs)
+        # NOTE(amelia): This overide is mostly in use so that it can be tested
+        # However it does take into account the improbable edge case that the
+        # regions have changed since the server was last started
+        self.fields['regions'] = serializers.MultipleChoiceField(
+            choices=get_region_choices())
+
+    def validate_size(self, value):
+        """
+        Check that the size exists in the conf.
+        """
+        size_list = settings.PROJECT_QUOTA_SIZES.keys()
+        if value not in size_list:
+            raise serializers.ValidationError("Quota size: %s is not valid"
+                                              % value)
+        return value

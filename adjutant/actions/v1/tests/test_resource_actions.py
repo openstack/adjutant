@@ -13,12 +13,13 @@
 #    under the License.
 
 from django.test import TestCase
+from django.test.utils import override_settings
 
 import mock
 
 from adjutant.actions.v1.resources import (
     NewDefaultNetworkAction, NewProjectDefaultNetworkAction,
-    SetProjectQuotaAction)
+    SetProjectQuotaAction, UpdateProjectQuotasAction)
 from adjutant.api.models import Task
 from adjutant.api.v1.tests import (FakeManager, setup_temp_cache,
                                    modify_dict_settings)
@@ -454,9 +455,204 @@ class ProjectSetupActionTests(TestCase):
         neutronquota = neutron_cache['RegionOne']['test_project_id']['quota']
         self.assertEquals(neutronquota['network'], 3)
 
-        # RegionTwo, cinder only
-        self.assertFalse('RegionTwo' in nova_cache)
-        r2_cinderquota = cinder_cache['RegionTwo']['test_project_id']['quota']
-        self.assertEquals(r2_cinderquota['gigabytes'], 73571)
-        self.assertEquals(r2_cinderquota['snapshots'], 73572)
-        self.assertEquals(r2_cinderquota['volumes'], 73573)
+        # RegionThree, cinder only
+        self.assertFalse('RegionThree' in nova_cache)
+        r2_cinderquota = cinder_cache['RegionThree'][
+            'test_project_id']['quota']
+        self.assertEquals(r2_cinderquota['gigabytes'], 50000)
+        self.assertEquals(r2_cinderquota['snapshots'], 600)
+        self.assertEquals(r2_cinderquota['volumes'], 200)
+
+
+@mock.patch(
+    'adjutant.actions.user_store.IdentityManager',
+    FakeManager)
+@mock.patch(
+    'adjutant.common.quota.get_neutronclient',
+    get_fake_neutron)
+@mock.patch(
+    'adjutant.common.quota.get_novaclient',
+    get_fake_novaclient)
+@mock.patch(
+    'adjutant.common.quota.get_cinderclient',
+    get_fake_cinderclient)
+@mock.patch(
+    'adjutant.actions.v1.resources.' +
+    'openstack_clients.get_neutronclient',
+    get_fake_neutron)
+@mock.patch(
+    'adjutant.actions.v1.resources.' +
+    'openstack_clients.get_novaclient',
+    get_fake_novaclient)
+@mock.patch(
+    'adjutant.actions.v1.resources.' +
+    'openstack_clients.get_cinderclient',
+    get_fake_cinderclient)
+class QuotaActionTests(TestCase):
+
+    def tearDown(self):
+        cinder_cache.clear()
+        nova_cache.clear()
+        neutron_cache.clear()
+
+    def test_update_quota(self):
+        """
+        Sets a new quota on all services of a project in a single region
+        """
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_temp_cache({'test_project': project, }, {user.id: user})
+        setup_neutron_cache('RegionOne', 'test_project_id')
+
+        # Test sending to only a single region
+        task = Task.objects.create(
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+
+        data = {
+            'project_id': 'test_project_id',
+            'size': 'medium',
+            'regions': ['RegionOne'],
+            'user_id': user.id
+        }
+
+        action = UpdateProjectQuotasAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
+        # check the quotas were updated
+        # This relies on test_settings heavily.
+        cinderquota = cinder_cache['RegionOne']['test_project_id']['quota']
+        self.assertEquals(cinderquota['gigabytes'], 10000)
+        novaquota = nova_cache['RegionOne']['test_project_id']['quota']
+        self.assertEquals(novaquota['ram'], 327680)
+        neutronquota = neutron_cache['RegionOne']['test_project_id']['quota']
+        self.assertEquals(neutronquota['network'], 5)
+
+    def test_update_quota_multi_region(self):
+        """
+        Sets a new quota on all services of a project in multiple regions
+        """
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_temp_cache({'test_project': project, }, {user.id: user})
+        setup_mock_caches('RegionOne', project.id)
+        setup_mock_caches('RegionTwo', project.id)
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+
+        data = {
+            'project_id': 'test_project_id',
+            'size': 'large',
+            'domain_id': 'default',
+            'regions': ['RegionOne', 'RegionTwo'],
+            'user_id': 'user_id'
+        }
+
+        action = UpdateProjectQuotasAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
+        # check the quotas were updated
+        # This relies on test_settings heavily.
+        cinderquota = cinder_cache['RegionOne']['test_project_id']['quota']
+        self.assertEquals(cinderquota['gigabytes'], 50000)
+        novaquota = nova_cache['RegionOne']['test_project_id']['quota']
+        self.assertEquals(novaquota['ram'], 655360)
+        neutronquota = neutron_cache['RegionOne']['test_project_id']['quota']
+        self.assertEquals(neutronquota['network'], 10)
+
+        cinderquota = cinder_cache['RegionTwo']['test_project_id']['quota']
+        self.assertEquals(cinderquota['gigabytes'], 50000)
+        novaquota = nova_cache['RegionTwo']['test_project_id']['quota']
+        self.assertEquals(novaquota['ram'], 655360)
+        neutronquota = neutron_cache['RegionTwo']['test_project_id']['quota']
+        self.assertEquals(neutronquota['network'], 10)
+
+    @override_settings(QUOTA_SIZES_ASC=[])
+    def test_update_quota_not_in_sizes_asc(self):
+        """
+        Tests that the quota will still update to a size even if it is not
+        placed in QUOTA_SIZES_ASC
+        """
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_temp_cache({'test_project': project, }, {user.id: user})
+        setup_mock_caches('RegionOne', project.id)
+        setup_mock_caches('RegionTwo', project.id)
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+
+        data = {
+            'project_id': 'test_project_id',
+            'size': 'large',
+            'domain_id': 'default',
+            'regions': ['RegionOne', 'RegionTwo'],
+        }
+
+        action = UpdateProjectQuotasAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
+        # check the quotas were updated
+        # This relies on test_settings heavily.
+        cinderquota = cinder_cache['RegionOne']['test_project_id']['quota']
+        self.assertEquals(cinderquota['gigabytes'], 50000)
+        novaquota = nova_cache['RegionOne']['test_project_id']['quota']
+        self.assertEquals(novaquota['ram'], 655360)
+        neutronquota = neutron_cache['RegionOne']['test_project_id']['quota']
+        self.assertEquals(neutronquota['network'], 10)
+
+        cinderquota = cinder_cache['RegionTwo']['test_project_id']['quota']
+        self.assertEquals(cinderquota['gigabytes'], 50000)
+        novaquota = nova_cache['RegionTwo']['test_project_id']['quota']
+        self.assertEquals(novaquota['ram'], 655360)
+        neutronquota = neutron_cache['RegionTwo']['test_project_id']['quota']
+        self.assertEquals(neutronquota['network'], 10)

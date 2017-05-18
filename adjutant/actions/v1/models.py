@@ -22,7 +22,7 @@ from adjutant.actions.v1.users import (
     UpdateUserEmailAction)
 from adjutant.actions.v1.resources import (
     NewDefaultNetworkAction, NewProjectDefaultNetworkAction,
-    SetProjectQuotaAction)
+    SetProjectQuotaAction, UpdateProjectQuotasAction)
 from adjutant.actions.v1.misc import SendAdditionalEmailAction
 
 
@@ -56,6 +56,8 @@ register_action_class(
     serializers.NewProjectDefaultNetworkSerializer)
 register_action_class(
     SetProjectQuotaAction, serializers.SetProjectQuotaSerializer)
+register_action_class(
+    UpdateProjectQuotasAction, serializers.UpdateProjectQuotasSerializer)
 
 # Register Misc actions:
 register_action_class(

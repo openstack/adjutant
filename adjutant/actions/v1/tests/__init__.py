@@ -151,8 +151,8 @@ class FakeNovaClient(FakeOpenstackClient):
         def __init__(self, data):
             self.data = data
 
-        def get(self, project_id):
-            return self.LimitFake(self.data, project_id)
+        def get(self, tenant_id):
+            return self.LimitFake(self.data, tenant_id)
 
         class LimitFake(object):
             def __init__(self, data, project_id):

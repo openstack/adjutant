@@ -39,8 +39,11 @@ def setup_temp_cache(projects, users):
     users.update({admin_user.id: admin_user})
 
     region_one = mock.Mock()
-    region_one.id = 'region_id_0'
+    region_one.id = 'RegionOne'
     region_one.name = 'RegionOne'
+
+    region_two = mock.Mock()
+    region_two.id = 'RegionTwo'
 
     global temp_cache
 
@@ -58,6 +61,7 @@ def setup_temp_cache(projects, users):
         },
         'regions': {
             'RegionOne': region_one,
+            'RegionTwo': region_two
         },
         'domains': {
             default_domain.id: default_domain,
@@ -266,6 +270,10 @@ class FakeManager(object):
     def get_region(self, region_id):
         global temp_cache
         return temp_cache['regions'].get(region_id, None)
+
+    def list_regions(self):
+        global temp_cache
+        return temp_cache['regions'].values()
 
 
 class modify_dict_settings(override_settings):

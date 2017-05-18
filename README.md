@@ -133,6 +133,14 @@ For ease of integration with OpenStack, these endpoints are setup to work and pa
         * setup basic networking if needed
         * create user with random password
         * set user given password on token submit
+* ../v1/openstack/quotas/ - GET
+    * JSON containg the specifications of each quota size, and data about the quota size for all regions in the current project
+    * An additional parameter regions, containing a comma separated list of regions can be passed as well to limit the regions it will return data about.
+* ../v1/openstack/quotas/ - POST
+    * Change the quota for all regions
+        * The quota will automatically update if the new quota level is adjacent to the current one and there has not been an update to that region in the past 30 days
+        * Other options will require admin approval before updating
+        * POST body should be a JSON dict containing the size ('size') and optionally 'regions', a list of regions to update to
 
 
 #### (DEPRECATED) Default TaskView Endpoints:
