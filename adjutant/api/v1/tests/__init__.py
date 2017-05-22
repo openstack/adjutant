@@ -322,7 +322,7 @@ class modify_dict_settings(override_settings):
         super(override_settings, self).__init__()
 
     def save_options(self, test_func):
-        if test_func._modified_dict_settings is None:
+        if getattr(test_func, "_modified_dict_settings", None) is None:
             test_func._modified_dict_settings = self.operations
         else:
             # Duplicate list to prevent subclasses from altering their parent.
@@ -400,20 +400,22 @@ class modify_dict_settings(override_settings):
 
 class TestCaseMixin(object):
     """ Mixin to add modify_dict_settings functions to test classes """
-    @classmethod
-    def setUpClass(cls):
-        super(AdjutantAPITestCase, cls).setUpClass()
-        if cls._modified_dict_settings:
-            cls._cls_modifyied_dict_context = override_settings(
-                **cls._overridden_settings)
-            cls._cls_modifyied_dict_context.enable()
 
     @classmethod
-    def tearDownClass(cls):
+    def _apply_settings_changes(cls):
+        if getattr(cls, '_modified_dict_settings', None):
+            operations = {}
+            for key, value in cls._modified_dict_settings:
+                operations[key] = value
+            cls._cls_modified_dict_context = modify_dict_settings(
+                **operations)
+            cls._cls_modified_dict_context.enable()
+
+    @classmethod
+    def _remove_settings_changes(cls):
         if hasattr(cls, '_cls_modified_dict_context'):
             cls._cls_modified_dict_context.disable()
             delattr(cls, '_cls_modified_dict_context')
-        super(AdjutantAPITestCase, cls).tearDownClass()
 
     def modify_dict_settings(self, **kwargs):
         return modify_dict_settings(**kwargs)
@@ -424,6 +426,15 @@ class AdjutantTestCase(TestCase, TestCaseMixin):
     TestCase override that has support for @modify_dict_settings as a
     class decorator and internal function
     """
+    @classmethod
+    def setUpClass(cls):
+        super(AdjutantTestCase, cls).setUpClass()
+        cls._apply_settings_changes()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._remove_settings_changes()
+        super(AdjutantTestCase, cls).tearDownClass()
 
 
 class AdjutantAPITestCase(APITestCase, TestCaseMixin):
@@ -431,3 +442,12 @@ class AdjutantAPITestCase(APITestCase, TestCaseMixin):
     APITestCase override that has support for @modify_dict_settings as a
     class decorator, and internal function
     """
+    @classmethod
+    def setUpClass(cls):
+        super(AdjutantAPITestCase, cls).setUpClass()
+        cls._apply_settings_changes()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._remove_settings_changes()
+        super(AdjutantAPITestCase, cls).tearDownClass()
