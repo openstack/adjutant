@@ -9,7 +9,7 @@ with open('package_readme.rst') as file:
 setup(
     name='adjutant',
 
-    version='0.1.4',
+    version='0.2.0',
     description='An admin task workflow service for openstack.',
     long_description=long_description,
     url='https://github.com/catalyst/adjutant',
