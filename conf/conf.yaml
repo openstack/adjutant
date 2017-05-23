@@ -228,7 +228,6 @@ TASK_SETTINGS:
         # Additional actions for views
         # These will run after the default actions, in the given order.
         additional_actions:
-            - AddDefaultUsersToProjectAction
             - NewProjectDefaultNetworkAction
             - SetProjectQuotaAction
         emails:
