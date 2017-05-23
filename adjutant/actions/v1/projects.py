@@ -166,6 +166,8 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
             # add to cache to use in template
             self.action.task.cache['user_state'] = "disabled"
             self.action.need_token = True
+            # as they are disabled we'll reset their password
+            self.set_token_fields(["password"])
             self.add_note(
                 "Existing disabled user '%s' with matching email." %
                 self.email)

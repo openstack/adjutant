@@ -2,7 +2,7 @@
 *.sqlite3
 *~
 *.log
-adjutant.egg-info/*
+python_adjutant.egg-info/*
 dist/*
 .tox/*
 env/*

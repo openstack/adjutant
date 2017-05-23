@@ -300,6 +300,9 @@ class ProjectActionTests(TestCase):
             {'user_id': 'user_id_1',
              'project_id': 'project_id_1',
              'user_state': 'disabled'})
+        self.assertEquals(
+            action.action.cache["token_fields"],
+            ['password'])
 
         # submit password reset
         token_data = {'password': '123456'}
