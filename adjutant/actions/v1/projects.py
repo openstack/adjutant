@@ -193,6 +193,8 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
         else:
             self.action.valid = False
 
+        self.action.task.cache['user_state'] = self.action.state
+
         self.action.save()
 
     def _pre_approve(self):
@@ -225,6 +227,7 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
         roles_granted = self.get_cache('roles_granted')
         if user_id and roles_granted:
             self.action.task.cache['user_id'] = user_id
+            self.action.task.cache['user_state'] = self.action.state
             self.add_note("User already setup.")
         elif not user_id:
             self.action.valid = self._validate_user()

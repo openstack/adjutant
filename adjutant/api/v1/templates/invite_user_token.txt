@@ -3,6 +3,7 @@ You have been invited by {{ task.keystone_user.username }} to join the project '
 Please click on this link to accept the invitation:
 {{ tokenurl }}{{ token }}
 
+{% spaceless %}
 {% if task.cache.user_state == "default" %}
 You will be asked to define a password when accepting the invitation. After that you will be given access to the project and will be able to login.
 {% elif task.cache.user_state == "existing" %}
@@ -10,6 +11,7 @@ As an existing user you will be added to the project and do not need to provide 
 {% elif task.cache.user_state == "disabled" %}
 It appears you already have a user account that was disabled. We've reactivated it, but because it may have been a while we've reset your password. After you setup your new password you will be given access to the project and will be able to login.
 {% endif %}
+{% endspaceless %}
 
 This link will expire automatically after 24 hours. If expired, you will need to request another one from the person who invited you.
 

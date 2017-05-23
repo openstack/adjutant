@@ -1,3 +1,4 @@
+{% spaceless %}
 {% if task.cache.user_state == "default" %}
 This email is to confirm that your Openstack signup has been completed and your new user and password have now been set up.
 {% elif task.cache.user_state == "existing" %}
@@ -5,6 +6,7 @@ This email is to confirm that your Openstack signup has been completed and your 
 {% elif task.cache.user_state == "disabled" %}
 This email is to confirm that your Openstack signup has been completed and your existing user has been re-enabled and given access to your new project.
 {% endif %}
+{% endspaceless %}
 
 If you did not do this yourself, please get in touch with your systems administrator to report suspicious activity and secure your account.
 
