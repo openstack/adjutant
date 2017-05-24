@@ -94,11 +94,13 @@ class FakeNeutronClient(object):
 
     def add_interface_router(self, router_id, body):
         global neutron_cache
-        # find project_id
-        router = neutron_cache['RegionOne']['test_project_id'][
-            'routers'][router_id]
-        router['router']['interface'] = body
-        return router
+        port_id = "port_id_%s" % neutron_cache['RegionOne']['i']
+        neutron_cache['RegionOne']['i'] += 1
+        interface = {
+            'port_id': port_id,
+            'id': router_id,
+            'subnet_id': body['subnet_id']}
+        return interface
 
     def update_quota(self, project_id, body):
         global neutron_cache

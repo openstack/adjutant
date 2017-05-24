@@ -149,17 +149,22 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
             self.add_note("Router already created for project %s" %
                           self.project_id)
 
-        try:
-            interface_body = {
-                "subnet_id": self.get_cache('subnet_id')
-            }
-            neutron.add_interface_router(self.get_cache('router_id'),
-                                         body=interface_body)
-        except Exception as e:
+        if not self.get_cache('port_id'):
+            try:
+                interface_body = {
+                    "subnet_id": self.get_cache('subnet_id')
+                }
+                interface = neutron.add_interface_router(
+                    self.get_cache('router_id'), body=interface_body)
+            except Exception as e:
+                self.add_note(
+                    "Error: '%s' while attaching interface" % e)
+                raise
+            self.set_cache('port_id', interface['port_id'])
+            self.add_note("Interface added to router for subnet")
+        else:
             self.add_note(
-                "Error: '%s' while attaching interface" % e)
-            raise
-        self.add_note("Interface added to router for subnet")
+                "Interface added to router for project %s" % self.project_id)
 
     def _pre_approve(self):
         # Note: Do we need to get this from cache? it is a required setting

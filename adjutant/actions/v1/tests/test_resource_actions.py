@@ -81,6 +81,7 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(
             action.action.cache,
             {'network_id': 'net_id_0',
+             'port_id': 'port_id_3',
              'router_id': 'router_id_2',
              'subnet_id': 'subnet_id_1'}
         )
@@ -197,6 +198,7 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(
             action.action.cache,
             {'network_id': 'net_id_0',
+             'port_id': 'port_id_3',
              'router_id': 'router_id_2',
              'subnet_id': 'subnet_id_1'}
         )
@@ -256,6 +258,7 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(
             action.action.cache,
             {'network_id': 'net_id_0',
+             'port_id': 'port_id_3',
              'router_id': 'router_id_2',
              'subnet_id': 'subnet_id_1'}
         )
@@ -404,6 +407,7 @@ class ProjectSetupActionTests(TestCase):
         self.assertEquals(
             action.action.cache,
             {'network_id': 'net_id_0',
+             'port_id': 'port_id_3',
              'router_id': 'router_id_2',
              'subnet_id': 'subnet_id_1'}
         )
