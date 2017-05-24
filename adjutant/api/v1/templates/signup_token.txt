@@ -4,10 +4,10 @@ Please follow this link to finalise access to your new OpenStack project:
 {{ tokenurl }}{{ token }}
 
 {% spaceless %}
-{% if task.cache.user_state == "default" %}
-You will be asked to define a password, after that you will be given access to the project and will be able to login
-{% elif task.cache.user_state == "disabled" %}
+{% if task.cache.user_state == "disabled" %}
 It appears you already have a user account that was disabled. We've reactivated it, but because it may have been a while we've reset your password. After you setup your new password you will be given access to your new project and will be able to login.
+{% else %}
+You will be asked to define a password, after that you will be given access to the project and will be able to login.
 {% endif %}
 {% endspaceless %}
 

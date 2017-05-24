@@ -10,6 +10,8 @@ You will be asked to define a password when accepting the invitation. After that
 As an existing user you will be added to the project and do not need to provide additional information. All you have to do is click confirm.
 {% elif task.cache.user_state == "disabled" %}
 It appears you already have a user account that was disabled. We've reactivated it, but because it may have been a while we've reset your password. After you setup your new password you will be given access to the project and will be able to login.
+{% else %}
+If you are a new user you will have to define a password when accepting the invitation, while as an existing user you simply need to click confirm.
 {% endif %}
 {% endspaceless %}
 
