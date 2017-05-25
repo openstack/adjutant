@@ -258,6 +258,7 @@ TASK_SETTINGS:
         # If domain isn't set explicity, will service user domain (see KEYSTONE).
         default_parent_id: null
     invite_user:
+        duplicate_policy: cancel
         emails:
             # To not send this email, set the value to null
             initial: null
@@ -292,11 +293,17 @@ TASK_SETTINGS:
                 subject: Welcome to OpenStack!
                 template: initial_password_completed.txt
     edit_user:
+        duplicate_policy: cancel
         emails:
             initial: null
             token: null
         role_blacklist:
             - admin
+    edit_roles:
+        duplicate_policy: cancel
+        emails:
+            initial: null
+            token: null
     update_email:
         duplicate_policy: cancel
         additional_actions:
