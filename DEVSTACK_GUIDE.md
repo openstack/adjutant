@@ -1,18 +1,18 @@
 # Deploying Adjutant in Devstack
 
-This is a guide to setting up Adjutant in a running Devstack environment similar to how we have been running it for development purposes.
+This is a guide to setting up Adjutant in a running Devstack environment close to how we have been running it for development purposes.
 
-This guide assumes you are running this in a clean ubuntu 14.04 virtual machine with sudo access.
+This guide assumes you are running this in a clean ubuntu 16.04 virtual machine with sudo access.
 
 ## Deploy Devstack
 
-Grab the Devstack repo. For this we are going to focus on mitaka.
+Grab the Devstack repo.
 
 ```
-git clone https://github.com/openstack-dev/devstack.git -b stable/mitaka
+git clone https://github.com/openstack-dev/devstack.git
 ```
 
-And then define a basic localrc file with the password set and place that in the devstack folder:
+And then define a basic localrc file with the password set and place that in the devstack folder (adjutant's default conf assumes 'openstack' as the admin password):
 ```
 ADMIN_PASSWORD=openstack
 MYSQL_PASSWORD=openstack
@@ -44,8 +44,9 @@ virtualenv venv
 source venv/bin/activate
 ```
 
-Once that is done you can install Adjutant into your virtual environment, which will also install all the required python libraries:
+Once that is done you can install Adjutant and its requirements:
 ```
+pip install -r requirements.txt
 python setup.py develop
 ```
 
@@ -74,8 +75,11 @@ In a new SSH termimal connected to your ubuntu VM setup your credentials as envi
 ```
 export OS_USERNAME=admin
 export OS_PASSWORD=openstack
-export OS_TENANT_NAME=demo
-export OS_AUTH_URL=http://localhost:5000/v2.0
+export OS_PROJECT_NAME=demo
+export OS_USER_DOMAIN_NAME=default
+export OS_PROJECT_DOMAIN_NAME=default
+export OS_AUTH_URL=http://localhost:5000/
+export OS_IDENTITY_API_VERSION=3
 export OS_REGION_NAME=RegionOne
 ```
 
@@ -95,6 +99,10 @@ To allow certain actions, Adjutant requires two special roles to exist. You can 
 openstack role create project_admin
 openstack role create project_mod
 ```
+Also because Adjutant by default also adds the role, you will want to create 'heat_stack_owner' which isn't by default present in devstack unless you install Heat:
+```
+openstack role create heat_stack_owner
+```
 
 
 ## Testing Adjutant via the CLI
@@ -103,11 +111,11 @@ Now that the service is running, and the endpoint setup, you will want to instal
 ```
 sudo pip install python-adjutantclient
 ```
-In this case the client is safe to install globally as none of its requirements will conflict with OpenStack.
+In this case the client should be safe to install globally with sudo, but you can also install it in the same virtualenv as Adjutant itself, or make a new virtualenv.
 
 Now lets check the status of the service:
 ```
-adjutant status
+openstack adjutant status
 ```
 
 What you should get is:
@@ -120,16 +128,17 @@ What you should get is:
 ```
 Seeing as we've done nothing to the service yet this is the expected output.
 
-To list the users on your current project (admin users are hidden):
+To list the users on your current project (admin users are hidden by default):
 ```
-adjutant user-list
+openstack project user list
 ```
+The above action is only possibly for users with the following roles: 'admin', 'project_admin', 'project_mod'
 
 Now lets try inviting a new user:
 ```
-adjutant user-invite --email bob@example.com --roles project_admin
+openstack project user invite bob@example.com project_admin
 ```
-You then then get a note saying your invitation has been sent followed by a print out of the users on your current project (same as doing 'adjutant user-list').
+You will then get a note saying your invitation has been sent. You can list your project users again with 'openstack project user list' to see your invite.
 
 
 Now if you look at the log in the Adjutant terminal you should still have open, you will see a print out of the email that would have been sent to bob@example.com. In the email is a line that looks like this:
@@ -140,12 +149,13 @@ Normally that would direct the user to a Horizon dashboard page where they can s
 
 Since we don't have that running, your only option is to submit it via the CLI. This is cumbersome, but doable. From that url in your Adjutant output, grab the values after '.../token/'. That is bob's token. You can submit that via the CLI:
 ```
-adjutant token-submit <bobs_token> --data '{"password": "123456"}'
+openstack admin task token submit <token> <json_data>
+openstack admin task token submit e86cbfb187d34222ace90845f900893c '{"password": "123456"}'
 ```
 
 Now if you get the user list, you will see bob is now active:
 ```
-adjutant user-list
+openstack project user list
 ```
 
 And also shows up as a user if you do:
@@ -153,76 +163,19 @@ And also shows up as a user if you do:
 openstack user list
 ```
 
+And since you are an admin, you can even take a look at the tasks themselves:
+```
+openstack admin task list
+```
+The topmost one should be your invite, and if you then do a show using that id you can see some details about it:
+```
+openstack admin task show <UUID>
+```
+
 
 ## Setting Up Adjutant on Horizon
 
-This is a little annoying, since we can't simple install the changes as a plugin, but for the purposes of our demo we will be using a fork of Horizon with our internal Horizon changes rebased on top.
+Adjutant has a Horizon UI plugin, the code and setup instructions for it can be found here:
+https://github.com/catalyst/adjutant-ui
 
-First grab the Adjutant fork of horizon:
-```
-git clone https://github.com/catalyst/horizon.git -b stable/mitaka_adjutant
-```
-
-Now we will copy the code from that repo to replace the code devstack is using:
-```
-cp -r horizon/* /opt/stack/horizon/
-```
-
-We will also need to add the Adjutant url to the local_settings file for the non-authed views:
-```
-echo 'OPENSTACK_REGISTRATION_URL="http://0.0.0.0:5050/v1"' >> /opt/stack/horizon/openstack_dashboard/local/local_settings.py
-```
-
-Now we need to restart apache:
-```
-sudo service apache2 restart
-```
-
-Now if you go to your devstack Horizon dashboard you will be able to access the new panel and new un-authed views.
-
-
-To help testing token submission, you probably will want to update this line in the Adjutant conf from:
-```
-TOKEN_SUBMISSION_URL: http://192.168.122.160:8080/dashboard/token/
-```
-To point to the ip or url of your devstack VM:
-```
-TOKEN_SUBMISSION_URL: <ip_or_url_to_devstack>/dashboard/token/
-```
-Setting that url will mean the token links send in the emails will be usable via your Horizon.
-
-
-## Sending email via a mail server
-
-By default the conf is set to output emails to console, but if you have a mail server you can use update the conf to reflect that and the service will send emails through that.
-
-Simply replace this part of the conf:
-```yaml
-EMAIL_SETTINGS:
-    EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
-```
-
-With this, adding in your server and port:
-```yaml
-EMAIL_SETTINGS:
-    EMAIL_BACKEND: django.core.mail.backends.smtp.EmailBackend
-    EMAIL_HOST: <server_url>
-    EMAIL_PORT: <server_port>
-```
-
-Or this if your server needs a username and password:
-```yaml
-EMAIL_SETTINGS:
-    EMAIL_BACKEND: django.core.mail.backends.smtp.EmailBackend
-    EMAIL_HOST: <server_url>
-    EMAIL_PORT: <server_port>
-    EMAIL_HOST_USER: <username>
-    EMAIL_HOST_PASSWORD: <password>
-```
-
-Once the service has reset, it should now send emails via that server rather than print them to console.
-
-## Updating adjutant
-
-Adjutant doesn't have a typical manage.py file, instead this functionality is installed into the virtual enviroment when adjutant is installed.
-All of the expected Django functionality can be used using the 'adjutant-api' cli.
+If you do set this up, you will want to edit the default Adjutant conf to so that the TOKEN_SUBMISSION_URL is correctly set to point at your Horizon.

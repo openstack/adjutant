@@ -365,6 +365,10 @@ class TaskView(APIViewWithLogger):
         return {'notes': ["Task completed successfully."]}, 200
 
 
+# NOTE(adriant): We should deprecate these TaskViews properly and switch tests
+# to work against the openstack ones. One option is making these abstract
+# classes, so we retain the code here, but make them useless without extension.
+
 class CreateProject(TaskView):
 
     task_type = "create_project"
