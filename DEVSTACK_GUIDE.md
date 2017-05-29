@@ -99,7 +99,7 @@ If you used the localrc file as given above, these should work.
 Now setup a new service in Keystone for Adjutant and add an endpoint for it:
 ```
 openstack service create registration --name adjutant
-openstack endpoint create adjutant --publicurl http://0.0.0.0:5050/v1 --region RegionOne
+openstack endpoint create adjutant public http://0.0.0.0:5050/v1 --region RegionOne
 ```
 
 
