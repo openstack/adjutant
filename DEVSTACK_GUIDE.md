@@ -53,6 +53,17 @@ python setup.py develop
 If you prefer you can install it fully, but using develop instead allows you update the Adjutant code and have the service reflect that without rerunning the install.
 
 
+## Configure Adjutant
+
+Most of the default conf values should work fine against devstack, but one thing that you will need to change is the uuid for the public network in DEFAULT_ACTION_SETTINGS for the actions NewDefaultNetworkAction and NewProjectDefaultNetworkAction. If you don't set this correctly, then signups or tasks using those actions will not be able to correctly create a default network as they cannot find the correct external public network.
+
+On a fresh devstack there is only one public network so to find the public network uuid you can to run:
+```
+openstack network show public
+```
+And then grab the id value and put that into the Adjutant conf.
+
+
 ## Running Adjutant
 
 Still in the Adjutant repo directory, you will now need to run the migrations to build a basic database. By default this will use sqlite3, and for testing and development this is ideal and easier.
