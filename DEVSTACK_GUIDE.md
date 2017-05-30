@@ -89,7 +89,7 @@ export OS_PASSWORD=openstack
 export OS_PROJECT_NAME=demo
 export OS_USER_DOMAIN_NAME=default
 export OS_PROJECT_DOMAIN_NAME=default
-export OS_AUTH_URL=http://localhost:5000/
+export OS_AUTH_URL=http://localhost/identity
 export OS_IDENTITY_API_VERSION=3
 export OS_REGION_NAME=RegionOne
 ```
