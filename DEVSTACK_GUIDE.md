@@ -63,6 +63,12 @@ openstack network show public
 ```
 And then grab the id value and put that into the Adjutant conf.
 
+### Username is email
+
+The example conf for Adjutant is setup with `USERNAME_IS_EMAIL = TRUE` which works on the assumption that usernames are emails. This is easy to change in the conf, but a fairly useful way of avoiding username clashes. If you set this to `False` then usernames will be required as well as emails for most tasks that deal with user creation.
+
+Migrating between the two states hasn't yet been handled entirely, so once you pick a valuve for `USERNAME_IS_EMAIL` stick with it, or clear the database inbetween.
+
 
 ## Running Adjutant
 
