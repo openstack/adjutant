@@ -18,7 +18,7 @@ from django.conf import settings
 
 from keystoneclient import exceptions as ks_exceptions
 
-from openstack_clients import get_keystoneclient
+from adjutant.actions.openstack_clients import get_keystoneclient
 
 
 def get_managable_roles(user_roles):

@@ -15,6 +15,7 @@
 from adjutant.actions.v1.base import BaseAction, ProjectMixin
 from django.conf import settings
 from adjutant.actions import openstack_clients, user_store
+
 import six
 
 

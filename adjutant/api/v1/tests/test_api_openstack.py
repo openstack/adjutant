@@ -59,7 +59,7 @@ class OpenstackAPITests(APITestCase):
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'notes': ['created token']})
+        self.assertEqual(response.json(), {'notes': ['created token']})
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -92,7 +92,7 @@ class OpenstackAPITests(APITestCase):
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'notes': ['created token']})
+        self.assertEqual(response.json(), {'notes': ['created token']})
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -105,11 +105,11 @@ class OpenstackAPITests(APITestCase):
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'notes': ['created token']})
+        self.assertEqual(response.json(), {'notes': ['created token']})
 
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['users']), 2)
+        self.assertEqual(len(response.json()['users']), 2)
 
     def test_user_list_managable(self):
         """
@@ -152,9 +152,9 @@ class OpenstackAPITests(APITestCase):
         url = "/v1/openstack/users"
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['users']), 2)
+        self.assertEqual(len(response.json()['users']), 2)
 
-        for st_user in response.data['users']:
+        for st_user in response.json()['users']:
             if st_user['id'] == user.id:
                 self.assertFalse(st_user['manageable'])
             if st_user['id'] == user2.id:
@@ -196,7 +196,7 @@ class OpenstackAPITests(APITestCase):
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            response.data['notes'],
+            response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
 
         new_token = Token.objects.all()[0]
@@ -239,7 +239,7 @@ class OpenstackAPITests(APITestCase):
         response = self.client.delete(url, data,
                                       format='json', headers=admin_headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data,
+        self.assertEqual(response.json(),
                          {'notes': ['Task completed successfully.']})
 
     @override_settings(USERNAME_IS_EMAIL=False)
@@ -269,7 +269,7 @@ class OpenstackAPITests(APITestCase):
                 'project_id': 'test_project_id', 'username': 'user_name'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'notes': ['created token']})
+        self.assertEqual(response.json(), {'notes': ['created token']})
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token

@@ -46,7 +46,7 @@ class AdminAPITests(APITestCase):
         response = self.client.get(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(
-            response.data,
+            response.json(),
             {'errors': ['This token does not exist or has expired.']})
 
     def test_no_token_post(self):
@@ -57,7 +57,7 @@ class AdminAPITests(APITestCase):
         response = self.client.post(url, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(
-            response.data,
+            response.json(),
             {'errors': ['This token does not exist or has expired.']})
 
     def test_task_get(self):
@@ -100,7 +100,7 @@ class AdminAPITests(APITestCase):
         response = self.client.get(url, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(
-            response.data, {'errors': ['No task with this id.']})
+            response.json(), {'errors': ['No task with this id.']})
 
     def test_no_task_post(self):
         """
@@ -118,7 +118,7 @@ class AdminAPITests(APITestCase):
         response = self.client.post(url, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(
-            response.data, {'errors': ['No task with this id.']})
+            response.json(), {'errors': ['No task with this id.']})
 
     def test_token_expired_post(self):
         """
@@ -139,7 +139,7 @@ class AdminAPITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            response.data['notes'],
+            response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
 
         new_token = Token.objects.all()[0]
@@ -150,7 +150,7 @@ class AdminAPITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(
-            response.data,
+            response.json(),
             {'errors': ['This token does not exist or has expired.']})
         self.assertEqual(0, Token.objects.count())
 
@@ -173,7 +173,7 @@ class AdminAPITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            response.data['notes'],
+            response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
 
         new_token = Token.objects.all()[0]
@@ -183,7 +183,7 @@ class AdminAPITests(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(
-            response.data,
+            response.json(),
             {'errors': ['This token does not exist or has expired.']})
         self.assertEqual(0, Token.objects.count())
 
@@ -214,7 +214,7 @@ class AdminAPITests(APITestCase):
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
-            response.data,
+            response.json(),
             {'errors': ['This task has already been completed.']})
 
     def test_task_update(self):
@@ -261,14 +261,14 @@ class AdminAPITests(APITestCase):
                                    headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            response.data,
+            response.json(),
             {'notes': ['Task successfully updated.']})
 
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            response.data,
+            response.json(),
             {'notes': ['created token']})
 
     def test_notification_acknowledge(self):
@@ -297,14 +297,14 @@ class AdminAPITests(APITestCase):
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            response.data["notifications"][0]['task'],
+            response.json()["notifications"][0]['task'],
             new_task.uuid)
 
         url = ("/v1/notifications/%s/" %
-               response.data["notifications"][0]['uuid'])
+               response.json()["notifications"][0]['uuid'])
         data = {'acknowledged': True}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.data,
+        self.assertEqual(response.json(),
                          {'notes': ['Notification acknowledged.']})
 
         url = "/v1/notifications"
@@ -316,7 +316,7 @@ class AdminAPITests(APITestCase):
         response = self.client.get(
             url, params, format='json', headers=headers
         )
-        self.assertEqual(response.data, {'notifications': []})
+        self.assertEqual(response.json(), {'notifications': []})
 
     def test_notification_acknowledge_list(self):
         """
@@ -346,10 +346,10 @@ class AdminAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         url = "/v1/notifications"
-        notifications = response.data["notifications"]
+        notifications = response.json()["notifications"]
         data = {'notifications': [note['uuid'] for note in notifications]}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.data,
+        self.assertEqual(response.json(),
                          {'notes': ['Notifications acknowledged.']})
 
         url = "/v1/notifications"
@@ -361,7 +361,7 @@ class AdminAPITests(APITestCase):
         response = self.client.get(
             url, params, format='json', headers=headers
         )
-        self.assertEqual(response.data, {'notifications': []})
+        self.assertEqual(response.json(), {'notifications': []})
 
     def test_token_expired_delete(self):
         """
@@ -389,7 +389,7 @@ class AdminAPITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            response.data['notes'],
+            response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
 
         url = "/v1/actions/ResetPassword"
@@ -397,7 +397,7 @@ class AdminAPITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            response.data['notes'],
+            response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
 
         tokens = Token.objects.all()
@@ -419,7 +419,7 @@ class AdminAPITests(APITestCase):
         url = "/v1/tokens/"
         response = self.client.delete(url, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data,
+        self.assertEqual(response.json(),
                          {'notes': ['Deleted all expired tokens.']})
         self.assertEqual(Token.objects.count(), 1)
 
@@ -442,7 +442,7 @@ class AdminAPITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            response.data['notes'],
+            response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
 
         task = Task.objects.all()[0]
@@ -463,7 +463,7 @@ class AdminAPITests(APITestCase):
         response = self.client.post(url, data, format='json',
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data,
+        self.assertEqual(response.json(),
                          {'notes': ['Token reissued.']})
         self.assertEqual(Token.objects.count(), 1)
         new_token = Token.objects.all()[0]
@@ -495,7 +495,7 @@ class AdminAPITests(APITestCase):
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'notes': ['created token']})
+        self.assertEqual(response.json(), {'notes': ['created token']})
 
         task = Task.objects.all()[0]
         new_token = Token.objects.all()[0]
@@ -507,7 +507,7 @@ class AdminAPITests(APITestCase):
         response = self.client.post(url, data, format='json',
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data,
+        self.assertEqual(response.json(),
                          {'notes': ['Token reissued.']})
         self.assertEqual(Token.objects.count(), 1)
         new_token = Token.objects.all()[0]
@@ -518,7 +518,7 @@ class AdminAPITests(APITestCase):
         response = self.client.post(url, data, format='json',
                                     headers=headers)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data,
+        self.assertEqual(response.json(),
                          {'errors': ['No task with this id.']})
 
     def test_cancel_task(self):
@@ -657,7 +657,7 @@ class AdminAPITests(APITestCase):
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'notes': ['created token']})
+        self.assertEqual(response.json(), {'notes': ['created token']})
 
         new_task = Task.objects.all()[0]
         url = "/v1/tasks/" + new_task.uuid
@@ -700,7 +700,7 @@ class AdminAPITests(APITestCase):
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'notes': ['created token']})
+        self.assertEqual(response.json(), {'notes': ['created token']})
 
         new_task = Task.objects.all()[0]
         url = "/v1/tasks/" + new_task.uuid
@@ -753,7 +753,7 @@ class AdminAPITests(APITestCase):
         url = "/v1/tasks"
         response = self.client.get(url, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['tasks']), 3)
+        self.assertEqual(len(response.json()['tasks']), 3)
 
     def test_task_list_ordering(self):
         """
@@ -802,12 +802,12 @@ class AdminAPITests(APITestCase):
         response = self.client.get(url, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         sorted_list = sorted(
-            response.data['tasks'],
+            response.json()['tasks'],
             key=lambda k: k['created_on'],
             reverse=True)
 
         for i, task in enumerate(sorted_list):
-            self.assertEqual(task, response.data['tasks'][i])
+            self.assertEqual(task, response.json()['tasks'][i])
 
     def test_task_list_filter(self):
         """
@@ -862,7 +862,7 @@ class AdminAPITests(APITestCase):
             url, params, format='json', headers=headers
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['tasks']), 1)
+        self.assertEqual(len(response.json()['tasks']), 1)
 
         params = {
             "filters": json.dumps({
@@ -873,7 +873,7 @@ class AdminAPITests(APITestCase):
             url, params, format='json', headers=headers
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['tasks']), 2)
+        self.assertEqual(len(response.json()['tasks']), 2)
 
     # TODO(adriant): enable this test again when filters are properly
     # blacklisted.
@@ -933,7 +933,7 @@ class AdminAPITests(APITestCase):
             url, params, format='json', headers=headers
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data['tasks']), 0)
+        self.assertEqual(len(response.json()['tasks']), 0)
 
     def test_task_list_filter_formating(self):
         """
@@ -1055,6 +1055,6 @@ class AdminAPITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
-            response.data['notes'],
+            response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
         self.assertEqual(0, Token.objects.count())

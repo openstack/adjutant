@@ -17,7 +17,7 @@ created_on: {{ task.created_on }}
 approved_on: {{ task.approved_on }}
 completed_on: {{ task.completed_on }}
 action_notes:
-{% for action, notes in task.action_notes.iteritems %}- {{ action }}
+{% for action, notes in task.action_notes.items %}- {{ action }}
 {% for note in notes %}    - {{ note }}
 {% endfor %}{% endfor %}
 

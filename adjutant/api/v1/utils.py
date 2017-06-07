@@ -14,6 +14,8 @@
 
 import hashlib
 import json
+import six
+
 from datetime import timedelta
 from smtplib import SMTPException
 from uuid import uuid4
@@ -160,7 +162,8 @@ def create_notification(task, notes, error=False, engines=True):
     class_conf = settings.TASK_SETTINGS.get(
         task.task_type, settings.DEFAULT_TASK_SETTINGS)
 
-    for note_engine, conf in class_conf.get('notifications', {}).iteritems():
+    for note_engine, conf in six.iteritems(
+            class_conf.get('notifications', {})):
         if error:
             conf = conf.get('error', {})
         else:
@@ -192,7 +195,7 @@ def create_task_hash(task_type, action_list):
                 else:
                     raise
 
-    return hashlib.sha256(str(hashable_list)).hexdigest()
+    return hashlib.sha256(str(hashable_list).encode('utf-8')).hexdigest()
 
 
 # "{'filters': {'fieldname': { 'operation': 'value'}}
@@ -212,8 +215,8 @@ def parse_filters(func, *args, **kwargs):
     cleaned_filters = {}
     try:
         filters = json.loads(filters)
-        for field, operations in filters.iteritems():
-            for operation, value in operations.iteritems():
+        for field, operations in six.iteritems(filters):
+            for operation, value in six.iteritems(operations):
                 cleaned_filters['%s__%s' % (field, operation)] = value
     except (ValueError, AttributeError):
         return Response(
