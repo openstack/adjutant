@@ -284,6 +284,44 @@ class TaskViewTests(AdjutantAPITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    def test_new_project_invalid_on_submit(self):
+        """
+        Ensures that when a project becomes invalid at the submit stage
+        that the a 400 is recieved and no final emails are sent.
+        """
+
+        setup_temp_cache({}, {})
+
+        url = "/v1/actions/CreateProject"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        new_task = Task.objects.all()[0]
+        url = "/v1/tasks/" + new_task.uuid
+        response = self.client.post(url, {'approved': True}, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data,
+            {'notes': ['created token']}
+        )
+        tests.temp_cache['projects'] = {}
+
+        new_token = Token.objects.all()[0]
+        url = "/v1/tokens/" + new_token.token
+        data = {'password': 'testpassword'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_new_project_existing(self):
         """
         Test to ensure validation marks actions as invalid

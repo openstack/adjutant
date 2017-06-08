@@ -751,9 +751,14 @@ class TokenDetail(APIViewWithLogger):
         if errors:
             return Response({"errors": errors}, status=400)
 
+        valid = True
         for action in actions:
             try:
                 action.submit(data)
+
+                if not action.valid:
+                    valid = False
+
             except Exception as e:
                 notes = {
                     'errors':
@@ -780,6 +785,9 @@ class TokenDetail(APIViewWithLogger):
         token.task.completed_on = timezone.now()
         token.task.save()
         token.delete()
+
+        if not valid:
+            return Response({"errors": ["Actions invalid"]}, status=400)
 
         # Sending confirmation email:
         class_conf = settings.TASK_SETTINGS.get(
