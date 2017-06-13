@@ -18,7 +18,8 @@ from django.test.utils import override_settings
 import mock
 
 from adjutant.actions.v1.projects import (
-    NewProjectWithUserAction, AddDefaultUsersToProjectAction)
+    NewProjectWithUserAction, AddDefaultUsersToProjectAction,
+    NewProjectAction)
 from adjutant.api.models import Task
 from adjutant.api.v1 import tests
 from adjutant.api.v1.tests import (FakeManager, setup_temp_cache,
@@ -66,9 +67,15 @@ class ProjectActionTests(TestCase):
             {'project_id': 'project_id_1', 'user_id': 'user_id_1',
              'user_state': 'default'})
 
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
         token_data = {'password': '123456'}
         action.submit(token_data)
         self.assertEquals(action.valid, True)
+        self.assertEquals(
+            tests.temp_cache['users']["user_id_1"].name,
+            'test@example.com')
         self.assertEquals(
             tests.temp_cache['users']["user_id_1"].email,
             'test@example.com')
@@ -256,6 +263,129 @@ class ProjectActionTests(TestCase):
             sorted(project.roles[user.id]),
             sorted(['_member_', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
+
+    @override_settings(USERNAME_IS_EMAIL=False)
+    def test_new_project_user_nonmatching_email(self):
+        """
+        Attempts to create a new project and a new user, where there is
+        a user with the same name but different email address
+        """
+
+        user = mock.Mock()
+        user.id = "test_id"
+        user.name = "test_user"
+        user.email = "different@example.com"
+        user.domain = 'default'
+
+        setup_temp_cache({}, {user.id: user})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={}
+        )
+
+        data = {
+            'domain_id': 'default',
+            'parent_id': None,
+            'username': 'test_user',
+            'email': 'test@example.com',
+            'project_name': 'test_project',
+        }
+
+        action = NewProjectWithUserAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, False)
+
+        action.post_approve()
+        self.assertEquals(action.valid, False)
+
+        self.assertEquals(
+            tests.temp_cache['projects'].get('test_project'), None)
+
+        token_data = {'password': '123456'}
+        action.submit(token_data)
+        self.assertEquals(action.valid, False)
+
+    def test_new_project_project_removed(self):
+        """
+        Tests when the project is removed after the post approve step.
+        """
+
+        setup_temp_cache({}, {})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={}
+        )
+
+        data = {
+            'domain_id': 'default',
+            'parent_id': None,
+            'email': 'test@example.com',
+            'project_name': 'test_project',
+        }
+
+        action = NewProjectWithUserAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+        self.assertEquals(
+            tests.temp_cache['projects']['test_project'].name,
+            'test_project')
+        self.assertEquals(
+            task.cache,
+            {'project_id': 'project_id_1', 'user_id': 'user_id_1',
+             'user_state': 'default'})
+
+        tests.temp_cache['projects'] = {}
+
+        token_data = {'password': '123456'}
+        action.submit(token_data)
+        self.assertEquals(action.valid, False)
+
+    def test_new_project_user_removed(self):
+        """
+        Tests when the user is removed after the post approve step.
+        """
+
+        setup_temp_cache({}, {})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={}
+        )
+
+        data = {
+            'domain_id': 'default',
+            'parent_id': None,
+            'email': 'test@example.com',
+            'project_name': 'test_project',
+        }
+
+        action = NewProjectWithUserAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+        self.assertEquals(
+            tests.temp_cache['projects']['test_project'].name,
+            'test_project')
+        self.assertEquals(
+            task.cache,
+            {'project_id': 'project_id_1', 'user_id': 'user_id_1',
+             'user_state': 'default'})
+
+        tests.temp_cache['users'] = {}
+
+        token_data = {'password': '123456'}
+        action.submit(token_data)
+        self.assertEquals(action.valid, False)
 
     def test_new_project_disabled_user(self):
         """
@@ -454,59 +584,59 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, False)
 
-        @override_settings(USERNAME_IS_EMAIL=False)
-        def test_new_project_email_not_username(self):
-            """
-            Base case, no project, no user.
+    @override_settings(USERNAME_IS_EMAIL=False)
+    def test_new_project_email_not_username(self):
+        """
+        Base case, no project, no user.
 
-            Project and user created at post_approve step,
-            user password at submit step.
-            """
+        Project and user created at post_approve step,
+        user password at submit step.
+        """
 
-            setup_temp_cache({}, {})
+        setup_temp_cache({}, {})
 
-            task = Task.objects.create(
-                ip_address="0.0.0.0",
-                keystone_user={}
-            )
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={}
+        )
 
-            data = {
-                'domain_id': 'default',
-                'parent_id': None,
-                'email': 'test@example.com',
-                'username': 'test_user',
-                'project_name': 'test_project',
-            }
+        data = {
+            'domain_id': 'default',
+            'parent_id': None,
+            'email': 'test@example.com',
+            'username': 'test_user',
+            'project_name': 'test_project',
+        }
 
-            action = NewProjectWithUserAction(data, task=task, order=1)
+        action = NewProjectWithUserAction(data, task=task, order=1)
 
-            action.pre_approve()
-            self.assertEquals(action.valid, True)
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
 
-            action.post_approve()
-            self.assertEquals(action.valid, True)
-            self.assertEquals(
-                tests.temp_cache['projects']['test_project'].name,
-                'test_project')
-            self.assertEquals(
-                task.cache,
-                {'project_id': 'project_id_1', 'user_id': 'user_id_1',
-                 'user_state': 'default'})
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+        self.assertEquals(
+            tests.temp_cache['projects']['test_project'].name,
+            'test_project')
+        self.assertEquals(
+            task.cache,
+            {'project_id': 'project_id_1', 'user_id': 'user_id_1',
+             'user_state': 'default'})
 
-            token_data = {'password': '123456'}
-            action.submit(token_data)
-            self.assertEquals(action.valid, True)
-            self.assertEquals(
-                tests.temp_cache['users']["user_id_1"].email,
-                'test@example.com')
-            self.assertEquals(
-                tests.temp_cache['users']["user_id_1"].name,
-                'test_user')
-            project = tests.temp_cache['projects']['test_project']
-            self.assertEquals(
-                sorted(project.roles["user_id_1"]),
-                sorted(['_member_', 'project_admin',
-                        'project_mod', 'heat_stack_owner']))
+        token_data = {'password': '123456'}
+        action.submit(token_data)
+        self.assertEquals(action.valid, True)
+        self.assertEquals(
+            tests.temp_cache['users']["user_id_1"].email,
+            'test@example.com')
+        self.assertEquals(
+            tests.temp_cache['users']["user_id_1"].name,
+            'test_user')
+        project = tests.temp_cache['projects']['test_project']
+        self.assertEquals(
+            sorted(project.roles["user_id_1"]),
+            sorted(['_member_', 'project_admin',
+                    'project_mod', 'heat_stack_owner']))
 
     @modify_dict_settings(DEFAULT_ACTION_SETTINGS={
                           'key_list': ['AddDefaultUsersToProjectAction'],
@@ -615,3 +745,241 @@ class ProjectActionTests(TestCase):
 
         project = tests.temp_cache['projects']['test_project']
         self.assertEquals(project.roles['user_id_0'], ['admin'])
+
+    def test_new_project_action(self):
+        """
+        Tests the new project action for an existing user.
+        """
+
+        user = mock.Mock()
+        user.id = "test_user_id"
+        user.name = "test_user"
+        user.domain = 'default'
+
+        project = mock.Mock()
+        project.id = "parent_project"
+        project.domain = "default"
+
+        setup_temp_cache({project.id: project}, {user.id: user})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={"user_id": "test_user_id",
+                           "project_id": "parent_project",
+                           "project_domain_id": 'default'})
+
+        data = {
+            'domain_id': 'default',
+            'parent_id': "parent_project",
+            'project_name': 'test_project',
+        }
+
+        action = NewProjectAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+        self.assertEquals(
+            tests.temp_cache['projects']['test_project'].name,
+            'test_project')
+
+        self.assertEquals(
+            tests.temp_cache['projects']['test_project'].parent,
+            'parent_project')
+
+        project = tests.temp_cache['projects']['test_project']
+        self.assertEquals(
+            sorted(project.roles["test_user_id"]),
+            sorted(['_member_', 'project_admin',
+                    'project_mod', 'heat_stack_owner']))
+
+        action.submit({})
+        self.assertEquals(action.valid, True)
+
+    def test_new_project_action_rerun_post_approve(self):
+        """
+        Tests the new project action for an existing user.
+        """
+
+        user = mock.Mock()
+        user.id = "test_user_id"
+        user.name = "test_user"
+        user.domain = 'default'
+
+        project = mock.Mock()
+        project.id = "parent_project"
+        project.domain = "default"
+
+        setup_temp_cache({project.id: project}, {user.id: user})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={"user_id": "test_user_id",
+                           "project_id": "parent_project",
+                           "project_domain_id": 'default'})
+
+        data = {
+            'domain_id': 'default',
+            'parent_id': "parent_project",
+            'project_name': 'test_project',
+        }
+
+        action = NewProjectAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+        self.assertEquals(
+            tests.temp_cache['projects']['test_project'].name,
+            'test_project')
+
+        self.assertEquals(
+            tests.temp_cache['projects']['test_project'].parent,
+            'parent_project')
+
+        action.post_approve()
+        # Nothing should change
+        self.assertEquals(action.valid, True)
+        self.assertEquals(
+            tests.temp_cache['projects']['test_project'].name,
+            'test_project')
+
+        self.assertEquals(
+            tests.temp_cache['projects']['test_project'].parent,
+            'parent_project')
+
+        project = tests.temp_cache['projects']['test_project']
+        self.assertEquals(
+            sorted(project.roles["test_user_id"]),
+            sorted(['_member_', 'project_admin',
+                    'project_mod', 'heat_stack_owner']))
+
+        action.submit({})
+        self.assertEquals(action.valid, True)
+
+    def test_new_project_action_wrong_parent_id(self):
+        """
+        New project action where specifed parent id is not the same
+        as the current user's project id
+        """
+
+        user = mock.Mock()
+        user.id = "test_user_id"
+        user.name = "test_user"
+        user.domain = 'default'
+
+        project = mock.Mock()
+        project.id = "parent_project"
+        project.domain = "default"
+
+        setup_temp_cache({project.id: project}, {user.id: user})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={"user_id": "test_user_id",
+                           "project_id": "not_parent_project",
+                           "project_domain_id": 'default'})
+
+        data = {
+            'domain_id': 'default',
+            'parent_id': "parent_project",
+            'project_name': 'test_project',
+        }
+
+        action = NewProjectAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, False)
+
+        action.post_approve()
+        self.assertEquals(action.valid, False)
+
+        action.submit({})
+        self.assertEquals(action.valid, False)
+
+    def test_new_project_action_wrong_domain_id(self):
+        """
+        New project action where specifed domain id is not the same
+        as the current user's domain id
+        """
+
+        user = mock.Mock()
+        user.id = "test_user_id"
+        user.name = "test_user"
+        user.domain = 'default'
+
+        project = mock.Mock()
+        project.id = "parent_project"
+        project.domain = "default"
+
+        setup_temp_cache({project.id: project}, {user.id: user})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={"user_id": "test_user_id",
+                           "project_id": "parent_project",
+                           "project_domain_id": 'default'})
+
+        data = {
+            'domain_id': 'notdefault',
+            'parent_id': "parent_project",
+            'project_name': 'test_project',
+        }
+
+        action = NewProjectAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, False)
+
+        action.post_approve()
+        self.assertEquals(action.valid, False)
+
+        action.submit({})
+        self.assertEquals(action.valid, False)
+
+    def test_new_project_action_no_parent_id(self):
+        """
+        New project action where there is no specified parent id
+        """
+
+        user = mock.Mock()
+        user.id = "test_user_id"
+        user.name = "test_user"
+        user.domain = 'default'
+
+        project = mock.Mock()
+        project.id = "parent_project"
+        project.domain = "default"
+
+        setup_temp_cache({project.id: project}, {user.id: user})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={"user_id": "test_user_id",
+                           "project_id": "parent_project",
+                           "project_domain_id": 'default'})
+
+        data = {
+            'domain_id': 'default',
+            'parent_id': None,
+            'project_name': 'test_project',
+        }
+
+        action = NewProjectAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
+        self.assertEquals(
+            tests.temp_cache['projects']['test_project'].parent,
+            'default')
+
+        action.submit({})
+        self.assertEquals(action.valid, True)

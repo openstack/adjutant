@@ -367,7 +367,7 @@ class ProjectMixin(ResourceMixin):
             parent = id_manager.get_project(self.parent_id)
             if not parent:
                 self.add_note("Parent id: '%s' does not exist." %
-                              self.project_name)
+                              self.parent_id)
                 return False
         return True
 

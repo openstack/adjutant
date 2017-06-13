@@ -228,6 +228,7 @@ class FakeManager(object):
     def create_project(self, project_name, created_on, parent=None,
                        domain='default', p_id=None):
         parent = self._project_from_id(parent)
+        domain = self._domain_from_id(domain)
         global temp_cache
         project = mock.Mock()
         if p_id:
@@ -237,10 +238,10 @@ class FakeManager(object):
             project.id = "project_id_%s" % int(temp_cache['i'])
         project.name = project_name
         if parent:
-            project.parent = parent
+            project.parent = parent.id
         else:
-            project.parent = domain
-        project.domain = domain
+            project.parent = domain.id
+        project.domain = domain.id
         project.roles = {}
         temp_cache['projects'][project_name] = project
         return project

@@ -21,7 +21,6 @@ from adjutant.actions.v1.base import (
     BaseAction, UserNameAction, UserMixin, ProjectMixin)
 
 
-# TODO(adriant): Write tests for this action.
 class NewProjectAction(BaseAction, ProjectMixin, UserMixin):
     """
     Creates a new project for the current keystone_user.
@@ -100,7 +99,7 @@ class NewProjectAction(BaseAction, ProjectMixin, UserMixin):
                 self.add_note(
                     ("Error: '%s' while adding roles %s "
                      "to user '%s' on project '%s'") %
-                    (e, self.username, default_roles, project_id))
+                    (e, default_roles, user.name, project_id))
                 raise
 
             # put user_id into action cache:
@@ -108,7 +107,7 @@ class NewProjectAction(BaseAction, ProjectMixin, UserMixin):
             self.set_cache('user_id', user.id)
             self.add_note(("Existing user '%s' attached to project %s" +
                           " with roles: %s")
-                          % (self.username, project_id,
+                          % (user.name, project_id,
                              default_roles))
 
     def _submit(self, token_data):
@@ -208,6 +207,9 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
         and if the user doesn't exist, create it right away. An existing
         user automatically gets added to the new project.
         """
+        if not self.valid:
+            return
+
         project_id = self.get_cache('project_id')
         if project_id:
             self.action.task.cache['project_id'] = project_id
