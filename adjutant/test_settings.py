@@ -167,6 +167,9 @@ DEFAULT_ACTION_SETTINGS = {
             'from': 'bounce+%(task_uuid)s@example.com'
         },
     },
+    'ResetUserPasswordAction': {
+        'blacklisted_roles': ['admin'],
+    }
 }
 
 TASK_SETTINGS = {

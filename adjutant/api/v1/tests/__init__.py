@@ -331,11 +331,16 @@ class modify_dict_settings(override_settings):
 
     def disable(self):
         self.wrapped = self._wrapped
+        for update_dict in self.update_dicts:
+            update_dict['pointer'].clear()
+            update_dict['pointer'].update(update_dict['copy'])
+
         super(modify_dict_settings, self).disable()
 
     def enable(self):
         self.options = {}
 
+        self.update_dicts = []
         self._wrapped = copy.deepcopy(settings._wrapped)
 
         for name, operation_list in self.operations:
@@ -375,6 +380,11 @@ class modify_dict_settings(override_settings):
                 elif op_type == "delete":
                     del holding_dict[final_key]
                 elif op_type == "update":
+                    # Needs to be saved seperately and update re-used on
+                    # disable due to pointers
+                    self.update_dicts.append(
+                        {'pointer': holding_dict[final_key],
+                         'copy': copy.deepcopy(holding_dict[final_key])})
                     holding_dict[final_key].update(operation['value'])
                 else:
                     val = holding_dict.get(final_key, [])
