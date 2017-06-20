@@ -27,6 +27,13 @@ setup(
         'Environment :: OpenStack',
     ],
 
+    command_options={
+        'build_sphinx': {
+            'build_dir': ('setup.py', 'doc/build'),
+            'source_dir': ('setup.py', 'doc/source'),
+        }
+    },
+
     keywords='openstack keystone users tasks registration workflow',
     packages=find_packages(),
     package_data={
