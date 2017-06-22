@@ -110,6 +110,40 @@ class OpenstackAPITests(APITestCase):
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()['users']), 2)
+        self.assertTrue(b'test2@example.com' in response.content)
+
+    def test_user_detail(self):
+        """
+        Confirm that the user detail view functions as expected
+        """
+
+        user = mock.Mock()
+        user.id = 'test_user_id'
+        user.name = 'test@example.com'
+        user.email = 'test@example.com'
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {user.id: ['_member_']}
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        url = "/v1/openstack/users/%s" % user.id
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()['username'], 'test@example.com')
+        self.assertEqual(response.json()['roles'], ["_member_"])
 
     def test_user_list_managable(self):
         """

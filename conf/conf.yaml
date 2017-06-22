@@ -197,7 +197,7 @@ DEFAULT_ACTION_SETTINGS:
           # email_roles:
           #   - project_admin
           # Or sends to an email set in the task cache
-          # email_in_task_cache: true
+          # email_task_cache: true
           # Or sends to an arbitrary admin email
           # email_additional_addresses:
           #   - admin@example.org

@@ -106,7 +106,21 @@ DEFAULT_TASK_SETTINGS = {
             'template': 'completed.txt',
             'subject': 'Task completed'
         }
-    }
+    },
+    'notifications': {
+        'EmailNotification': {
+            'standard': {
+                'emails': ['example@example.com'],
+                'reply': 'no-reply@example.com',
+                'template': 'notification.txt'
+            },
+            'error': {
+                'emails': ['example@example.com'],
+                'reply': 'no-reply@example.com',
+                'template': 'notification.txt'
+            }
+        }
+    },
 }
 
 DEFAULT_ACTION_SETTINGS = {
@@ -240,6 +254,9 @@ TASK_SETTINGS = {
             'initial': None,
         },
     },
+    'edit_user': {
+        'role_blacklist': ['admin']
+    }
 }
 
 ROLES_MAPPING = {

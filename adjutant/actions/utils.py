@@ -39,7 +39,9 @@ def send_email(to_addresses, context, conf, task):
         # message headers
         from_email = conf.get('from')
         if not from_email:
-            from_email = conf['reply']
+            from_email = conf.get('reply')
+            if not from_email:
+                return
         elif "%(task_uuid)s" in from_email:
             from_email = from_email % {'task_uuid': task.uuid}
 

@@ -106,9 +106,11 @@ class NotificationList(APIViewWithLogger):
             return Response({'notes': ['Notifications acknowledged.']},
                             status=200)
         else:
-            return Response({'notifications': ["this field is required" +
-                                               "needs to be a list."]},
-                            status=400)
+            return Response(
+                {'notifications': [
+                    "this field is required and needs to be a list."
+                ]},
+                status=400)
 
 
 class NotificationDetail(APIViewWithLogger):
@@ -680,11 +682,6 @@ class TokenDetail(APIViewWithLogger):
                     ['This task has been cancelled.']},
                 status=400)
 
-        if token.expires < timezone.now():
-            token.delete()
-            return Response({'errors': ['This token has expired.']},
-                            status=400)
-
         required_fields = []
         actions = []
 
@@ -726,11 +723,6 @@ class TokenDetail(APIViewWithLogger):
                 {'errors':
                     ['This task has been cancelled.']},
                 status=400)
-
-        if token.expires < timezone.now():
-            token.delete()
-            return Response({'errors': ['This token has expired.']},
-                            status=400)
 
         required_fields = set()
         actions = []

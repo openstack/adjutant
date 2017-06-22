@@ -731,6 +731,131 @@ class TaskViewTests(AdjutantAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEquals(user.name, 'new_test@example.com')
 
+    @modify_dict_settings(TASK_SETTINGS=[
+        {'key_list': ['update_email', 'additional_actions'],
+         'operation': 'append',
+         'value': ['SendAdditionalEmailAction']},
+        {'key_list': ['update_email', 'action_settings',
+                      'SendAdditionalEmailAction', 'initial'],
+         'operation': 'update',
+         'value': {
+            'subject': 'email_update_additional',
+            'template': 'email_update_started.txt',
+            'email_roles': [],
+            'email_current_user': True,
+        }
+        }
+    ])
+    def test_update_email_task_send_email_to_current_user(self):
+        """
+        Tests the email update workflow, and ensures that when setup
+        to send a confirmation email to the old email address it does.
+        """
+
+        user = mock.Mock()
+        user.id = 'test_user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+
+        setup_temp_cache({}, {user.id: user})
+
+        url = "/v1/actions/UpdateEmail"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        data = {'new_email': "new_test@example.com"}
+        response = self.client.post(url, data, format='json', headers=headers)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertEqual(mail.outbox[0].to, ['test@example.com'])
+        self.assertEqual(mail.outbox[0].subject, 'email_update_additional')
+
+        self.assertEqual(mail.outbox[1].to, ['new_test@example.com'])
+        self.assertEqual(mail.outbox[1].subject, 'Your Token')
+
+        new_token = Token.objects.all()[0]
+        url = "/v1/tokens/" + new_token.token
+
+        data = {'confirm': True}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(user.name, 'new_test@example.com')
+
+        self.assertEqual(len(mail.outbox), 3)
+
+    @modify_dict_settings(TASK_SETTINGS=[
+        {'key_list': ['update_email', 'additional_actions'],
+         'operation': 'append',
+         'value': ['SendAdditionalEmailAction']},
+        {'key_list': ['update_email', 'action_settings',
+                      'SendAdditionalEmailAction', 'initial'],
+         'operation': 'update',
+         'value': {
+            'subject': 'email_update_additional',
+            'template': 'email_update_started.txt',
+            'email_roles': [],
+            'email_current_user': True}
+         }
+    ])
+    @override_settings(USERNAME_IS_EMAIL=False)
+    def test_update_email_task_send_email_current_name_not_email(self):
+        """
+        Tests the email update workflow when USERNAME_IS_EMAIL=False, and
+        ensures that when setup to send a confirmation email to the old
+        email address it does.
+        """
+
+        user = mock.Mock()
+        user.id = 'test_user_id'
+        user.name = "nkdfslnkls"
+        user.email = "test@example.com"
+        user.domain = 'default'
+
+        setup_temp_cache({}, {user.id: user})
+
+        url = "/v1/actions/UpdateEmail"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "nkdfslnkls",
+            'user_id': "test_user_id",
+            'authenticated': True,
+            'email': 'test@example.com',
+        }
+
+        data = {'new_email': "new_test@example.com"}
+        response = self.client.post(url, data, format='json', headers=headers)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertEqual(mail.outbox[0].to, ['test@example.com'])
+        self.assertEqual(mail.outbox[0].subject, 'email_update_additional')
+
+        self.assertEqual(mail.outbox[1].to, ['new_test@example.com'])
+        self.assertEqual(mail.outbox[1].subject, 'Your Token')
+
+        new_token = Token.objects.all()[0]
+        url = "/v1/tokens/" + new_token.token
+
+        data = {'confirm': True}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(len(mail.outbox), 3)
+
     def test_update_email_task_invalid_email(self):
 
         user = mock.Mock()
@@ -1104,6 +1229,71 @@ class TaskViewTests(AdjutantAPITestCase):
 
         # Test that the token email gets sent to the other addresses
         self.assertEqual(mail.outbox[1].to[0], 'new_test@example.com')
+
+        new_token = Token.objects.all()[0]
+        url = "/v1/tokens/" + new_token.token
+
+        data = {'confirm': True, 'password': '1234'}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    @modify_dict_settings(
+        TASK_SETTINGS=[
+            {'key_list': ['invite_user', 'additional_actions'],
+             'operation': 'append',
+             'value': ['SendAdditionalEmailAction']},
+            {'key_list': ['invite_user', 'action_settings',
+                          'SendAdditionalEmailAction', 'initial'],
+             'operation': 'update',
+             'value': {
+                'subject': 'email_update_additional',
+                'template': 'email_update_started.txt',
+                'email_roles': ['project_admin'],
+                'email_current_user': False,
+            }
+            }
+        ])
+    def test_additional_emails_role_no_email(self):
+        """
+        Tests that setting email roles to something that has no people to
+        send to that the update action doesn't fall over
+        """
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+
+        user = mock.Mock()
+        user.id = 'test_user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+
+        project.roles = {user.id: ['_member_']}
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+
+        url = "/v1/actions/InviteUser"
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        data = {'email': "new_test@example.com",
+                'roles': ['_member_']}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {'notes': ['created token']})
+
+        self.assertEqual(len(mail.outbox), 1)
+
+        # Test that the token email gets sent to the other addresses
+        self.assertEqual(mail.outbox[0].to[0], 'new_test@example.com')
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token

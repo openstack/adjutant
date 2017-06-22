@@ -19,13 +19,14 @@ from datetime import timedelta
 from unittest import skip
 
 from django.utils import timezone
+from django.core import mail
 
 import mock
 
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from adjutant.api.models import Task, Token
+from adjutant.api.models import Task, Token, Notification
 from adjutant.api.v1.tests import (FakeManager, setup_temp_cache,
                                    modify_dict_settings)
 
@@ -189,8 +190,7 @@ class AdminAPITests(APITestCase):
 
     def test_token_get(self):
         """
-        Token should contian task uuid, task_type, required fields, and it's
-        own value
+        Token should contain actions, task_type, required fields.
         """
 
         user = mock.Mock()
@@ -221,6 +221,46 @@ class AdminAPITests(APITestCase):
              u'task_type': 'reset_password'})
         self.assertEqual(1, Token.objects.count())
 
+    def test_token_list_get(self):
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_temp_cache({}, {user.id: user})
+
+        url = "/v1/actions/ResetPassword"
+        data = {'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data['notes'],
+            ['If user with email exists, reset token will be issued.'])
+
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        first_task_id = Task.objects.all()[0].uuid
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        url = "/v1/tokens/"
+
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            len(response.json()['tokens']), 2)
+        self.assertEqual(response.json()['tokens'][1]['task'],
+                         first_task_id)
+
     def test_task_complete(self):
         """
         Can't approve a completed task.
@@ -250,6 +290,66 @@ class AdminAPITests(APITestCase):
         self.assertEqual(
             response.json(),
             {'errors': ['This task has already been completed.']})
+
+    def test_status_page(self):
+        """
+        Status page gives details of last_created_task, last_completed_task
+        and error notifcations
+        """
+
+        setup_temp_cache({}, {})
+
+        url = "/v1/actions/CreateProject"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        url = "/v1/status/"
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()['last_created_task'][
+            'actions'][0]['data']['email'], 'test@example.com')
+        self.assertEqual(response.json()['last_completed_task'], None)
+
+        self.assertEqual(response.json()['error_notifications'], [])
+
+        # Create a second task and ensure it is the new last_created_task
+        url = "/v1/actions/CreateProject"
+        data = {'project_name': "test_project_2",
+                'email': "test_2@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        url = "/v1/status/"
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()['last_created_task'][
+            'actions'][0]['data']['email'], 'test_2@example.com')
+        self.assertEqual(response.json()['last_completed_task'], None)
+
+        self.assertEqual(response.json()['error_notifications'], [])
+
+        new_task = Task.objects.all()[0]
+        new_task.completed = True
+        new_task.save()
+
+        url = "/v1/status/"
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()['last_completed_task'][
+            'actions'][0]['data']['email'], 'test@example.com')
+        self.assertEqual(response.json()['last_created_task'][
+            'actions'][0]['data']['email'], 'test_2@example.com')
+
+        self.assertEqual(response.json()['error_notifications'], [])
 
     def test_task_update(self):
         """
@@ -305,6 +405,63 @@ class AdminAPITests(APITestCase):
             response.json(),
             {'notes': ['created token']})
 
+    def test_notification_get(self):
+        """
+        Test that you can get details of an induvidual notfication.
+        """
+        setup_temp_cache({}, {})
+
+        url = "/v1/actions/CreateProject"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        new_task = Task.objects.all()[0]
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        note = Notification.objects.first().uuid
+
+        url = "/v1/notifications/%s" % note
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.json()['task'],
+            new_task.uuid)
+        self.assertEqual(
+            response.json()['notes'],
+            {u'notes': [u'New task for CreateProject.']})
+        self.assertEqual(
+            response.json()['error'], False)
+
+    def test_notification_doesnt_exist(self):
+        """
+        Test that you get a 404 trying to access a non-existent notification.
+        """
+        setup_temp_cache({}, {})
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        note = "notarealnotifiactionuuid"
+
+        url = "/v1/notifications/%s/" % note
+        response = self.client.get(url, headers=headers, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.json(),
+                         {"errors": ["No notification with this id."]})
+
     def test_notification_acknowledge(self):
         """
         Test that you can acknowledge a notification.
@@ -352,6 +509,89 @@ class AdminAPITests(APITestCase):
         )
         self.assertEqual(response.json(), {'notifications': []})
 
+    def test_notification_acknowledge_doesnt_exist(self):
+        """
+        Test that you cant acknowledge a non-existent notification.
+        """
+        setup_temp_cache({}, {})
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        url = "/v1/notifications/dasdaaaiooiiobksd/"
+        response = self.client.post(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.json(),
+                         {'errors':
+                         ['No notification with this id.']})
+
+    def test_notification_re_acknowledge(self):
+        """
+        Test that you cant reacknowledge a notification.
+        """
+        setup_temp_cache({}, {})
+
+        url = "/v1/actions/CreateProject"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        note_id = Notification.objects.first().uuid
+        url = "/v1/notifications/%s/" % note_id
+        data = {'acknowledged': True}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(),
+                         {'notes': ['Notification acknowledged.']})
+
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(),
+                         {'notes': ['Notification already acknowledged.']})
+
+    def test_notification_acknowledge_no_data(self):
+        """
+        Test that you have to include 'acknowledged': True to the request.
+        """
+        setup_temp_cache({}, {})
+
+        url = "/v1/actions/CreateProject"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        note_id = Notification.objects.first().uuid
+        url = "/v1/notifications/%s/" % note_id
+        data = {}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(),
+                         {u'acknowledged': [u'this field is required.']})
+
     def test_notification_acknowledge_list(self):
         """
         Test that you can acknowledge a list of notifications.
@@ -396,6 +636,91 @@ class AdminAPITests(APITestCase):
             url, params, format='json', headers=headers
         )
         self.assertEqual(response.json(), {'notifications': []})
+
+    def test_notification_acknowledge_list_empty_list(self):
+        """
+        Test that you cannot acknowledge an empty list of notifications.
+        """
+        setup_temp_cache({}, {})
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        url = "/v1/notifications"
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        data = {'notifications': []}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(),
+                         {u'notifications':
+                          [u'this field is required and needs to be a list.']})
+
+    @modify_dict_settings(DEFAULT_TASK_SETTINGS={
+        'key_list': ['notifications'],
+        'operation': 'override',
+        'value': {
+            'EmailNotification': {
+                'standard': {
+                    'emails': ['example@example.com'],
+                    'reply': 'no-reply@example.com',
+                    'template': 'notification.txt'
+                },
+                'error': {
+                    'emails': ['example@example.com'],
+                    'reply': 'no-reply@example.com',
+                    'template': 'notification.txt'
+                }
+            }
+        }
+    }, TASK_SETTINGS={
+        'key_list': ['create_project', 'emails'],
+        'operation': 'override',
+        'value': {
+            'initial': None,
+            'token': None,
+            'completed': None
+        }
+    })
+    def test_notification_email(self):
+        """
+        Tests the email notification engine
+        """
+        setup_temp_cache({}, {})
+
+        url = "/v1/actions/CreateProject"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        new_task = Task.objects.all()[0]
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        url = "/v1/notifications"
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["notifications"][0]['task'],
+            new_task.uuid)
+
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].subject, 'create_project notification')
+        self.assertTrue("New task for CreateProject" in mail.outbox[0].body)
 
     def test_token_expired_delete(self):
         """
@@ -554,6 +879,124 @@ class AdminAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.json(),
                          {'errors': ['No task with this id.']})
+
+    def test_token_reissue_task_cancelled(self):
+        """
+        Tests that a cancelled task cannot have a token reissued
+        """
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_temp_cache({}, {user.id: user})
+
+        url = "/v1/actions/ResetPassword"
+        data = {'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.json()['notes'],
+            ['If user with email exists, reset token will be issued.'])
+
+        task = Task.objects.all()[0]
+        task.cancelled = True
+        task.save()
+        self.assertEqual(Token.objects.count(), 1)
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        url = "/v1/tokens/"
+        data = {"task": task.uuid}
+        response = self.client.post(url, data, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(),
+                         {'errors': ['This task has been cancelled.']})
+
+    def test_token_reissue_task_completed(self):
+        """
+        Tests that a completed task cannot have a token reissued
+        """
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_temp_cache({}, {user.id: user})
+
+        url = "/v1/actions/ResetPassword"
+        data = {'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.json()['notes'],
+            ['If user with email exists, reset token will be issued.'])
+
+        task = Task.objects.all()[0]
+        task.completed = True
+        task.save()
+        self.assertEqual(Token.objects.count(), 1)
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        url = "/v1/tokens/"
+        data = {"task": task.uuid}
+        response = self.client.post(url, data, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(),
+                         {'errors': ['This task has already been completed.']})
+
+    def test_token_reissue_task_not_approve(self):
+        """
+        Tests that an unapproved task cannot have a token reissued
+        """
+
+        setup_temp_cache({}, {})
+
+        url = "/v1/actions/CreateProject"
+        data = {'email': "test@example.com", "project_name": "test_project"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.json()['notes'], [u'task created'])
+
+        task = Task.objects.all()[0]
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        url = "/v1/tokens/"
+        data = {"task": task.uuid}
+        response = self.client.post(url, data, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(),
+                         {'errors': ['This task has not been approved.']})
 
     def test_cancel_task(self):
         """

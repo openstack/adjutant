@@ -31,8 +31,11 @@ class SendAdditionalEmailAction(BaseAction):
                 self.emails.add(self.action.task.keystone_user['username'])
             else:
                 try:
-                    self.emails.add(self.action.task.keystone_user['email'])
-                except KeyError:
+                    id_manager = user_store.IdentityManager()
+                    email = id_manager.get_user(
+                        self.action.task.keystone_user['user_id']).email
+                    self.emails.add(email)
+                except AttributeError:
                     self.add_note("Could not add current user email address")
 
         if conf.get('email_roles'):
@@ -52,7 +55,7 @@ class SendAdditionalEmailAction(BaseAction):
                         self.emails.add(user.email)
 
         if conf.get('email_task_cache'):
-            task_emails = self.task.cache.get('additional_emails', [])
+            task_emails = self.action.task.cache.get('additional_emails', [])
             if isinstance(task_emails, six.string_types):
                 task_emails = [task_emails]
             for email in task_emails:

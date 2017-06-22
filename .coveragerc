@@ -6,5 +6,7 @@ exclude_lines =
     if settings.DEBUG:
     raise AssertionError
     raise NotImplementedError
+    self.fail
 omit =
     adjutant/wsgi.py
+    setup.py
