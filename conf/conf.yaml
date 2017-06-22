@@ -9,7 +9,6 @@ ALLOWED_HOSTS:
 ADDITIONAL_APPS:
     - adjutant.api.v1
     - adjutant.actions.v1
-    - adjutant.notifications.request_tracker
 
 DATABASES:
     default:
@@ -110,19 +109,6 @@ DEFAULT_TASK_SETTINGS:
                 from: bounce+%(task_uuid)s@example.com
                 template: notification.txt
                 # html_template: completed.txt
-        RTNotification:
-            standard:
-                url: http://localhost/rt/REST/1.0/
-                queue: helpdesk
-                username: example@example.com
-                password: password
-                template: notification.txt
-            error:
-                url: http://localhost/rt/REST/1.0/
-                queue: errors
-                username: example@example.com
-                password: password
-                template: notification.txt
 
 # Default Action settings:
 # These can be overriden at a per task level below in the
@@ -248,11 +234,6 @@ TASK_SETTINGS:
                 error:
                     emails:
                         - signups@example.com
-            RTNotification:
-                standard:
-                    queue: signups
-                error:
-                    queue: signups
         default_region: RegionOne
         # If 'None' (null in yaml), will default to domain as parent.
         # If domain isn't set explicity, will service user domain (see KEYSTONE).

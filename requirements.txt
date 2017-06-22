@@ -15,5 +15,4 @@ six>=1.10.0
 jsonfield>=2.0.1
 django-rest-swagger>=2.1.2
 pyyaml>=3.12
-python-rtkit>=0.7.1
 mysqlclient>=1.3.10
