@@ -126,6 +126,7 @@ class Token(models.Model):
     def to_dict(self):
         return {
             "task": self.task.uuid,
+            "task_type": self.task.task_type,
             "token": self.token,
             "created_on": self.created_on,
             "expires": self.expires

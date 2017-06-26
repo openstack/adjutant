@@ -187,6 +187,40 @@ class AdminAPITests(APITestCase):
             {'errors': ['This token does not exist or has expired.']})
         self.assertEqual(0, Token.objects.count())
 
+    def test_token_get(self):
+        """
+        Token should contian task uuid, task_type, required fields, and it's
+        own value
+        """
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_temp_cache({}, {user.id: user})
+
+        url = "/v1/actions/ResetPassword"
+        data = {'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.json()['notes'],
+            ['If user with email exists, reset token will be issued.'])
+
+        new_token = Token.objects.all()[0]
+        url = "/v1/tokens/" + new_token.token
+        response = self.client.get(url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.json(),
+            {u'actions': [u'ResetUserPasswordAction'],
+             u'required_fields': [u'password'],
+             u'task_type': 'reset_password'})
+        self.assertEqual(1, Token.objects.count())
+
     def test_task_complete(self):
         """
         Can't approve a completed task.
