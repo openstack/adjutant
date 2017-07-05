@@ -15,7 +15,6 @@
 
 import mock
 import copy
-import six
 
 from django.conf import settings
 from django.test.utils import override_settings
@@ -110,7 +109,7 @@ class FakeManager(object):
         roles = temp_cache['projects'][project.name].roles
         users = []
 
-        for user_id, user_roles in six.iteritems(roles):
+        for user_id, user_roles in roles.items():
             user = self.get_user(user_id)
             user.roles = []
 
@@ -248,7 +247,7 @@ class FakeManager(object):
 
     def update_project(self, project, **kwargs):
         project = self._project_from_id(project)
-        for key, arg in six.iteritems(kwargs):
+        for key, arg in kwargs.items():
             if arg is not None:
                 setattr(project, key, arg)
         return project
@@ -319,7 +318,7 @@ class modify_dict_settings(override_settings):
             self.operations = args[0]
         else:
             assert not args
-            self.operations = list(six.iteritems(kwargs))
+            self.operations = list(kwargs.items())
         super(override_settings, self).__init__()
 
     def save_options(self, test_func):

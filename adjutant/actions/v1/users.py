@@ -15,8 +15,6 @@
 from django.conf import settings
 from django.db import models
 
-import six
-
 from adjutant.actions import user_store
 from adjutant.actions.v1.base import (
     UserNameAction, UserIdAction, UserMixin, ProjectMixin)
@@ -177,7 +175,7 @@ class ResetUserPasswordAction(UserNameAction, UserMixin):
         roles = id_manager.get_all_roles(self.user)
 
         user_roles = []
-        for roles in six.itervalues(roles):
+        for roles in roles.values():
             user_roles.extend(role.name for role in roles)
 
         if set(self.blacklist) & set(user_roles):

@@ -16,8 +16,6 @@ from adjutant.actions.v1.base import BaseAction, ProjectMixin
 from django.conf import settings
 from adjutant.actions import openstack_clients, user_store
 
-import six
-
 
 class NewDefaultNetworkAction(BaseAction, ProjectMixin):
     """
@@ -294,7 +292,7 @@ class SetProjectQuotaAction(BaseAction):
 
         # update quota for each openstack service
         regions_dict = self.settings.get('regions', {})
-        for region_name, region_settings in six.iteritems(regions_dict):
+        for region_name, region_settings in regions_dict.items():
             quota_size = region_settings.get('quota_size')
             quota_settings = settings.PROJECT_QUOTA_SIZES.get(quota_size, {})
             if not quota_settings:
@@ -302,7 +300,7 @@ class SetProjectQuotaAction(BaseAction):
                     "Project quota not defined for size '%s' in region %s." % (
                         quota_size, region_name))
                 continue
-            for service_name, values in six.iteritems(quota_settings):
+            for service_name, values in quota_settings.items():
                 updater_class = self._quota_updaters.get(service_name)
                 if not updater_class:
                     self.add_note("No quota updater found for %s. Ignoring" %
