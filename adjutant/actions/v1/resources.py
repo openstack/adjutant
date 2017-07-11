@@ -13,7 +13,7 @@
 #    under the License.
 
 from adjutant.actions.v1.base import BaseAction, ProjectMixin, QuotaMixin
-from adjutant.actions import openstack_clients, user_store
+from adjutant.common import openstack_clients, user_store
 from adjutant.api import models
 from adjutant.common.quota import QuotaManager
 

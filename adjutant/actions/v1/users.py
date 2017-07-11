@@ -15,7 +15,7 @@
 from django.conf import settings
 from django.db import models
 
-from adjutant.actions import user_store
+from adjutant.common import user_store
 from adjutant.actions.v1.base import (
     UserNameAction, UserIdAction, UserMixin, ProjectMixin)
 

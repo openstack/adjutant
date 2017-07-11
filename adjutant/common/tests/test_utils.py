@@ -17,12 +17,14 @@ import mock
 from rest_framework import status
 
 from adjutant.api.models import Token
-from adjutant.api.v1.tests import (FakeManager, setup_temp_cache,
-                                   AdjutantAPITestCase, modify_dict_settings)
+from adjutant.common.tests.fake_clients import FakeManager, setup_temp_cache
+from adjutant.common.tests.utils import (AdjutantAPITestCase,
+                                         modify_dict_settings)
+
 from django.core import mail
 
 
-@mock.patch('adjutant.actions.user_store.IdentityManager',
+@mock.patch('adjutant.common.user_store.IdentityManager',
             FakeManager)
 class ModifySettingsTests(AdjutantAPITestCase):
     """

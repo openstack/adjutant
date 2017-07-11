@@ -14,7 +14,7 @@
 
 from rest_framework import serializers
 from django.conf import settings
-from adjutant.actions import user_store
+from adjutant.common import user_store
 
 
 role_options = settings.DEFAULT_ACTION_SETTINGS.get("NewUserAction", {}).get(

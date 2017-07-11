@@ -18,7 +18,7 @@ from django.utils import timezone
 
 from rest_framework.response import Response
 
-from adjutant.actions import user_store
+from adjutant.common import user_store
 from adjutant.api import models
 from adjutant.api import utils
 from adjutant.api.v1 import tasks

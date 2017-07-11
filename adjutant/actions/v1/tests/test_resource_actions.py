@@ -21,15 +21,14 @@ from adjutant.actions.v1.resources import (
     NewDefaultNetworkAction, NewProjectDefaultNetworkAction,
     SetProjectQuotaAction, UpdateProjectQuotasAction)
 from adjutant.api.models import Task
-from adjutant.api.v1.tests import (FakeManager, setup_temp_cache,
-                                   modify_dict_settings)
-from adjutant.actions.v1.tests import (
-    get_fake_neutron, get_fake_novaclient, get_fake_cinderclient,
-    setup_neutron_cache, neutron_cache, cinder_cache, nova_cache,
-    setup_mock_caches)
+from adjutant.common.tests.utils import modify_dict_settings
+from adjutant.common.tests.fake_clients import (
+    FakeManager, setup_temp_cache, get_fake_neutron, get_fake_novaclient,
+    get_fake_cinderclient, setup_neutron_cache, neutron_cache, cinder_cache,
+    nova_cache, setup_mock_caches)
 
 
-@mock.patch('adjutant.actions.user_store.IdentityManager',
+@mock.patch('adjutant.common.user_store.IdentityManager',
             FakeManager)
 @mock.patch(
     'adjutant.actions.v1.resources.' +
@@ -465,7 +464,7 @@ class ProjectSetupActionTests(TestCase):
 
 
 @mock.patch(
-    'adjutant.actions.user_store.IdentityManager',
+    'adjutant.common.user_store.IdentityManager',
     FakeManager)
 @mock.patch(
     'adjutant.common.quota.get_neutronclient',

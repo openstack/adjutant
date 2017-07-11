@@ -17,7 +17,7 @@ import six
 from django.conf import settings
 
 from adjutant.actions.v1.base import BaseAction
-from adjutant.actions import user_store
+from adjutant.common import user_store
 from adjutant.actions.utils import send_email
 
 

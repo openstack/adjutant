@@ -16,7 +16,7 @@ from uuid import uuid4
 
 from django.utils import timezone
 
-from adjutant.actions import user_store
+from adjutant.common import user_store
 from adjutant.actions.v1.base import (
     BaseAction, UserNameAction, UserMixin, ProjectMixin)
 

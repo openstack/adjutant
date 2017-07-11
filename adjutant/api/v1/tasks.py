@@ -13,7 +13,7 @@
 #    under the License.
 
 from rest_framework.response import Response
-from adjutant.actions.user_store import IdentityManager
+from adjutant.common.user_store import IdentityManager
 from adjutant.api.models import Task
 from django.utils import timezone
 from adjutant.api import utils

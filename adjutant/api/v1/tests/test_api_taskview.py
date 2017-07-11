@@ -20,12 +20,13 @@ from django.core import mail
 from rest_framework import status
 
 from adjutant.api.models import Task, Token
-from adjutant.api.v1.tests import (FakeManager, setup_temp_cache,
-                                   AdjutantAPITestCase, modify_dict_settings)
-from adjutant.api.v1 import tests
+from adjutant.common.tests.fake_clients import FakeManager, setup_temp_cache
+from adjutant.common.tests import fake_clients
+from adjutant.common.tests.utils import (AdjutantAPITestCase,
+                                         modify_dict_settings)
 
 
-@mock.patch('adjutant.actions.user_store.IdentityManager',
+@mock.patch('adjutant.common.user_store.IdentityManager',
             FakeManager)
 class TaskViewTests(AdjutantAPITestCase):
     """
@@ -110,7 +111,7 @@ class TaskViewTests(AdjutantAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(mail.outbox), 2)
         self.assertEquals(
-            tests.temp_cache['users']["user_id_1"].name,
+            fake_clients.identity_temp_cache['users']["user_id_1"].name,
             'test@example.com')
 
     def test_new_user_no_project(self):
@@ -314,7 +315,7 @@ class TaskViewTests(AdjutantAPITestCase):
             response.data,
             {'notes': ['created token']}
         )
-        tests.temp_cache['projects'] = {}
+        fake_clients.identity_temp_cache['projects'] = {}
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -1062,7 +1063,7 @@ class TaskViewTests(AdjutantAPITestCase):
         self.assertEqual(len(mail.outbox), 2)
 
         self.assertEquals(
-            tests.temp_cache['users']["user_id_1"].name,
+            fake_clients.identity_temp_cache['users']["user_id_1"].name,
             'new_user')
 
     @override_settings(USERNAME_IS_EMAIL=False)

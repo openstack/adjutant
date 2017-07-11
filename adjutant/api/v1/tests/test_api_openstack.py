@@ -22,16 +22,15 @@ from django.utils import timezone
 from django.conf import settings
 
 from adjutant.api.models import Token, Task
-from adjutant.api.v1.tests import FakeManager, setup_temp_cache
-from adjutant.actions.v1.tests import (
-    get_fake_neutron, get_fake_novaclient, get_fake_cinderclient,
-    cinder_cache, nova_cache, neutron_cache,
+from adjutant.common.tests.fake_clients import (
+    FakeManager, setup_temp_cache, get_fake_neutron, get_fake_novaclient,
+    get_fake_cinderclient, cinder_cache, nova_cache, neutron_cache,
     setup_mock_caches, setup_quota_cache, FakeResource)
 
 from datetime import timedelta
 
 
-@mock.patch('adjutant.actions.user_store.IdentityManager',
+@mock.patch('adjutant.common.user_store.IdentityManager',
             FakeManager)
 class OpenstackAPITests(APITestCase):
     """
@@ -321,7 +320,7 @@ class OpenstackAPITests(APITestCase):
 
 
 @mock.patch(
-    'adjutant.actions.user_store.IdentityManager',
+    'adjutant.common.user_store.IdentityManager',
     FakeManager)
 @mock.patch(
     'adjutant.common.quota.get_novaclient',

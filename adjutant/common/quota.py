@@ -13,7 +13,7 @@
 #    under the License.
 
 
-from adjutant.actions.openstack_clients import (
+from adjutant.common.openstack_clients import (
     get_novaclient, get_cinderclient, get_neutronclient)
 
 from django.conf import settings

@@ -27,11 +27,11 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from adjutant.api.models import Task, Token, Notification
-from adjutant.api.v1.tests import (FakeManager, setup_temp_cache,
-                                   modify_dict_settings)
+from adjutant.common.tests.fake_clients import FakeManager, setup_temp_cache
+from adjutant.common.tests.utils import modify_dict_settings
 
 
-@mock.patch('adjutant.actions.user_store.IdentityManager',
+@mock.patch('adjutant.common.user_store.IdentityManager',
             FakeManager)
 class AdminAPITests(APITestCase):
     """

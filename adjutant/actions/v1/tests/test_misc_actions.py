@@ -19,8 +19,8 @@ from django.core import mail
 from adjutant.actions.v1.misc import SendAdditionalEmailAction
 from adjutant.actions.utils import send_email
 from adjutant.api.models import Task
-from adjutant.api.v1.tests import (FakeManager,
-                                   modify_dict_settings, AdjutantTestCase)
+from adjutant.common.tests.fake_clients import FakeManager
+from adjutant.common.tests.utils import modify_dict_settings, AdjutantTestCase
 from smtplib import SMTPException
 
 default_email_conf = {
@@ -37,7 +37,7 @@ class FailEmail(mock.MagicMock):
         raise SMTPException
 
 
-@mock.patch('adjutant.actions.user_store.IdentityManager',
+@mock.patch('adjutant.common.user_store.IdentityManager',
             FakeManager)
 class MiscActionTests(AdjutantTestCase):
 

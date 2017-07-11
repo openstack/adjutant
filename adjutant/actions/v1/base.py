@@ -18,7 +18,7 @@ from django.conf import settings
 from django.utils import timezone
 
 from adjutant.common.quota import QuotaManager
-from adjutant.actions import user_store
+from adjutant.common import user_store
 from adjutant.actions.models import Action
 
 

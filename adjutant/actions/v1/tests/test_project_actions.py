@@ -21,12 +21,12 @@ from adjutant.actions.v1.projects import (
     NewProjectWithUserAction, AddDefaultUsersToProjectAction,
     NewProjectAction)
 from adjutant.api.models import Task
-from adjutant.api.v1 import tests
-from adjutant.api.v1.tests import (FakeManager, setup_temp_cache,
-                                   modify_dict_settings)
+from adjutant.common.tests import fake_clients
+from adjutant.common.tests.fake_clients import FakeManager, setup_temp_cache
+from adjutant.common.tests.utils import modify_dict_settings
 
 
-@mock.patch('adjutant.actions.user_store.IdentityManager',
+@mock.patch('adjutant.common.user_store.IdentityManager',
             FakeManager)
 class ProjectActionTests(TestCase):
 
@@ -60,7 +60,7 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
         self.assertEquals(
-            tests.temp_cache['projects']['test_project'].name,
+            fake_clients.identity_temp_cache['projects']['test_project'].name,
             'test_project')
         self.assertEquals(
             task.cache,
@@ -74,12 +74,12 @@ class ProjectActionTests(TestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
         self.assertEquals(
-            tests.temp_cache['users']["user_id_1"].name,
+            fake_clients.identity_temp_cache['users']["user_id_1"].name,
             'test@example.com')
         self.assertEquals(
-            tests.temp_cache['users']["user_id_1"].email,
+            fake_clients.identity_temp_cache['users']["user_id_1"].email,
             'test@example.com')
-        project = tests.temp_cache['projects']['test_project']
+        project = fake_clients.identity_temp_cache['projects']['test_project']
         self.assertEquals(
             sorted(project.roles["user_id_1"]),
             sorted(['_member_', 'project_admin',
@@ -113,7 +113,7 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
         self.assertEquals(
-            tests.temp_cache['projects']['test_project'].name,
+            fake_clients.identity_temp_cache['projects']['test_project'].name,
             'test_project')
         self.assertEquals(
             task.cache,
@@ -123,7 +123,7 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
         self.assertEquals(
-            tests.temp_cache['projects']['test_project'].name,
+            fake_clients.identity_temp_cache['projects']['test_project'].name,
             'test_project')
         self.assertEquals(
             task.cache,
@@ -135,9 +135,9 @@ class ProjectActionTests(TestCase):
         self.assertEquals(action.valid, True)
 
         self.assertEquals(
-            tests.temp_cache['users']["user_id_1"].email,
+            fake_clients.identity_temp_cache['users']["user_id_1"].email,
             'test@example.com')
-        project = tests.temp_cache['projects']['test_project']
+        project = fake_clients.identity_temp_cache['projects']['test_project']
         self.assertEquals(
             sorted(project.roles["user_id_1"]),
             sorted(['_member_', 'project_admin',
@@ -188,9 +188,9 @@ class ProjectActionTests(TestCase):
         self.assertTrue("user_id" in action.action.cache)
         self.assertFalse("roles_granted" in action.action.cache)
         self.assertEquals(
-            tests.temp_cache['users']["user_id_1"].email,
+            fake_clients.identity_temp_cache['users']["user_id_1"].email,
             'test@example.com')
-        project = tests.temp_cache['projects']['test_project']
+        project = fake_clients.identity_temp_cache['projects']['test_project']
         self.assertFalse("user_id_1" in project.roles)
 
         # And then swap back the correct function
@@ -205,7 +205,7 @@ class ProjectActionTests(TestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
 
-        project = tests.temp_cache['projects']['test_project']
+        project = fake_clients.identity_temp_cache['projects']['test_project']
         self.assertEquals(
             sorted(project.roles["user_id_1"]),
             sorted(['_member_', 'project_admin',
@@ -244,7 +244,7 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
         self.assertEquals(
-            tests.temp_cache['projects']['test_project'].name,
+            fake_clients.identity_temp_cache['projects']['test_project'].name,
             'test_project')
         self.assertEquals(
             task.cache,
@@ -256,9 +256,9 @@ class ProjectActionTests(TestCase):
         self.assertEquals(action.valid, True)
 
         self.assertEquals(
-            tests.temp_cache['users'][user.id].email,
+            fake_clients.identity_temp_cache['users'][user.id].email,
             'test@example.com')
-        project = tests.temp_cache['projects']['test_project']
+        project = fake_clients.identity_temp_cache['projects']['test_project']
         self.assertEquals(
             sorted(project.roles[user.id]),
             sorted(['_member_', 'project_admin',
@@ -301,7 +301,8 @@ class ProjectActionTests(TestCase):
         self.assertEquals(action.valid, False)
 
         self.assertEquals(
-            tests.temp_cache['projects'].get('test_project'), None)
+            fake_clients.identity_temp_cache['projects'].get('test_project'),
+            None)
 
         token_data = {'password': '123456'}
         action.submit(token_data)
@@ -334,14 +335,14 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
         self.assertEquals(
-            tests.temp_cache['projects']['test_project'].name,
+            fake_clients.identity_temp_cache['projects']['test_project'].name,
             'test_project')
         self.assertEquals(
             task.cache,
             {'project_id': 'project_id_1', 'user_id': 'user_id_1',
              'user_state': 'default'})
 
-        tests.temp_cache['projects'] = {}
+        fake_clients.identity_temp_cache['projects'] = {}
 
         token_data = {'password': '123456'}
         action.submit(token_data)
@@ -374,14 +375,14 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
         self.assertEquals(
-            tests.temp_cache['projects']['test_project'].name,
+            fake_clients.identity_temp_cache['projects']['test_project'].name,
             'test_project')
         self.assertEquals(
             task.cache,
             {'project_id': 'project_id_1', 'user_id': 'user_id_1',
              'user_state': 'default'})
 
-        tests.temp_cache['users'] = {}
+        fake_clients.identity_temp_cache['users'] = {}
 
         token_data = {'password': '123456'}
         action.submit(token_data)
@@ -423,7 +424,7 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
         self.assertEquals(
-            tests.temp_cache['projects']['test_project'].name,
+            fake_clients.identity_temp_cache['projects']['test_project'].name,
             'test_project')
         self.assertEquals(
             task.cache,
@@ -441,14 +442,14 @@ class ProjectActionTests(TestCase):
 
         # check that user has been created correctly
         self.assertEquals(
-            tests.temp_cache['users'][user.id].email,
+            fake_clients.identity_temp_cache['users'][user.id].email,
             'test@example.com')
         self.assertEquals(
-            tests.temp_cache['users'][user.id].enabled,
+            fake_clients.identity_temp_cache['users'][user.id].enabled,
             True)
 
         # Check user has correct roles in new project
-        project = tests.temp_cache['projects']['test_project']
+        project = fake_clients.identity_temp_cache['projects']['test_project']
         self.assertEquals(
             sorted(project.roles[user.id]),
             sorted(['_member_', 'project_admin',
@@ -498,7 +499,7 @@ class ProjectActionTests(TestCase):
         # approve previous signup
         action.post_approve()
         self.assertEquals(action.valid, True)
-        project = tests.temp_cache['projects']['test_project']
+        project = fake_clients.identity_temp_cache['projects']['test_project']
         self.assertEquals(
             project.name,
             'test_project')
@@ -616,7 +617,7 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
         self.assertEquals(
-            tests.temp_cache['projects']['test_project'].name,
+            fake_clients.identity_temp_cache['projects']['test_project'].name,
             'test_project')
         self.assertEquals(
             task.cache,
@@ -627,12 +628,12 @@ class ProjectActionTests(TestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
         self.assertEquals(
-            tests.temp_cache['users']["user_id_1"].email,
+            fake_clients.identity_temp_cache['users']["user_id_1"].email,
             'test@example.com')
         self.assertEquals(
-            tests.temp_cache['users']["user_id_1"].name,
+            fake_clients.identity_temp_cache['users']["user_id_1"].name,
             'test_user')
-        project = tests.temp_cache['projects']['test_project']
+        project = fake_clients.identity_temp_cache['projects']['test_project']
         self.assertEquals(
             sorted(project.roles["user_id_1"]),
             sorted(['_member_', 'project_admin',
@@ -674,7 +675,7 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
 
-        project = tests.temp_cache['projects']['test_project']
+        project = fake_clients.identity_temp_cache['projects']['test_project']
         self.assertEquals(project.roles['user_id_0'], ['admin'])
 
     def test_add_default_users_invalid_project(self):
@@ -737,13 +738,13 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
 
-        project = tests.temp_cache['projects']['test_project']
+        project = fake_clients.identity_temp_cache['projects']['test_project']
         self.assertEquals(project.roles['user_id_0'], ['admin'])
 
         action.post_approve()
         self.assertEquals(action.valid, True)
 
-        project = tests.temp_cache['projects']['test_project']
+        project = fake_clients.identity_temp_cache['projects']['test_project']
         self.assertEquals(project.roles['user_id_0'], ['admin'])
 
     def test_new_project_action(self):
@@ -782,14 +783,14 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
         self.assertEquals(
-            tests.temp_cache['projects']['test_project'].name,
+            fake_clients.identity_temp_cache['projects']['test_project'].name,
             'test_project')
 
         self.assertEquals(
-            tests.temp_cache['projects']['test_project'].parent,
-            'parent_project')
+            fake_clients.identity_temp_cache['projects'][
+                'test_project'].parent, 'parent_project')
 
-        project = tests.temp_cache['projects']['test_project']
+        project = fake_clients.identity_temp_cache['projects']['test_project']
         self.assertEquals(
             sorted(project.roles["test_user_id"]),
             sorted(['_member_', 'project_admin',
@@ -834,25 +835,25 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
         self.assertEquals(
-            tests.temp_cache['projects']['test_project'].name,
+            fake_clients.identity_temp_cache['projects']['test_project'].name,
             'test_project')
 
         self.assertEquals(
-            tests.temp_cache['projects']['test_project'].parent,
-            'parent_project')
+            fake_clients.identity_temp_cache[
+                'projects']['test_project'].parent, 'parent_project')
 
         action.post_approve()
         # Nothing should change
         self.assertEquals(action.valid, True)
         self.assertEquals(
-            tests.temp_cache['projects']['test_project'].name,
+            fake_clients.identity_temp_cache['projects']['test_project'].name,
             'test_project')
 
         self.assertEquals(
-            tests.temp_cache['projects']['test_project'].parent,
-            'parent_project')
+            fake_clients.identity_temp_cache[
+                'projects']['test_project'].parent, 'parent_project')
 
-        project = tests.temp_cache['projects']['test_project']
+        project = fake_clients.identity_temp_cache['projects']['test_project']
         self.assertEquals(
             sorted(project.roles["test_user_id"]),
             sorted(['_member_', 'project_admin',
@@ -978,8 +979,8 @@ class ProjectActionTests(TestCase):
         self.assertEquals(action.valid, True)
 
         self.assertEquals(
-            tests.temp_cache['projects']['test_project'].parent,
-            'default')
+            fake_clients.identity_temp_cache[
+                'projects']['test_project'].parent, 'default')
 
         action.submit({})
         self.assertEquals(action.valid, True)
