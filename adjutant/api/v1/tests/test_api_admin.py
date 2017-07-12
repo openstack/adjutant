@@ -591,6 +591,51 @@ class AdminAPITests(APITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
+    def test_reapprove_task_delete_tokens(self):
+        """
+        Tests that a reapproved task will delete all of it's previous tokens.
+        """
+
+        setup_temp_cache({}, {})
+
+        url = "/v1/actions/CreateProject"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        new_task = Task.objects.all()[0]
+        url = "/v1/tasks/" + new_task.uuid
+        response = self.client.post(url, {'approved': True}, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(Token.objects.all()), 1)
+
+        new_token = Token.objects.all()[0]
+        url = "/v1/tokens/" + new_token.token
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Reapprove
+        url = "/v1/tasks/" + new_task.uuid
+        response = self.client.post(url, {'approved': True}, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Old token no longer found
+        url = "/v1/tokens/" + new_token.token
+        response = self.client.get(url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+        self.assertEqual(len(Token.objects.all()), 1)
+
     def test_task_update_unapprove(self):
         """
         Ensure task update doesn't work for approved actions.
