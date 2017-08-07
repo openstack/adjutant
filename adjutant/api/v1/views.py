@@ -92,9 +92,30 @@ class NotificationList(APIViewWithLogger):
                 **filters).order_by("-created_on")
         else:
             notifications = Notification.objects.all().order_by("-created_on")
+
+        page = request.GET.get('page', 1)
+        notifs_per_page = request.GET.get('notifications_per_page', None)
+
+        if notifs_per_page:
+            paginator = Paginator(notifications, notifs_per_page)
+            try:
+                notifications = paginator.page(page)
+            except EmptyPage:
+                return Response({'error': 'Empty page'}, status=400)
+            except PageNotAnInteger:
+                return Response({'error': 'Page not an integer'},
+                                status=400)
+
         note_list = []
         for notification in notifications:
             note_list.append(notification.to_dict())
+        if notifs_per_page:
+            return Response({'notifications': note_list,
+                             'pages': paginator.num_pages,
+                             'has_more': notifications.has_next(),
+                             'has_prev': notifications.has_previous()},
+                            status=200)
+
         return Response({"notifications": note_list}, status=200)
 
     @utils.admin
@@ -172,60 +193,41 @@ class TaskList(APIViewWithLogger):
         page = request.GET.get('page', 1)
         tasks_per_page = request.GET.get('tasks_per_page', None)
 
-        if 'admin' in request.keystone_user['roles']:
-            if filters:
-                tasks = Task.objects.filter(**filters).order_by("-created_on")
-            else:
-                tasks = Task.objects.all().order_by("-created_on")
+        if not filters:
+            filters = {}
 
-            if tasks_per_page:
-                paginator = Paginator(tasks, tasks_per_page)
-                try:
-                    tasks = paginator.page(page)
-                except EmptyPage:
-                    return Response({'tasks': [],
-                                     'pages': paginator.num_pages,
-                                     'has_more': False,
-                                     'has_prev': False}, status=200)
-                    # NOTE(amelia): 'has_more'and 'has_prev' names are
-                    # based on the horizon pagination table pagination names
-                except PageNotAnInteger:
-                    return Response({'error': 'Page not an integer'},
-                                    status=400)
+        if 'admin' not in request.keystone_user['roles']:
+            # Ignore any filters with project_id in them
+            for field_filter in filters.keys():
+                if "project_id" in field_filter:
+                    filters.pop(field_filter)
 
-            task_list = []
-            for task in tasks:
-                task_list.append(task._to_dict())
-            if tasks_per_page:
-                return Response({'tasks': task_list,
-                                 'pages': paginator.num_pages,
-                                 'has_more': tasks.has_next(),
-                                 'has_prev': tasks.has_previous()}, status=200)
-            else:
-                return Response({'tasks': task_list})
-        else:
-            if filters:
-                # Ignore any filters with project_id in them
-                for field_filter in filters.keys():
-                    if "project_id" in field_filter:
-                        filters.pop(field_filter)
+            filters['project_id__exact'] = request.keystone_user['project_id']
 
-                tasks = Task.objects.filter(
-                    project_id__exact=request.keystone_user['project_id'],
-                    **filters).order_by("-created_on")
-            else:
-                tasks = Task.objects.filter(
-                    project_id__exact=request.keystone_user['project_id']
-                ).order_by("-created_on")
+        tasks = Task.objects.filter(**filters).order_by("-created_on")
 
+        if tasks_per_page:
             paginator = Paginator(tasks, tasks_per_page)
-            tasks = paginator.page(page)
+            try:
+                tasks = paginator.page(page)
+            except EmptyPage:
+                return Response({'error': 'Empty page'}, status=400)
+            except PageNotAnInteger:
+                return Response({'error': 'Page not an integer'},
+                                status=400)
+        task_list = []
+        for task in tasks:
+            task_list.append(task._to_dict())
 
-            task_list = []
-            for task in tasks:
-                task_list.append(task.to_dict())
+        if tasks_per_page:
             return Response({'tasks': task_list,
-                             'pages': paginator.num_pages}, status=200)
+                             'pages': paginator.num_pages,
+                             'has_more': tasks.has_next(),
+                             'has_prev': tasks.has_previous()}, status=200)
+            # NOTE(amelia): 'has_more'and 'has_prev' names are
+            # based on the horizon pagination table pagination names
+        else:
+            return Response({'tasks': task_list})
 
 
 class TaskDetail(APIViewWithLogger):
