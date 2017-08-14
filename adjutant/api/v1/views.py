@@ -312,7 +312,7 @@ class TaskDetail(APIViewWithLogger):
                               "See task itself for details.") % e],
                         'task': task.uuid
                     }
-                    create_notification(task, notes)
+                    create_notification(task, notes, error=True)
 
                     import traceback
                     trace = traceback.format_exc()
@@ -412,7 +412,7 @@ class TaskDetail(APIViewWithLogger):
                           "See task itself for details.") % e],
                     'task': task.uuid
                 }
-                create_notification(task, notes)
+                create_notification(task, notes, error=True)
 
                 import traceback
                 trace = traceback.format_exc()
@@ -448,7 +448,7 @@ class TaskDetail(APIViewWithLogger):
                               "itself for details.") % e],
                         'task': task.uuid
                     }
-                    create_notification(task, notes)
+                    create_notification(task, notes, error=True)
 
                     import traceback
                     trace = traceback.format_exc()
@@ -474,7 +474,7 @@ class TaskDetail(APIViewWithLogger):
                                   "itself for details.") % e],
                             'task': task.uuid
                         }
-                        create_notification(task, notes)
+                        create_notification(task, notes, error=True)
 
                         import traceback
                         trace = traceback.format_exc()
@@ -619,7 +619,7 @@ class TokenList(APIViewWithLogger):
                 ],
                 'task': task.uuid
             }
-            create_notification(task, notes)
+            create_notification(task, notes, error=True)
 
             import traceback
             trace = traceback.format_exc()
@@ -766,7 +766,7 @@ class TokenDetail(APIViewWithLogger):
                           "See task itself for details.") % e],
                     'task': token.task.uuid
                 }
-                create_notification(token.task, notes)
+                create_notification(token.task, notes, error=True)
 
                 import traceback
                 trace = traceback.format_exc()
