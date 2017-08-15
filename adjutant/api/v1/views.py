@@ -692,7 +692,8 @@ class TokenDetail(APIViewWithLogger):
                     required_fields.append(field)
 
         return Response({'actions': [str(act) for act in actions],
-                         'required_fields': required_fields})
+                         'required_fields': required_fields,
+                         'task_type': token.task.task_type})
 
     def post(self, request, id, format=None):
         """
