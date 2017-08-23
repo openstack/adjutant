@@ -18,11 +18,17 @@ from django.conf import settings
 
 from rest_framework_swagger.views import get_swagger_view
 
-urlpatterns = []
+from adjutant.api import views
+from adjutant.api.v1 import views as views_v1
+
+urlpatterns = [
+    url(r'^$', views.VersionView.as_view()),
+]
 
 # NOTE(adriant): This may not be the best approach, but it does work. Will
 # gladly accept a cleaner alternative if it presents itself.
 if apps.is_installed('adjutant.api.v1'):
+    urlpatterns.append(url(r'^v1/?$', views_v1.V1VersionEndpoint.as_view()))
     urlpatterns.append(url(r'^v1/', include('adjutant.api.v1.urls')))
 
 

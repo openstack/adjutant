@@ -37,6 +37,10 @@ The points that are modular, or will be made more modular in future, are the Tas
 
 Creation and management of Tasks, Tokens, and Notifications is not modular and is the framework around the defined Actions and TaskViews that handles how they are executed. This helps keep the way Actions are executed consistent and simpler to maintain, but does also allow Actions to run almost any logic within those consistent steps.
 
+#### Version Endpoints:
+* ../ - GET
+    * JSON containing details of the currently available versions (just v1 for now)
+
 #### Admin Endpoints:
 
 Endpoints for the management of tasks, tokens, and notifications. Most of these are limited by roles, or are for admin use only.

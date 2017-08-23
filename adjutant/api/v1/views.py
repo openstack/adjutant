@@ -23,9 +23,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from adjutant.api import utils
+from adjutant.api.views import SingleVersionView
 from adjutant.api.models import Notification, Task, Token
 from adjutant.api.v1.utils import (
     create_notification, create_token, parse_filters, send_stage_email)
+
+
+class V1VersionEndpoint(SingleVersionView):
+    version = '1.0'
 
 
 class APIViewWithLogger(APIView):
