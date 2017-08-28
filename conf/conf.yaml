@@ -53,7 +53,7 @@ KEYSTONE:
     password: openstack
     project_name: admin
     # MUST BE V3 API:
-    auth_url: http://localhost:5000/v3
+    auth_url: http://localhost/identity/v3
     domain_id: default
 
 TOKEN_SUBMISSION_URL: http://192.168.122.160:8080/token/

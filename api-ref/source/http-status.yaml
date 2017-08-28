@@ -1,0 +1,38 @@
+200:
+  default: |
+    Request was successful.
+  task-view: |
+    Request successful, task submitted.
+202:
+  default: |
+    Request is accepted, but processing may take some time.
+400:
+  default: |
+    Bad request
+  task-view: |
+    Invalid task data, or missing parameters. The response body will include
+    the details of the missing or invalid parameters.
+401:
+  default: |
+    User is unauthenticated, or X-Auth-Token has expired.
+403:
+  default: |
+    User has the wrong roles for this operation.
+404:
+  default: |
+    The requested resource could not be found.
+405:
+  default: |
+    Method is not valid for this endpoint and resource.
+409:
+  default: |
+    Conflict
+  task-view: |
+    Duplicate task.
+500:
+  default: |
+    Something went wrong with the service which prevents it from
+    fulfilling the request.
+503:
+  default: |
+    Adjutant cannot connect to the Keystone Authentication Server.

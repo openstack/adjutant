@@ -1,0 +1,152 @@
+# variables in header
+X-Auth-Token:
+    description: |
+      A valid authentication token for a user.
+    in: header
+    required: true
+    type: string
+
+# Path parameters
+notification_id:
+    description: |
+        The notification UUID, as given on list endpoints and in email correspondence.
+    in: path
+    required: true
+    type: string
+task_id:
+    description: |
+      The task UUID as given in the task list and email correspondence.
+    in: path
+    required: true
+    type: string
+token_id:
+    description: |
+        The token UUID, as given on the lists and in email correspondence.
+    in: path
+    required: true
+    type: string
+user_id:
+    description: |
+      The user id, as seen on the ../v1/openstack/users page. Note that this
+      is the openstack user id for confirmed users and the task ID for invited
+      users.
+    in: path
+    required: true
+    type: string
+
+
+# Query Parameters
+filters:
+    description: |
+        Django style filters for task, token and notification endpoints.
+        See section `Filters` for details.
+    in: query
+    required: false
+    type: dictionary
+region:
+    description: |
+        Region to setup the default network in.
+    in: query
+    required: true
+    type: string
+setup_network:
+    description: |
+        Whether or not to setup a default network for a new project
+    in: query
+    required: true
+    type: boolean
+page:
+    description: |
+        Page number to access, starts at and defaults to 1.
+    in: query
+    required: false
+    type: int
+project_name:
+    description: |
+        Name for the new project.
+    in: query
+    required: true
+    type: string
+tasks_per_page:
+    description: |
+        Limit on the tasks viewed on each page.
+    in: query
+    required: false
+    type: int
+
+
+# Body Parameters
+acknowledged:
+    description: |
+        Confirmation for acknowledging a notification.
+    in: body
+    required: true
+    type: boolean
+approved:
+    description: |
+        Confirmation to approve a task.
+    in: body
+    required: true
+    type: boolean
+email:
+    description: |
+      New user email address.
+    in: body
+    required: true
+    type: string
+email_password:
+    description: |
+        Email address for the user whose password needs resetting
+    in: body
+    required: true
+    type: string
+email_signup:
+    description: |
+        Email address for the default user and project admin.
+    in: body
+    required: true
+    type: string
+notifications:
+    description: |
+        List of notification UUIDs to acknowledge
+    in: body
+    required: true
+    type: array
+roles:
+    description: |
+      List of roles for the user.
+    in: body
+    required: true
+    type: array
+task_data:
+    description: |
+        A dictionary replacing all the data for a task. See the task details
+        for what values should be included
+    in: body
+    required: true
+    type: dictionary
+task_id_body:
+    description: |
+      The task UUID as given in the task list and email correspondence.
+    in: body
+    required: true
+    type: int
+token_data:
+    description: |
+        A dictionary replacing all the data for a task. Use the token get request
+        to see what should needs to be included.
+    in: body
+    required: true
+    type: dictionary
+username:
+    description: |
+      New user username, required only if USERNAME_IS_EMAIL is false.
+    in: body
+    required: false
+    type: string
+username_password:
+    description: |
+        Username, required only if USERNAME_IS_EMAIL is false.
+    in: body
+    required: false
+    type: string
