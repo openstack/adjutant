@@ -386,6 +386,10 @@ class TaskDetail(APIViewWithLogger):
                      'Update data and rerun pre_approve.']},
                 status=400)
 
+        if task.approved:
+            # Expire previously in use tokens
+            Token.objects.filter(task=task.uuid).delete()
+
         # We approve the task before running actions,
         # that way if something goes wrong we know if it was approved,
         # when it was approved, and who approved it last. Subsequent
