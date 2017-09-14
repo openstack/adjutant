@@ -18,9 +18,17 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from django.test.utils import override_settings
+from django.utils import timezone
+from django.conf import settings
 
-from adjutant.api.models import Token
+from adjutant.api.models import Token, Task
 from adjutant.api.v1.tests import FakeManager, setup_temp_cache
+from adjutant.actions.v1.tests import (
+    get_fake_neutron, get_fake_novaclient, get_fake_cinderclient,
+    cinder_cache, nova_cache, neutron_cache,
+    setup_mock_caches, setup_quota_cache, FakeResource)
+
+from datetime import timedelta
 
 
 @mock.patch('adjutant.actions.user_store.IdentityManager',
@@ -310,3 +318,766 @@ class OpenstackAPITests(APITestCase):
         data = {'password': 'testpassword'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+@mock.patch(
+    'adjutant.actions.user_store.IdentityManager',
+    FakeManager)
+@mock.patch(
+    'adjutant.common.quota.get_novaclient',
+    get_fake_novaclient)
+@mock.patch(
+    'adjutant.common.quota.get_neutronclient',
+    get_fake_neutron)
+@mock.patch(
+    'adjutant.common.quota.get_cinderclient',
+    get_fake_cinderclient)
+@mock.patch(
+    'adjutant.actions.v1.resources.' +
+    'openstack_clients.get_neutronclient',
+    get_fake_neutron)
+@mock.patch(
+    'adjutant.actions.v1.resources.' +
+    'openstack_clients.get_novaclient',
+    get_fake_novaclient)
+@mock.patch(
+    'adjutant.actions.v1.resources.' +
+    'openstack_clients.get_cinderclient',
+    get_fake_cinderclient)
+class QuotaAPITests(APITestCase):
+
+    def tearDown(self):
+        """ Clears quota caches """
+        global cinder_cache
+        cinder_cache.clear()
+        global nova_cache
+        nova_cache.clear()
+        global neutron_cache
+        neutron_cache.clear()
+        super(QuotaAPITests, self).tearDown()
+
+    def setUp(self):
+        super(QuotaAPITests, self).setUp()
+        setup_mock_caches('RegionOne', 'test_project_id')
+        setup_mock_caches('RegionTwo', 'test_project_id')
+
+    def check_quota_cache(self, region_name, project_id, size):
+        """
+        Helper function to check if the global quota caches now match the size
+        defined in the config
+        """
+        cinderquota = cinder_cache[region_name][project_id]['quota']
+        gigabytes = settings.PROJECT_QUOTA_SIZES[size]['cinder']['gigabytes']
+        self.assertEquals(cinderquota['gigabytes'], gigabytes)
+
+        novaquota = nova_cache[region_name][project_id]['quota']
+        ram = settings.PROJECT_QUOTA_SIZES[size]['nova']['ram']
+        self.assertEquals(novaquota['ram'], ram)
+
+        neutronquota = neutron_cache[region_name][project_id]['quota']
+        network = settings.PROJECT_QUOTA_SIZES[size]['neutron']['network']
+        self.assertEquals(neutronquota['network'], network)
+
+    def test_update_quota_no_history(self):
+        """ Update the quota size of a project with no history """
+
+        admin_headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "user_id",
+            'authenticated': True
+        }
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+
+        url = "/v1/openstack/quotas/"
+
+        data = {'size': 'medium',
+                'regions': ['RegionOne']}
+
+        response = self.client.post(url, data,
+                                    headers=admin_headers, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Then check to see the quotas have changed
+        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+
+    def test_update_quota_history(self):
+        """
+         Update the quota size of a project with a quota change recently
+         It should update the quota the first time but wait for admin approval
+         the second time
+        """
+        admin_headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "user_id",
+            'authenticated': True
+        }
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+        url = "/v1/openstack/quotas/"
+
+        data = {'size': 'medium',
+                'regions': ['RegionOne']}
+        response = self.client.post(url, data,
+                                    headers=admin_headers, format='json')
+        # First check we can actually access the page correctly
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Then check to see the quotas have changed
+        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+
+        data = {'size': 'small',
+                'regions': ['RegionOne']}
+        response = self.client.post(url, data,
+                                    headers=admin_headers, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+
+        # Then check to see the quotas have not changed
+        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+
+        # Approve the quota change as admin
+        headers = {
+            'project_name': "admin_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "admin",
+            'user_id': "admin_id",
+            'authenticated': True
+        }
+
+        # Grab the details for the second task and approve it
+        new_task = Task.objects.all()[1]
+        url = "/v1/tasks/" + new_task.uuid
+        response = self.client.post(url, {'approved': True}, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data,
+            {'notes': ['Task completed successfully.']}
+        )
+
+        # Quotas should have changed to small
+        self.check_quota_cache('RegionOne', 'test_project_id', 'small')
+
+    def test_update_quota_old_history(self):
+        """
+         Update the quota size of a project with a quota change 31 days ago
+         It should update the quota the first time without approval
+        """
+
+        admin_headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "user_id",
+            'authenticated': True
+        }
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+
+        url = "/v1/openstack/quotas/"
+
+        data = {'size': 'medium',
+                'regions': ['RegionOne']}
+        response = self.client.post(url, data,
+                                    headers=admin_headers, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Then check to see the quotas have changed
+        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+
+        # Fudge the data to make the task occur 31 days ago
+        task = Task.objects.all()[0]
+        task.completed_on = timezone.now() - timedelta(days=32)
+        task.save()
+
+        data = {'size': 'small',
+                'regions': ['RegionOne']}
+        response = self.client.post(url, data,
+                                    headers=admin_headers, format='json')
+        # First check we can actually access the page correctly
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Then check to see the quotas have changed
+        self.check_quota_cache('RegionOne', 'test_project_id', 'small')
+
+    def test_update_quota_other_project_history(self):
+        """
+         Tests that a quota update to another project does not interfer
+         with the 30 days per project limit.
+        """
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "user_id",
+            'authenticated': True
+        }
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        project2 = mock.Mock()
+        project2.id = 'second_project_id'
+        project2.name = 'second_project'
+        project2.domain = 'default'
+        project2.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_temp_cache({'test_project': project, 'second_project': project2},
+                         {user.id: user})
+        setup_mock_caches('RegionOne', 'second_project_id')
+        # setup_quota_cache('RegionOne', 'second_project_id', 'small')
+
+        url = "/v1/openstack/quotas/"
+
+        data = {'size': 'medium',
+                'regions': ['RegionOne']}
+        response = self.client.post(url, data, headers=headers, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Then check to see the quotas have changed
+        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+        headers = {
+            'project_name': "second_project",
+            'project_id': "second_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test2@example.com",
+            'user_id': user.id,
+            'authenticated': True
+        }
+
+        data = {'regions': ["RegionOne"], 'size': 'medium',
+                'project_id': 'second_project_id'}
+        response = self.client.post(url, data, headers=headers, format='json')
+        # First check we can actually access the page correctly
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Then check to see the quotas have changed
+        self.check_quota_cache('RegionOne', 'second_project_id', 'medium')
+
+    def test_update_quota_outside_range(self):
+        """
+        Attempts to update the quota size to a value outside of the
+        project's pre-approved range.
+        """
+
+        admin_headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "user_id",
+            'authenticated': True
+        }
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+
+        url = "/v1/openstack/quotas/"
+
+        data = {'size': 'large',
+                'regions': ['RegionOne']}
+        response = self.client.post(url, data,
+                                    headers=admin_headers, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+
+        # Then check to see the quotas have not changed (stayed small)
+        self.check_quota_cache('RegionOne', 'test_project_id', 'small')
+
+        # Approve and test for change
+
+        # Approve the quota change as admin
+        headers = {
+            'project_name': "admin_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "admin",
+            'user_id': "admin_id",
+            'authenticated': True
+        }
+
+        # Grab the details for the task and approve it
+        new_task = Task.objects.all()[0]
+        url = "/v1/tasks/" + new_task.uuid
+        response = self.client.post(url, {'approved': True}, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data,
+            {'notes': ['Task completed successfully.']}
+        )
+
+        self.check_quota_cache('RegionOne', 'test_project_id', 'large')
+
+    def test_calculate_custom_quota_size(self):
+        """
+        Calculates the best 'fit' quota size from a custom quota.
+        """
+
+        admin_headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "user_id",
+            'authenticated': True
+        }
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_temp_cache({'test_project': project}, {user.id})
+        cinderquota = cinder_cache['RegionOne']['test_project_id']['quota']
+        cinderquota['gigabytes'] = 6000
+        novaquota = nova_cache['RegionOne']['test_project_id']['quota']
+        novaquota['ram'] = 70000
+        neutronquota = neutron_cache['RegionOne']['test_project_id']['quota']
+        neutronquota['network'] = 4
+
+        url = "/v1/openstack/quotas/?regions=RegionOne"
+
+        response = self.client.get(url, headers=admin_headers)
+        # First check we can actually access the page correctly
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data['regions'][0]['current_quota_size'], 'small')
+
+    def test_return_quota_history(self):
+        """
+        Ensures that the correct quota history and usage data is returned
+        """
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "user_id",
+            'authenticated': True
+        }
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_temp_cache({'test_project_id': project}, {user.id: user})
+
+        url = "/v1/openstack/quotas/"
+
+        data = {'size': 'large',
+                'regions': ['RegionOne', 'RegionTwo']}
+        response = self.client.post(url, data, headers=headers, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+
+        response = self.client.get(url, headers=headers)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        recent_task = response.data['active_quota_tasks'][0]
+        self.assertEqual(
+            recent_task['size'], 'large')
+        self.assertEqual(
+            recent_task['request_user'], 'test@example.com')
+        self.assertEqual(
+            recent_task['status'], 'Awaiting Approval')
+
+    def test_set_multi_region_quota(self):
+        """ Sets a quota to all to all regions in a project """
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "user_id",
+            'authenticated': True
+        }
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+
+        url = "/v1/openstack/quotas/"
+
+        data = {'size': 'medium', 'regions': ['RegionOne', 'RegionTwo']}
+        response = self.client.post(url, data, headers=headers, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+
+        self.check_quota_cache('RegionTwo', 'test_project_id', 'medium')
+
+    def test_set_multi_region_quota_history(self):
+        """
+        Attempts to set a multi region quota with a multi region update history
+        """
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "user_id",
+            'authenticated': True
+        }
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+
+        url = "/v1/openstack/quotas/"
+
+        data = {'size': 'medium',
+                'regions': ['RegionOne', 'RegionTwo']}
+        response = self.client.post(url, data, headers=headers, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+
+        self.check_quota_cache('RegionTwo', 'test_project_id', 'medium')
+
+        data = {'size': 'small',
+                'project_id': 'test_project_id'}
+        response = self.client.post(url, data, headers=headers, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+
+        # All of them stay the same
+        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+
+        self.check_quota_cache('RegionTwo', 'test_project_id', 'medium')
+
+        # Approve the task
+        headers = {
+            'project_name': "admin_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "admin",
+            'user_id': "admin_id",
+            'authenticated': True
+        }
+
+        new_task = Task.objects.all()[1]
+        url = "/v1/tasks/" + new_task.uuid
+        response = self.client.post(url, {'approved': True}, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data,
+            {'notes': ['Task completed successfully.']}
+        )
+
+        self.check_quota_cache('RegionOne', 'test_project_id', 'small')
+
+        self.check_quota_cache('RegionTwo', 'test_project_id', 'small')
+
+    def test_set_multi_quota_single_history(self):
+        """
+        Attempts to set a multi region quota with a single region quota
+        update history
+        """
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "user_id",
+            'authenticated': True
+        }
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+
+        # Setup custom parts of the quota still within 'small' however
+
+        url = "/v1/openstack/quotas/"
+
+        data = {'size': 'medium',
+                'regions': ['RegionOne']}
+        response = self.client.post(url, data, headers=headers, format='json')
+        # First check we can actually access the page correctly
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+
+        url = "/v1/openstack/quotas/"
+
+        data = {'size': 'small',
+                'regions': ['RegionOne', 'RegionTwo']}
+        response = self.client.post(url, data, headers=headers, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+
+        # Quotas stay the same
+        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+        self.check_quota_cache('RegionTwo', 'test_project_id', 'small')
+
+        headers = {
+            'project_name': "admin_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "admin",
+            'user_id': "admin_id",
+            'authenticated': True
+        }
+
+        new_task = Task.objects.all()[1]
+        url = "/v1/tasks/" + new_task.uuid
+
+        response = self.client.post(url, {'approved': True}, format='json',
+                                    headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data,
+            {'notes': ['Task completed successfully.']}
+        )
+
+        self.check_quota_cache('RegionOne', 'test_project_id', 'small')
+        self.check_quota_cache('RegionTwo', 'test_project_id', 'small')
+
+    def test_set_quota_over_limit(self):
+        """ Attempts to set a smaller quota than the current usage """
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "user_id",
+            'authenticated': True
+        }
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+        setup_quota_cache('RegionOne', 'test_project_id', 'medium')
+        # Setup current quota as medium
+        # Create a number of lists with limits higher than the small quota
+
+        global nova_cache
+        nova_cache['RegionOne']['test_project_id'][
+            'absolute']["totalInstancesUsed"] = 11
+
+        url = "/v1/openstack/quotas/"
+
+        data = {'size': 'small',
+                'regions': ['RegionOne']}
+        response = self.client.post(url, data,
+                                    headers=headers, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+
+        data = {'size': 'small',
+                'regions': ['RegionOne']}
+
+        nova_cache['RegionOne']['test_project_id'][
+            'absolute']["totalInstancesUsed"] = 10
+
+        # Test for cinder resources
+        volume_list = [FakeResource(10) for i in range(21)]
+        cinder_cache['RegionOne']['test_project_id']['volumes'] = volume_list
+
+        response = self.client.post(url, data,
+                                    headers=headers, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+
+        # Test for neutron resources
+        cinder_cache['RegionOne']['test_project_id']['volumes'] = []
+        net_list = [{} for i in range(4)]
+        neutron_cache['RegionOne']['test_project_id']['networks'] = net_list
+        response = self.client.post(url, data,
+                                    headers=headers, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+
+        # Check that after they are all cleared to sub small levels
+        # the quota updates
+        neutron_cache['RegionOne']['test_project_id']['networks'] = []
+        response = self.client.post(url, data,
+                                    headers=headers, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.check_quota_cache('RegionOne', 'test_project_id', 'small')
+
+    def test_set_quota_invalid_region(self):
+        """ Attempts to set a quota on a non-existent region """
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "user_id",
+            'authenticated': True
+        }
+
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_temp_cache({'test_project': project}, {user.id: user})
+
+        url = "/v1/openstack/quotas/"
+
+        data = {'size': 'small',
+                'regions': ['RegionThree']}
+        response = self.client.post(url, data,
+                                    headers=headers, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

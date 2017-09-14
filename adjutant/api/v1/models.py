@@ -49,3 +49,5 @@ register_taskview_class(
     r'^openstack/users/email-update/?$', openstack.UserUpdateEmail)
 register_taskview_class(
     r'^openstack/sign-up/?$', openstack.SignUp)
+register_taskview_class(
+    r'^openstack/quotas/?$', openstack.UpdateProjectQuotas)

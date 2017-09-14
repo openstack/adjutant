@@ -217,3 +217,6 @@ class IdentityManager(object):
         except ks_exceptions.NotFound:
             region = None
         return region
+
+    def list_regions(self, **kwargs):
+        return self.ks_client.regions.list(**kwargs)

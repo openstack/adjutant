@@ -86,7 +86,8 @@ ACTIVE_TASKVIEWS = [
     'InviteUser',
     'ResetPassword',
     'EditUser',
-    'UpdateEmail'
+    'UpdateEmail',
+    'UpdateProjectQuotas',
 ]
 
 DEFAULT_TASK_SETTINGS = {
@@ -162,8 +163,8 @@ DEFAULT_ACTION_SETTINGS = {
             'RegionOne': {
                 'quota_size': 'small'
             },
-            'RegionTwo': {
-                'quota_size': 'large'
+            'RegionThree': {
+                'quota_size': 'large_cinder_only'
             }
         },
     },
@@ -183,7 +184,7 @@ DEFAULT_ACTION_SETTINGS = {
     },
     'ResetUserPasswordAction': {
         'blacklisted_roles': ['admin'],
-    }
+    },
 }
 
 TASK_SETTINGS = {
@@ -252,11 +253,23 @@ TASK_SETTINGS = {
     'update_email': {
         'emails': {
             'initial': None,
+            'token': {
+                'subject': 'email_update_token',
+                'template': 'email_update_token.txt'
+            },
+            'completed': {
+                'subject': 'Email Update Complete',
+                'template': 'email_update_completed.txt'
+            }
         },
     },
     'edit_user': {
         'role_blacklist': ['admin']
-    }
+    },
+    'update_quota': {
+        'duplicate_policy': 'cancel',
+        'days_between_autoapprove': 30,
+    },
 }
 
 ROLES_MAPPING = {
@@ -301,14 +314,75 @@ PROJECT_QUOTA_SIZES = {
             'subnet': 3,
         },
     },
-    'large': {
-        'cinder': {
-            'gigabytes': 73571,
-            'snapshots': 73572,
-            'volumes': 73573,
+    "medium": {
+        "cinder": {
+            "gigabytes": 10000,
+            "volumes": 100,
+            "snapshots": 300
+        },
+        "nova": {
+            "metadata_items": 128,
+            "injected_file_content_bytes": 10240,
+            "ram": 327680,
+            "floating_ips": 25,
+            "key_pairs": 50,
+            "instances": 50,
+            "security_group_rules": 400,
+            "injected_files": 5,
+            "cores": 100,
+            "fixed_ips": 0,
+            "security_groups": 50
+        },
+        "neutron": {
+            "security_group_rule": 400,
+            "subnet": 5,
+            "network": 5,
+            "floatingip": 25,
+            "security_group": 50,
+            "router": 5,
+            "port": 250
+        }
+    },
+    "large": {
+        "cinder": {
+            "gigabytes": 50000,
+            "volumes": 200,
+            "snapshots": 600
+        },
+        "nova": {
+            "metadata_items": 128,
+            "injected_file_content_bytes": 10240,
+            "ram": 655360,
+            "floating_ips": 50,
+            "key_pairs": 50,
+            "instances": 100,
+            "security_group_rules": 800,
+            "injected_files": 5,
+            "cores": 200,
+            "fixed_ips": 0,
+            "security_groups": 100
+        },
+        "neutron": {
+            "security_group_rule": 800,
+            "subnet": 10,
+            "network": 10,
+            "floatingip": 50,
+            "security_group": 100,
+            "router": 10,
+            "port": 500
+        }
+    },
+    "large_cinder_only": {
+        "cinder": {
+            "gigabytes": 50000,
+            "volumes": 200,
+            "snapshots": 600
         },
     },
+
 }
+
+QUOTA_SIZES_ASC = ['small', 'medium', 'large']
 
 SHOW_ACTION_ENDPOINTS = True
 
@@ -330,4 +404,5 @@ conf_dict = {
     "ROLES_MAPPING": ROLES_MAPPING,
     "PROJECT_QUOTA_SIZES": PROJECT_QUOTA_SIZES,
     "SHOW_ACTION_ENDPOINTS": SHOW_ACTION_ENDPOINTS,
+    "QUOTA_SIZES_ASC": QUOTA_SIZES_ASC,
 }

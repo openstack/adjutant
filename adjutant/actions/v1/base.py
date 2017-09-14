@@ -17,6 +17,7 @@ from logging import getLogger
 from django.conf import settings
 from django.utils import timezone
 
+from adjutant.common.quota import QuotaManager
 from adjutant.actions import user_store
 from adjutant.actions.models import Action
 
@@ -219,6 +220,17 @@ class ResourceMixin(object):
         self.domain_id = self.domain.id
         return True
 
+    def _validate_region_exists(self, region):
+        # Check that the region actually exists
+        id_manager = user_store.IdentityManager()
+        v_region = id_manager.get_region(region)
+        if not v_region:
+            self.add_note('ERROR: Region: %s does not exist.' % region)
+            return False
+        self.add_note('Region: %s exists.' % region)
+
+        return True
+
 
 class UserMixin(ResourceMixin):
     """Mixin with functions for users."""
@@ -399,6 +411,44 @@ class ProjectMixin(ResourceMixin):
         self.action.task.cache['project_id'] = project.id
         self.set_cache('project_id', project.id)
         self.add_note("New project '%s' created." % project.name)
+
+
+class QuotaMixin(ResourceMixin):
+    """Mixin with functions for dealing with quotas and limits."""
+
+    def _region_usage_greater_than_quota(self, usage, quota):
+        for service, values in quota.items():
+            for resource, value in values.items():
+                try:
+                    if usage[service][resource] > value and value >= 0:
+                        return True
+                except KeyError:
+                    pass
+        return False
+
+    def _usage_greater_than_quota(self, regions):
+        quota_manager = QuotaManager(
+            self.project_id,
+            size_difference_threshold=self.size_difference_threshold)
+        quota = settings.PROJECT_QUOTA_SIZES.get(self.size, {})
+        for region in regions:
+            current_usage = quota_manager.get_current_usage(region)
+            if self._region_usage_greater_than_quota(current_usage, quota):
+                return True
+        return False
+
+    def _validate_regions_exist(self):
+        # Check that all the regions in the list exist
+        for region in self.regions:
+            if not self._validate_region_exists(region):
+                return False
+        return True
+
+    def _validate_usage_lower_than_quota(self):
+        if self._usage_greater_than_quota(self.regions):
+            self.add_note("Current usage greater than new quota")
+            return False
+        return True
 
 
 class UserIdAction(BaseAction):

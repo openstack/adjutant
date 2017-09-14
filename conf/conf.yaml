@@ -70,6 +70,7 @@ ACTIVE_TASKVIEWS:
     - RoleList
     - SignUp
     - UserUpdateEmail
+    - UpdateProjectQuotas
 
 DEFAULT_TASK_SETTINGS:
     emails:
@@ -173,6 +174,8 @@ DEFAULT_ACTION_SETTINGS:
         regions:
             RegionOne:
                 quota_size: small
+    UpdateProjectQuotasAction:
+        days_between_autoapprove: 30
     SendAdditionalEmailAction:
       initial:
           email_current_user: false
@@ -235,13 +238,13 @@ TASK_SETTINGS:
                     emails:
                         - signups@example.com
         default_region: RegionOne
-        # If 'None' (null in yaml), will default to domain as parent.
-        # If domain isn't set explicity, will service user domain (see KEYSTONE).
+        # If 'None' (null in yaml) will default to domain as parent.
+        # If domain isn't set explicity will service user domain (see KEYSTONE).
         default_parent_id: null
     invite_user:
         duplicate_policy: cancel
         emails:
-            # To not send this email, set the value to null
+            # To not send this email set the value to null
             initial: null
             token:
                 subject: Invitation to an OpenStack project
@@ -303,6 +306,15 @@ TASK_SETTINGS:
                     subject: OpenStack Email Update Requested
                     template: email_update_started.txt
                     email_current_user: True
+    update_quota:
+        duplicate_policy: cancel
+        size_difference_threshold: 0.1
+        emails:
+            initial: null
+            token: null
+            completed:
+                subject: Openstack Quota updated
+                template: quota_completed.txt
 
 # mapping between roles and managable roles
 ROLES_MAPPING:
@@ -347,3 +359,59 @@ PROJECT_QUOTA_SIZES:
             security_group: 20
             security_group_rule: 100
             subnet: 3
+    medium:
+        cinder:
+            gigabytes: 10000
+            volumes: 100
+            snapshots: 300
+        nova:
+            metadata_items: 128
+            injected_file_content_bytes: 10240
+            ram: 327680
+            floating_ips: 25
+            key_pairs: 50
+            instances: 50
+            security_group_rules: 400
+            injected_files: 5
+            cores: 100
+            fixed_ips: 0
+            security_groups: 50
+        neutron:
+            security_group_rule: 400
+            subnet: 5
+            network: 5
+            floatingip: 25
+            security_group: 50
+            router: 5
+            port: 250
+    large:
+        cinder:
+            gigabytes: 50000
+            volumes: 200
+            snapshots: 600
+        nova:
+            metadata_items: 128
+            injected_file_content_bytes: 10240
+            ram: 655360
+            floating_ips: 50
+            key_pairs: 50
+            instances: 100
+            security_group_rules: 800
+            injected_files: 5
+            cores: 200
+            fixed_ips: 0
+            security_groups: 100
+        neutron:
+            security_group_rule: 800
+            subnet: 10
+            network: 10
+            floatingip: 50
+            security_group: 100
+            router: 10
+            port: 500
+
+# Ordered list of quota sizes from smallest to biggest
+QUOTA_SIZES_ASC:
+    - small
+    - medium
+    - large

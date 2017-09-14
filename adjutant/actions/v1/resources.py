@@ -1,4 +1,4 @@
-# Copyright (C) 2015 Catalyst IT Ltd
+#  Copyright (C) 2015 Catalyst IT Ltd
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -12,9 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from adjutant.actions.v1.base import BaseAction, ProjectMixin
-from django.conf import settings
+from adjutant.actions.v1.base import BaseAction, ProjectMixin, QuotaMixin
 from adjutant.actions import openstack_clients, user_store
+from adjutant.api import models
+from adjutant.common.quota import QuotaManager
+
+from django.utils import timezone
+from django.conf import settings
+
+from datetime import timedelta
 
 
 class NewDefaultNetworkAction(BaseAction, ProjectMixin):
@@ -218,8 +224,16 @@ class NewProjectDefaultNetworkAction(NewDefaultNetworkAction):
             self._create_network()
 
 
-class SetProjectQuotaAction(BaseAction):
-    """ Updates quota for a given project to a configured quota level """
+class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
+    """ Updates quota for a project to a given size in a list of regions """
+
+    required = [
+        'size',
+        'project_id',
+        'regions',
+    ]
+
+    default_days_between_autoapprove = 30
 
     class ServiceQuotaFunctor(object):
         def __call__(self, project_id, values):
@@ -252,35 +266,161 @@ class SetProjectQuotaAction(BaseAction):
         'neutron': ServiceQuotaNeutronFunctor
     }
 
-    def _validate_project_exists(self):
-        if not self.project_id:
-            self.add_note('No project_id set, previous action should have '
-                          'set it.')
-            return False
+    def __init__(self, *args, **kwargs):
+        super(UpdateProjectQuotasAction, self).__init__(*args, **kwargs)
+        self.size_difference_threshold = settings.TASK_SETTINGS.get(
+            self.action.task.task_type, {}).get(
+            'size_difference_threshold')
 
-        id_manager = user_store.IdentityManager()
-        project = id_manager.get_project(self.project_id)
-        if not project:
-            self.add_note('Project with id %s does not exist.' %
-                          self.project_id)
+    def _get_email(self):
+
+        if settings.USERNAME_IS_EMAIL:
+            return self.action.task.keystone_user['username']
+        else:
+            id_manager = user_store.IdentityManager()
+            user = id_manager.users.get(self.keystone_user['user_id'])
+            email = user.email
+            if email:
+                return email
+
+        self.add_note("User email address not set.")
+        return None
+
+    def _validate_quota_size_exists(self):
+        size_list = settings.PROJECT_QUOTA_SIZES.keys()
+        if self.size not in size_list:
+            self.add_note("Quota size: %s does not exist" % self.size)
             return False
-        self.add_note('Project with id %s exists.' % self.project_id)
         return True
 
-    def _pre_validate(self):
-        # Nothing to validate yet.
-        self.action.valid = True
-        self.action.save()
+    def _set_region_quota(self, region_name, quota_size):
+        # Set the quota for an individual region
+        quota_settings = settings.PROJECT_QUOTA_SIZES.get(quota_size, {})
+        if not quota_settings:
+            self.add_note(
+                "Project quota not defined for size '%s' in region %s." % (
+                    quota_size, region_name))
+            return
+
+        for service_name, values in quota_settings.items():
+            updater_class = self._quota_updaters.get(service_name)
+            if not updater_class:
+                self.add_note("No quota updater found for %s. Ignoring" %
+                              service_name)
+                continue
+            # functor for the service+region
+            service_functor = updater_class(region_name)
+            service_functor(self.project_id, values)
+        self.add_note("Project quota for region %s set to %s" % (
+                      region_name, quota_size))
+
+    def _can_auto_approve(self):
+        wait_days = self.settings.get('days_between_autoapprove',
+                                      self.default_days_between_autoapprove)
+        task_list = models.Task.objects.filter(
+            completed_on__gte=timezone.now() - timedelta(days=wait_days),
+            task_type__exact=self.action.task.task_type,
+            cancelled__exact=False,
+            project_id__exact=self.project_id)
+
+        # Check to see if there have been any updates in the relavent regions
+        # recently
+        for task in task_list:
+            for action in task.actions:
+                intersect = set(action.action_data[
+                    'regions']).intersection(self.regions)
+                if intersect:
+                    self.add_note(
+                        "Quota has already been updated within the auto "
+                        "approve time limit.")
+                    return False
+
+        region_sizes = []
+
+        quota_manager = QuotaManager(self.project_id,
+                                     self.size_difference_threshold)
+
+        for region in self.regions:
+            current_size = quota_manager.get_region_quota_data(
+                region)['current_quota_size']
+            region_sizes.append(current_size)
+            self.add_note(
+                "Project has size '%s' in region: '%s'" %
+                (current_size, region))
+
+        # Check for preapproved_quotas
+        preapproved_quotas = []
+
+        # If all region sizes are the same
+        if region_sizes.count(region_sizes[0]) == len(region_sizes):
+            preapproved_quotas = quota_manager.get_quota_change_options(
+                region_sizes[0])
+
+        if self.size not in preapproved_quotas:
+            self.add_note(
+                "Quota size '%s' not in preapproved list: %s" %
+                (self.size, preapproved_quotas))
+            return False
+        self.add_note(
+            "Quota size '%s' in preapproved list: %s" %
+            (self.size, preapproved_quotas))
+        return True
 
     def _validate(self):
         # Make sure the project id is valid and can be used
         self.action.valid = (
-            self._validate_project_exists()
+            self._validate_project_id() and
+            self._validate_quota_size_exists() and
+            self._validate_regions_exist() and
+            self._validate_usage_lower_than_quota()
         )
         self.action.save()
 
     def _pre_approve(self):
-        self._pre_validate()
+        self._validate()
+        # Set auto-approval
+        self.set_auto_approve(self._can_auto_approve())
+
+    def _post_approve(self):
+        self._validate()
+
+        if not self.valid or self.action.state == "completed":
+            return
+
+        for region in self.regions:
+            self._set_region_quota(region, self.size)
+
+        self.action.state = "completed"
+        self.action.task.cache['project_id'] = self.project_id
+        self.action.task.cache['size'] = self.size
+
+        self.action.save()
+
+    def _submit(self, token_data):
+        """
+        Nothing to do here. Everything is done at post_approve.
+        """
+        pass
+
+
+class SetProjectQuotaAction(UpdateProjectQuotasAction):
+    """ Updates quota for a given project to a configured quota level """
+    required = []
+
+    def _get_email(self):
+        return None
+
+    def _validate(self):
+        # Make sure the project id is valid and can be used
+        self.action.valid = (
+            self._validate_project_id()
+        )
+        self.action.save()
+
+    def _pre_approve(self):
+        # Nothing to validate yet
+        self.action.valid = True
+        self.action.save()
 
     def _post_approve(self):
         # Assumption: another action has placed the project_id into the cache.
@@ -294,24 +434,7 @@ class SetProjectQuotaAction(BaseAction):
         regions_dict = self.settings.get('regions', {})
         for region_name, region_settings in regions_dict.items():
             quota_size = region_settings.get('quota_size')
-            quota_settings = settings.PROJECT_QUOTA_SIZES.get(quota_size, {})
-            if not quota_settings:
-                self.add_note(
-                    "Project quota not defined for size '%s' in region %s." % (
-                        quota_size, region_name))
-                continue
-            for service_name, values in quota_settings.items():
-                updater_class = self._quota_updaters.get(service_name)
-                if not updater_class:
-                    self.add_note("No quota updater found for %s. Ignoring" %
-                                  service_name)
-                    continue
-                # functor for the service+region
-                service_functor = updater_class(region_name)
-                service_functor(self.project_id, values)
-            self.add_note(
-                "Project quota for region %s set to %s" % (
-                    region_name, quota_size))
+            self._set_region_quota(region_name, quota_size)
 
         self.action.state = "completed"
         self.action.save()

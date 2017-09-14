@@ -781,7 +781,7 @@ class TaskViewTests(AdjutantAPITestCase):
         self.assertEqual(mail.outbox[0].subject, 'email_update_additional')
 
         self.assertEqual(mail.outbox[1].to, ['new_test@example.com'])
-        self.assertEqual(mail.outbox[1].subject, 'Your Token')
+        self.assertEqual(mail.outbox[1].subject, 'email_update_token')
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -845,7 +845,7 @@ class TaskViewTests(AdjutantAPITestCase):
         self.assertEqual(mail.outbox[0].subject, 'email_update_additional')
 
         self.assertEqual(mail.outbox[1].to, ['new_test@example.com'])
-        self.assertEqual(mail.outbox[1].subject, 'Your Token')
+        self.assertEqual(mail.outbox[1].subject, 'email_update_token')
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -1170,7 +1170,7 @@ class TaskViewTests(AdjutantAPITestCase):
         """
 
         # NOTE(amelia): sending this email here is probably not the intended
-        # case. It would be more useful in cases such as a quota update or a
+        # case. It would be more useful in utils such as a quota update or a
         # child project being created that all the project admins should be
         # notified of
 
