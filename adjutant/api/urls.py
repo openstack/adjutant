@@ -12,14 +12,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from django.apps import apps
 from django.conf.urls import url, include
 from django.conf import settings
 
 from rest_framework_swagger.views import get_swagger_view
 
-urlpatterns = [
-    url(r'^v1/', include('adjutant.api.v1.urls')),
-]
+urlpatterns = []
+
+# NOTE(adriant): This may not be the best approach, but it does work. Will
+# gladly accept a cleaner alternative if it presents itself.
+if apps.is_installed('adjutant.api.v1'):
+    urlpatterns.append(url(r'^v1/', include('adjutant.api.v1.urls')))
+
 
 if settings.DEBUG:
     schema_view = get_swagger_view(title='Adjutant API')
