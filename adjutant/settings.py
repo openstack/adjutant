@@ -27,6 +27,7 @@ import os
 import sys
 import yaml
 from adjutant.utils import setup_task_settings
+from adjutant.exceptions import ConfirmationException
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 # Application definition
@@ -148,7 +149,14 @@ USERNAME_IS_EMAIL = CONFIG['USERNAME_IS_EMAIL']
 # Keystone admin credentials:
 KEYSTONE = CONFIG['KEYSTONE']
 
-TOKEN_SUBMISSION_URL = CONFIG['TOKEN_SUBMISSION_URL']
+TOKEN_SUBMISSION_URL = CONFIG.get('TOKEN_SUBMISSION_URL')
+if TOKEN_SUBMISSION_URL:
+    print("'TOKEN_SUBMISSION_URL' is deprecated, use 'HORIZON_URL' instead")
+
+HORIZON_URL = CONFIG.get('HORIZON_URL')
+
+if not HORIZON_URL and not TOKEN_SUBMISSION_URL:
+    raise ConfirmationException("Must supply 'HORIZON_URL'")
 
 TOKEN_EXPIRE_TIME = CONFIG['TOKEN_EXPIRE_TIME']
 

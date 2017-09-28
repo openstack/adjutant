@@ -7,7 +7,7 @@ There is a task that needs some attention.
 Related Task:
 uuid: {{ task.uuid }}
 ip_address: {{ task.ip_address }}
-keystone_user: {{ task.keystone_user }}
+keystone_user: {{ task.keystone_user|safe }}
 project_id: {{ task.project_id }}
 task_type: {{ task.task_type }}
 cancelled: {{ task.cancelled }}
@@ -17,11 +17,17 @@ created_on: {{ task.created_on }}
 approved_on: {{ task.approved_on }}
 completed_on: {{ task.completed_on }}
 action_notes:
-{% for action, notes in task.action_notes.items %}- {{ action }}
-{% for note in notes %}    - {{ note }}
+{% for action, notes in task.action_notes.items %}- {{ action|safe }}
+{% for note in notes %}    - {{ note|safe }}
 {% endfor %}{% endfor %}
 
 Notification details:
 uuid: {{ notification.uuid }}
 notes:
-{{ notification.notes }}
+{{ notification.notes|safe }}
+
+{% if task_url %}
+Task link:
+{{ task_url }}{{ task.uuid }}
+
+{% endif %}

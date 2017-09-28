@@ -32,3 +32,7 @@ class ActionNotFound(BaseException):
 
 class SerializerMissingException(BaseException):
     """ Serializer configured but it does not exist """
+
+
+class ConfirmationException(BaseException):
+    """ Missing or incorrect configuration value. """

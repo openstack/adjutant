@@ -70,6 +70,13 @@ class EmailNotification(NotificationEngine):
         context = {
             'task': task, 'notification': notification}
 
+        if settings.HORIZON_URL:
+            task_url = settings.HORIZON_URL
+            if not task_url.endswith('/'):
+                task_url += '/'
+            task_url += 'management/tasks/'
+            context['task_url'] = task_url
+
         if notification.error:
             subject = "Error - %s notification" % task.task_type
         else:

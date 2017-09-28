@@ -85,8 +85,17 @@ def send_stage_email(task, email_conf, token=None):
         'actions': actions
     }
     if token:
+        if settings.HORIZON_URL:
+            tokenurl = settings.HORIZON_URL
+            if not tokenurl.endswith('/'):
+                tokenurl += '/'
+            tokenurl += 'token/'
+        else:
+            tokenurl = settings.TOKEN_SUBMISSION_URL
+            if not tokenurl.endswith('/'):
+                tokenurl += '/'
         context.update({
-            'tokenurl': settings.TOKEN_SUBMISSION_URL,
+            'tokenurl': tokenurl,
             'token': token.token
         })
 

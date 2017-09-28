@@ -56,7 +56,7 @@ KEYSTONE:
     auth_url: http://localhost/identity/v3
     domain_id: default
 
-TOKEN_SUBMISSION_URL: http://192.168.122.160:8080/token/
+HORIZON_URL: http://localhost:8080/
 
 # time for the token to expire in hours
 TOKEN_EXPIRE_TIME: 24
