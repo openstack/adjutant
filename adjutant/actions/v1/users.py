@@ -166,12 +166,11 @@ class ResetUserPasswordAction(UserNameAction, UserMixin):
 
     def __init__(self, *args, **kwargs):
         super(ResetUserPasswordAction, self).__init__(*args, **kwargs)
-        self.blacklist = self.settings.get("blacklisted_roles", {})
+        self.blacklist = self.settings.get("blacklisted_roles", [])
 
     def _validate_user_roles(self):
         id_manager = user_store.IdentityManager()
 
-        self.user = id_manager.find_user(self.username, self.domain.id)
         roles = id_manager.get_all_roles(self.user)
 
         user_roles = []
@@ -182,23 +181,30 @@ class ResetUserPasswordAction(UserNameAction, UserMixin):
             self.add_note('Cannot reset users with blacklisted roles.')
             return False
 
-        if self.user.email == self.email:
-            self.action.need_token = True
-            self.set_token_fields(["password"])
-            self.add_note('Existing user with matching email.')
-            return True
-        else:
-            self.add_note('Existing user with non-matching email.')
-            return False
+        return True
+
+    def _validate_user_email(self):
+        # NOTE(adriant): We only need to check the USERNAME_IS_EMAIL=False
+        # case since '_validate_username_exists' will ensure the True case
+        if not settings.USERNAME_IS_EMAIL:
+            if self.user.email.lower() != self.email.lower():
+                self.add_note('Existing user with non-matching email.')
+                return False
+
+        self.action.need_token = True
+        self.set_token_fields(["password"])
+        self.add_note('Existing user with matching email.')
+        return True
 
     def _validate(self):
         # Here, the order of validation matters
         # as each one adds new class variables
-        self.action.valid = (
-            self._validate_domain_name() and
-            self._validate_username_exists() and
-            self._validate_user_roles()
-        )
+        self.action.valid = all([
+            self._validate_domain_name(),
+            self._validate_username_exists(),
+            self._validate_user_roles(),
+            self._validate_user_email(),
+        ])
         self.action.save()
 
     def _pre_approve(self):

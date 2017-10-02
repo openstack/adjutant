@@ -438,6 +438,52 @@ class UserActionTests(AdjutantTestCase):
             fake_clients.identity_temp_cache['users'][user.id].password,
             '123456')
 
+    def test_reset_user_password_case_insensitive(self):
+        """
+        Existing user, ensure action is case insensitive.
+
+        USERNAME_IS_EMAIL=True
+        """
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "gibberish"
+
+        setup_temp_cache({}, {user.id: user})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
+
+        data = {
+            'domain_name': 'Default',
+            'email': 'TEST@example.com',
+            'project_name': 'test_project',
+        }
+
+        action = ResetUserPasswordAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
+        token_data = {'password': '123456'}
+        action.submit(token_data)
+        self.assertEquals(action.valid, True)
+
+        self.assertEquals(
+            fake_clients.identity_temp_cache['users'][user.id].password,
+            '123456')
+
     def test_reset_user_password_no_user(self):
         """
         Reset password for a non-existant user.
@@ -943,6 +989,54 @@ class UserActionTests(AdjutantTestCase):
         self.assertEquals(
             fake_clients.identity_temp_cache['users'][user.id].email,
             'test@example.com')
+
+    @override_settings(USERNAME_IS_EMAIL=False)
+    def test_reset_user_password_case_insensitive_not_username(self):
+        """
+        Existing user, ensure action is case insensitive.
+
+        USERNAME_IS_EMAIL=False
+        """
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test_user"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "gibberish"
+
+        setup_temp_cache({}, {user.id: user})
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0",
+            keystone_user={
+                'roles': ['admin', 'project_mod'],
+                'project_id': 'test_project_id',
+                'project_domain_id': 'default',
+            })
+
+        data = {
+            'domain_name': 'Default',
+            'username': 'test_USER',
+            'email': 'TEST@example.com',
+            'project_name': 'test_project',
+        }
+
+        action = ResetUserPasswordAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEquals(action.valid, True)
+
+        action.post_approve()
+        self.assertEquals(action.valid, True)
+
+        token_data = {'password': '123456'}
+        action.submit(token_data)
+        self.assertEquals(action.valid, True)
+
+        self.assertEquals(
+            fake_clients.identity_temp_cache['users'][user.id].password,
+            '123456')
 
     @override_settings(USERNAME_IS_EMAIL=True)
     def test_update_email(self):

@@ -99,7 +99,7 @@ class FakeManager(object):
         domain = self._domain_from_id(domain)
         global identity_temp_cache
         for user in identity_temp_cache['users'].values():
-            if user.name == name and user.domain == domain.id:
+            if user.name.lower() == name.lower() and user.domain == domain.id:
                 return user
         return None
 
@@ -218,7 +218,8 @@ class FakeManager(object):
         domain = self._domain_from_id(domain)
         global identity_temp_cache
         for project in identity_temp_cache['projects'].values():
-            if project.name == project_name and project.domain == domain.id:
+            if (project.name.lower() == project_name.lower() and
+                    project.domain == domain.id):
                 return project
         return None
 
@@ -259,7 +260,7 @@ class FakeManager(object):
     def find_domain(self, domain_name):
         global identity_temp_cache
         for domain in identity_temp_cache['domains'].values():
-            if domain.name == domain_name:
+            if domain.name.lower() == domain_name.lower():
                 return domain
         return None
 
