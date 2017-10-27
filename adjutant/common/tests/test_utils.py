@@ -17,7 +17,9 @@ import mock
 from rest_framework import status
 
 from adjutant.api.models import Token
-from adjutant.common.tests.fake_clients import FakeManager, setup_temp_cache
+from adjutant.common.tests import fake_clients
+from adjutant.common.tests.fake_clients import (
+    FakeManager, setup_identity_cache)
 from adjutant.common.tests.utils import (AdjutantAPITestCase,
                                          modify_dict_settings)
 
@@ -42,28 +44,34 @@ class ModifySettingsTests(AdjutantAPITestCase):
         Test override reset, by changing the reset password blacklisted roles
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="test_password",
+            email="test@example.com")
 
-        user2 = mock.Mock()
-        user2.id = 'user_2'
-        user2.name = "admin@example.com"
-        user2.email = "admin@example.com"
-        user2.domain = "default"
-        user2.password = "admin_password"
+        user2 = fake_clients.FakeUser(
+            name="admin@example.com", password="admin_password",
+            email="admin@example.com")
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {user.id: ['test_role'], user2.id: ['admin']}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project},
-                         {user.id: user, user2.id: user2})
+        test_role = fake_clients.FakeRole("test_role")
+
+        assignments = [
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="test_role",
+                user={'id': user.id}
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="admin",
+                user={'id': user2.id}
+            ),
+        ]
+
+        setup_identity_cache(
+            projects=[project], users=[user, user2],
+            role_assignments=assignments, extra_roles=[test_role])
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
@@ -103,21 +111,20 @@ class ModifySettingsTests(AdjutantAPITestCase):
         Test override reset, by changing the reset password blacklisted roles
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "admin@example.com"
-        user.email = "admin@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
+        user = fake_clients.FakeUser(
+            name="admin@example.com", password="admin_password",
+            email="admin@example.com")
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {user.id: ['admin']}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project},
-                         {user.id: user})
+        assignment = fake_clients.FakeRoleAssignment(
+            scope={'project': {'id': project.id}},
+            role_name="admin",
+            user={'id': user.id}
+        )
+
+        setup_identity_cache(
+            projects=[project], users=[user], role_assignments=[assignment])
 
         url = "/v1/actions/ResetPassword"
         data = {'email': 'admin@example.com'}
@@ -151,28 +158,34 @@ class ModifySettingsTests(AdjutantAPITestCase):
         Test override reset, by changing the reset password blacklisted roles
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="test_password",
+            email="test@example.com")
 
-        user2 = mock.Mock()
-        user2.id = 'user_2'
-        user2.name = "admin@example.com"
-        user2.email = "admin@example.com"
-        user2.domain = "default"
-        user2.password = "admin_password"
+        user2 = fake_clients.FakeUser(
+            name="admin@example.com", password="admin_password",
+            email="admin@example.com")
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {user.id: ['test_role'], user2.id: ['admin']}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project},
-                         {user.id: user, user2.id: user2})
+        test_role = fake_clients.FakeRole("test_role")
+
+        assignments = [
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="test_role",
+                user={'id': user.id}
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="admin",
+                user={'id': user2.id}
+            ),
+        ]
+
+        setup_identity_cache(
+            projects=[project], users=[user, user2],
+            role_assignments=assignments, extra_roles=[test_role])
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
@@ -191,31 +204,30 @@ class ModifySettingsTests(AdjutantAPITestCase):
         Tests the update operator using email sending
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="test_password",
+            email="test@example.com")
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {user.id: ['project_admin']}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project},
-                         {user.id: user})
+        assignment = fake_clients.FakeRoleAssignment(
+            scope={'project': {'id': project.id}},
+            role_name="project_admin",
+            user={'id': user.id}
+        )
+
+        setup_identity_cache(
+            projects=[project], users=[user], role_assignments=[assignment])
 
         url = "/v1/actions/UpdateEmail"
         data = {'new_email': "new_test@example.com"}
 
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
-            'user_id': "user_id",
+            'user_id': user.id,
             'authenticated': True
         }
 

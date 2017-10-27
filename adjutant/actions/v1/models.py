@@ -16,7 +16,8 @@ from django.conf import settings
 
 from adjutant.actions.v1 import serializers
 from adjutant.actions.v1.projects import (
-    NewProjectWithUserAction, AddDefaultUsersToProjectAction)
+    NewProjectWithUserAction, NewProjectAction,
+    AddDefaultUsersToProjectAction)
 from adjutant.actions.v1.users import (
     EditUserRolesAction, NewUserAction, ResetUserPasswordAction,
     UpdateUserEmailAction)
@@ -37,6 +38,7 @@ def register_action_class(action_class, serializer_class):
 # Register Project actions:
 register_action_class(
     NewProjectWithUserAction, serializers.NewProjectWithUserSerializer)
+register_action_class(NewProjectAction, serializers.NewProjectSerializer)
 register_action_class(
     AddDefaultUsersToProjectAction,
     serializers.AddDefaultUsersToProjectSerializer)

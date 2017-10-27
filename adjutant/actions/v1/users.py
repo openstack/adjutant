@@ -33,6 +33,7 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
         'email',
         'project_id',
         'roles',
+        'inherited_roles',
         'domain_id',
     ]
 
@@ -116,6 +117,7 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
             # default action: Create a new user in the tenant and add roles
             user = self.create_user(token_data['password'])
             self.grant_roles(user, self.roles, self.project_id)
+            self.grant_roles(user, self.inherited_roles, self.project_id, True)
 
             self.add_note(
                 'User %s has been created, with roles %s in project %s.'
@@ -126,6 +128,7 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
             user = self.find_user()
             self.enable_user(user)
             self.grant_roles(user, self.roles, self.project_id)
+            self.grant_roles(user, self.inherited_roles, self.project_id, True)
             self.update_password(token_data['password'])
 
             self.add_note('User %s password has been changed.' % self.username)
@@ -139,6 +142,7 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
             # Existing action: only add roles.
             user = self.find_user()
             self.grant_roles(user, self.roles, self.project_id)
+            self.grant_roles(user, self.inherited_roles, self.project_id, True)
 
             self.add_note(
                 'Existing user %s has been given roles %s in project %s.'
@@ -187,7 +191,7 @@ class ResetUserPasswordAction(UserNameAction, UserMixin):
         # NOTE(adriant): We only need to check the USERNAME_IS_EMAIL=False
         # case since '_validate_username_exists' will ensure the True case
         if not settings.USERNAME_IS_EMAIL:
-            if self.user.email.lower() != self.email.lower():
+            if self.user and self.user.email.lower() != self.email.lower():
                 self.add_note('Existing user with non-matching email.')
                 return False
 
@@ -234,6 +238,7 @@ class EditUserRolesAction(UserIdAction, ProjectMixin, UserMixin):
         'project_id',
         'user_id',
         'roles',
+        'inherited_roles',
         'remove'
     ]
 
@@ -251,35 +256,35 @@ class EditUserRolesAction(UserIdAction, ProjectMixin, UserMixin):
         project = id_manager.get_project(self.project_id)
         # user roles
         current_roles = id_manager.get_roles(user, project)
-        current_role_names = {role.name for role in current_roles}
-
-        # NOTE(adriant): Only allow someone to edit roles if all roles from
-        # the target user can be managed by editor.
-        can_manage_roles = user_store.get_managable_roles(
-            self.action.task.keystone_user['roles'])
-        if not set(can_manage_roles).issuperset(current_role_names):
-            self.add_note(
-                'Not all target user roles are manageable.')
-            return False
-
+        current_inherited_roles = id_manager.get_roles(
+            user, project, inherited=True)
+        current_roles = {role.name for role in current_roles}
+        current_inherited_roles = {
+            role.name for role in current_inherited_roles}
         if self.remove:
-            remaining = set(current_role_names) & set(self.roles)
-            if not remaining:
+            remaining = set(current_roles) & set(self.roles)
+            remaining_inherited = (
+                set(current_inherited_roles) & set(self.inherited_roles))
+            if not remaining and not remaining_inherited:
                 self.action.state = "complete"
                 self.add_note(
                     "User doesn't have roles to remove.")
             else:
                 self.roles = list(remaining)
+                self.inherited_roles = list(remaining_inherited)
                 self.add_note(
                     'User has roles to remove.')
         else:
-            missing = set(self.roles) - set(current_role_names)
-            if not missing:
+            missing = set(self.roles) - set(current_roles)
+            missing_inherited = (
+                set(self.inherited_roles) - set(current_inherited_roles))
+            if not missing and not missing_inherited:
                 self.action.state = "complete"
                 self.add_note(
                     'User already has roles.')
             else:
                 self.roles = list(missing)
+                self.inherited_roles = list(missing_inherited)
                 self.add_note(
                     'User user missing roles.')
         # All paths are valid here
@@ -314,23 +319,34 @@ class EditUserRolesAction(UserIdAction, ProjectMixin, UserMixin):
             user = self._get_target_user()
             self._user_roles_edit(user, self.roles, self.project_id,
                                   remove=self.remove)
+            self._user_roles_edit(user, self.inherited_roles, self.project_id,
+                                  remove=self.remove, inherited=True)
 
-            if self.remove:
+            if self.remove and self.roles:
                 self.add_note(
                     'User %s has had roles %s removed from project %s.'
                     % (self.user_id, self.roles, self.project_id))
-            else:
+            if self.remove and self.inherited_roles:
+                self.add_note(
+                    'User %s has had inherited roles %s '
+                    'removed from project %s.'
+                    % (self.user_id, self.inherited_roles, self.project_id))
+            if self.roles:
                 self.add_note(
                     'User %s has been given roles %s in project %s.'
                     % (self.user_id, self.roles, self.project_id))
+            if self.inherited_roles:
+                self.add_note(
+                    'User %s has been given inherited roles %s in project %s.'
+                    % (self.user_id, self.inherited_roles, self.project_id))
         elif self.action.state == "complete":
             if self.remove:
                 self.add_note(
-                    'User %s already had roles %s in project %s.'
+                    "User %s didn't have roles %s in project %s."
                     % (self.user_id, self.roles, self.project_id))
             else:
                 self.add_note(
-                    "User %s didn't have roles %s in project %s."
+                    'User %s already had roles %s in project %s.'
                     % (self.user_id, self.roles, self.project_id))
 
 
@@ -357,6 +373,7 @@ class UpdateUserEmailAction(UserIdAction, UserMixin):
         self.user = self._get_target_user()
         if self.user:
             return True
+        self.add_note("Unable to find target user.")
         return False
 
     def _validate_email_not_in_use(self):

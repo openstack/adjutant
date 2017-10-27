@@ -12,53 +12,125 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from uuid import uuid4
+
 from django.conf import settings
 
 import mock
 
 
 identity_temp_cache = {}
-
 neutron_cache = {}
 nova_cache = {}
 cinder_cache = {}
 
 
-def setup_temp_cache(projects, users):
-    default_domain = mock.Mock()
+class FakeProject(object):
+
+    def __init__(self, name, description="",
+                 domain_id='default', parent_id=None,
+                 enabled=True, is_domain=False, **kwargs):
+        self.id = uuid4().hex
+        self.name = name
+        self.description = description
+        self.domain_id = domain_id
+        self.parent_id = parent_id
+        self.enabled = enabled
+        self.is_domain = is_domain
+
+        # handle extra values
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+
+class FakeUser(object):
+
+    def __init__(self, name, password, domain_id='default',
+                 enabled=True, default_project_id=None, **kwargs):
+        self.id = uuid4().hex
+        self.name = name
+        self.password = password
+        self.domain_id = domain_id
+        self.enabled = enabled
+        self.default_project_id = default_project_id
+
+        # handle extra values
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+
+class FakeRole(object):
+
+    def __init__(self, name):
+        self.id = uuid4().hex
+        self.name = name
+
+
+class FakeRoleAssignment(object):
+
+    def __init__(self, scope, role=None, role_name=None, user=None,
+                 group=None, inherited=False):
+        if role:
+            self.role = role
+        elif role_name:
+            self.role = {'name': role_name}
+        else:
+            raise AttributeError("must supply 'role' or 'role_name'.")
+        self.scope = scope
+        self.user = user
+        self.group = group
+        if inherited:
+            self.scope['OS-INHERIT:inherited_to'] = "projects"
+
+    def __eq__(self, other):
+        return self.__dict__ == other.__dict__
+
+
+def setup_identity_cache(projects=None, users=None, role_assignments=None,
+                         extra_roles=[]):
+    if not projects:
+        projects = []
+    if not users:
+        users = []
+    if not role_assignments:
+        role_assignments = []
+
+    default_domain = FakeProject(
+        name="Default", is_domain=True)
     default_domain.id = 'default'
-    default_domain.name = 'Default'
 
-    admin_user = mock.Mock()
-    admin_user.id = 'user_id_0'
-    admin_user.name = 'admin'
-    admin_user.password = 'password'
-    admin_user.email = 'admin@example.com'
-    admin_user.domain = default_domain.id
+    projects.append(default_domain)
 
-    users.update({admin_user.id: admin_user})
+    admin_user = FakeUser(
+        name="admin", password="password", email="admin@example.com",
+        domain_id=default_domain.id)
+
+    users.append(admin_user)
+
+    roles = [
+        FakeRole(name="_member_"),
+        FakeRole(name="admin"),
+        FakeRole(name="project_admin"),
+        FakeRole(name="project_mod"),
+        FakeRole(name="heat_stack_owner"),
+    ] + extra_roles
 
     region_one = mock.Mock()
     region_one.id = 'RegionOne'
-    region_one.name = 'RegionOne'
 
     region_two = mock.Mock()
     region_two.id = 'RegionTwo'
 
     global identity_temp_cache
 
-    # TODO(adriant): region and project keys are name, should be ID.
     identity_temp_cache = {
-        'i': 1,
-        'users': users,
-        'projects': projects,
-        'roles': {
-            '_member_': '_member_',
-            'admin': 'admin',
-            'project_admin': 'project_admin',
-            'project_mod': 'project_mod',
-            'heat_stack_owner': 'heat_stack_owner'
-        },
+        'users': {u.id: u for u in users},
+        'new_users': [],
+        'projects': {p.id: p for p in projects},
+        'new_projects': [],
+        'role_assignments': role_assignments,
+        'new_role_assignments': [],
+        'roles': {r.id: r for r in roles},
         'regions': {
             'RegionOne': region_one,
             'RegionTwo': region_two
@@ -72,25 +144,25 @@ def setup_temp_cache(projects, users):
 class FakeManager(object):
 
     def _project_from_id(self, project):
-        if isinstance(project, mock.Mock):
+        if isinstance(project, FakeProject):
             return project
         else:
             return self.get_project(project)
 
     def _role_from_id(self, role):
-        if isinstance(role, mock.Mock):
+        if isinstance(role, FakeRole):
             return role
         else:
             return self.get_role(role)
 
     def _user_from_id(self, user):
-        if isinstance(user, mock.Mock):
+        if isinstance(user, FakeUser):
             return user
         else:
             return self.get_user(user)
 
     def _domain_from_id(self, domain):
-        if isinstance(domain, mock.Mock):
+        if isinstance(domain, FakeProject) and domain.is_domain:
             return domain
         else:
             return self.get_domain(domain)
@@ -99,7 +171,8 @@ class FakeManager(object):
         domain = self._domain_from_id(domain)
         global identity_temp_cache
         for user in identity_temp_cache['users'].values():
-            if user.name.lower() == name.lower() and user.domain == domain.id:
+            if (user.name.lower() == name.lower() and
+                    user.domain_id == domain.id):
                 return user
         return None
 
@@ -110,36 +183,62 @@ class FakeManager(object):
     def list_users(self, project):
         project = self._project_from_id(project)
         global identity_temp_cache
-        roles = identity_temp_cache['projects'][project.name].roles
-        users = []
+        users = {}
 
-        for user_id, user_roles in roles.items():
-            user = self.get_user(user_id)
-            user.roles = []
+        for assignment in identity_temp_cache['role_assignments']:
+            if assignment.scope['project']['id'] == project.id:
 
-            for role in user_roles:
-                r = mock.Mock()
-                r.name = role
-                user.roles.append(r)
+                user = users.get(assignment.user['id'])
+                if not user:
+                    user = self.get_user(assignment.user['id'])
+                    user.roles = []
+                    user.inherited_roles = []
+                    users[user.id] = user
 
-            users.append(user)
-        return users
+                r = self.find_role(assignment.role['name'])
+
+                if assignment.scope.get('OS-INHERIT:inherited_to'):
+                    user.inherited_roles.append(r)
+                else:
+                    user.roles.append(r)
+
+        return users.values()
+
+    def list_inherited_users(self, project):
+        project = self._project_from_id(project)
+        global identity_temp_cache
+        users = {}
+
+        while project.parent_id:
+            project = self._project_from_id(project.parent_id)
+            for assignment in identity_temp_cache['role_assignments']:
+                if assignment.scope['project']['id'] == project.id:
+                    if not assignment.scope.get('OS-INHERIT:inherited_to'):
+                        continue
+
+                    user = users.get(assignment.user['id'])
+                    if not user:
+                        user = self.get_user(assignment.user['id'])
+                        user.roles = []
+                        user.inherited_roles = []
+                        users[user.id] = user
+
+                    r = self.find_role(assignment.role['name'])
+
+                    user.roles.append(r)
+
+        return users.values()
 
     def create_user(self, name, password, email, created_on,
                     domain='default', default_project=None):
         domain = self._domain_from_id(domain)
         default_project = self._project_from_id(default_project)
         global identity_temp_cache
-        user = mock.Mock()
-        user.id = "user_id_%s" % int(identity_temp_cache['i'])
-        user.name = name
-        user.password = password
-        user.email = email
-        user.domain = domain.id
-        user.default_project = default_project
+        user = FakeUser(
+            name=name, password=password, email=email,
+            domain_id=domain.id, default_project=default_project)
         identity_temp_cache['users'][user.id] = user
-
-        identity_temp_cache['i'] += 0.5
+        identity_temp_cache['new_users'].append(user)
         return user
 
     def update_user_password(self, user, password):
@@ -164,90 +263,115 @@ class FakeManager(object):
 
     def find_role(self, name):
         global identity_temp_cache
-        if identity_temp_cache['roles'].get(name, None):
-            role = mock.Mock()
-            role.name = name
-            return role
+        for role in identity_temp_cache['roles'].values():
+            if role.name == name:
+                return role
         return None
 
-    def get_roles(self, user, project):
+    def get_roles(self, user, project, inherited=False):
         user = self._user_from_id(user)
         project = self._project_from_id(project)
-        try:
-            roles = []
-            for role in project.roles[user.id]:
-                r = mock.Mock()
-                r.name = role
+        global identity_temp_cache
+
+        roles = []
+
+        for assignment in identity_temp_cache['role_assignments']:
+            if (assignment.user['id'] == user.id and
+                    assignment.scope['project']['id'] == project.id):
+
+                if (assignment.scope.get('OS-INHERIT:inherited_to') and not
+                        inherited) or (
+                            inherited and not
+                            assignment.scope.get('OS-INHERIT:inherited_to')):
+                    continue
+
+                r = self.find_role(assignment.role['name'])
                 roles.append(r)
-            return roles
-        except KeyError:
-            return []
+
+        return roles
+
+    def _get_roles_as_names(self, user, project, inherited=False):
+        return [r.name for r in self.get_roles(user, project, inherited)]
 
     def get_all_roles(self, user):
         user = self._user_from_id(user)
         global identity_temp_cache
         projects = {}
-        for project in identity_temp_cache['projects'].values():
-            projects[project.id] = []
-            for role in project.roles[user.id]:
-                r = mock.Mock()
-                r.name = role
-                projects[project.id].append(r)
-
+        for assignment in identity_temp_cache['role_assignments']:
+            if assignment.user['id'] == user.id:
+                r = self.find_role(assignment.role['name'])
+                try:
+                    projects[assignment.scope['project']['id']].append(r)
+                except KeyError:
+                    projects[assignment.scope['project']['id']] = [r]
         return projects
 
-    def add_user_role(self, user, role, project):
-        user = self._user_from_id(user)
-        role = self._role_from_id(role)
-        project = self._project_from_id(project)
-        try:
-            project.roles[user.id].append(role.name)
-        except KeyError:
-            project.roles[user.id] = [role.name]
+    def _make_role_assignment(self, user, role, project, inherited=False):
+        scope = {
+            'project': {
+                'id': project.id}}
+        if inherited:
+            scope['OS-INHERIT:inherited_to'] = "projects"
+        role_assignment = FakeRoleAssignment(
+            scope=scope,
+            role={"name": role.name},
+            user={'id': user.id},
+        )
+        return role_assignment
 
-    def remove_user_role(self, user, role, project):
+    def add_user_role(self, user, role, project, inherited=False):
         user = self._user_from_id(user)
         role = self._role_from_id(role)
         project = self._project_from_id(project)
-        try:
-            project.roles[user.id].remove(role.name)
-        except KeyError:
-            pass
+
+        role_assignment = self._make_role_assignment(user, role, project)
+
+        global identity_temp_cache
+
+        if role_assignment not in identity_temp_cache['role_assignments']:
+            identity_temp_cache['role_assignments'].append(role_assignment)
+            identity_temp_cache['new_role_assignments'].append(role_assignment)
+
+    def remove_user_role(self, user, role, project, inherited=False):
+        user = self._user_from_id(user)
+        role = self._role_from_id(role)
+        project = self._project_from_id(project)
+
+        role_assignment = self._make_role_assignment(user, role, project)
+
+        global identity_temp_cache
+
+        if role_assignment in identity_temp_cache['role_assignments']:
+            identity_temp_cache['role_assignments'].remove(role_assignment)
 
     def find_project(self, project_name, domain):
         domain = self._domain_from_id(domain)
         global identity_temp_cache
         for project in identity_temp_cache['projects'].values():
             if (project.name.lower() == project_name.lower() and
-                    project.domain == domain.id):
+                    project.domain_id == domain.id):
                 return project
         return None
 
-    def get_project(self, project_id):
+    def get_project(self, project_id, subtree_as_ids=False,
+                    parents_as_ids=False):
         global identity_temp_cache
-        for project in identity_temp_cache['projects'].values():
-            if project.id == project_id:
-                return project
+        return identity_temp_cache['projects'].get(project_id, None)
 
     def create_project(self, project_name, created_on, parent=None,
-                       domain='default', p_id=None):
+                       domain='default', description=""):
         parent = self._project_from_id(parent)
         domain = self._domain_from_id(domain)
         global identity_temp_cache
-        project = mock.Mock()
-        if p_id:
-            project.id = p_id
-        else:
-            identity_temp_cache['i'] += 0.5
-            project.id = "project_id_%s" % int(identity_temp_cache['i'])
-        project.name = project_name
+
+        project = FakeProject(
+            name=project_name, created_on=created_on, description=description,
+            domain_id=domain.id
+        )
         if parent:
-            project.parent = parent.id
-        else:
-            project.parent = domain.id
-        project.domain = domain.id
-        project.roles = {}
-        identity_temp_cache['projects'][project_name] = project
+            project.parent_id = parent.id
+        identity_temp_cache['projects'][project.id] = project
+        identity_temp_cache['new_projects'].append(project)
         return project
 
     def update_project(self, project, **kwargs):

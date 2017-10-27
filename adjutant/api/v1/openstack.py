@@ -53,6 +53,14 @@ class UserList(tasks.InviteUser):
                 roles.append(role.name)
             if skip:
                 continue
+            inherited_roles = []
+            for role in user.inherited_roles:
+                if role.name in role_blacklist:
+                    skip = True
+                    continue
+                inherited_roles.append(role.name)
+            if skip:
+                continue
 
             email = getattr(user, 'email', '')
             enabled = getattr(user, 'enabled')
@@ -63,10 +71,35 @@ class UserList(tasks.InviteUser):
                 'name': user.name,
                 'email': email,
                 'roles': roles,
+                'inherited_roles': inherited_roles,
                 'cohort': 'Member',
                 'status': user_status,
                 'manageable': set(can_manage_roles).issuperset(roles),
             })
+
+        for user in id_manager.list_inherited_users(project):
+            skip = False
+            roles = []
+            for role in user.roles:
+                if role.name in role_blacklist:
+                    skip = True
+                    continue
+                roles.append(role.name)
+            if skip:
+                continue
+
+            email = getattr(user, 'email', '')
+            enabled = getattr(user, 'enabled')
+            user_status = 'Active' if enabled else 'Account Disabled'
+            user_list.append({'id': user.id,
+                              'name': user.name,
+                              'email': email,
+                              'roles': roles,
+                              'inherited_roles': [],
+                              'cohort': 'Inherited',
+                              'status': user_status,
+                              'manageable': False,
+                              })
 
         # Get my active tasks for this project:
         project_tasks = models.Task.objects.filter(
@@ -98,12 +131,16 @@ class UserList(tasks.InviteUser):
             # than it helps. May uncomment once different duplication checking
             # measures are in place.
             # if task['task_data']['email'] not in active_emails:
-            user = {'id': task['uuid'],
-                    'name': task['task_data']['email'],
-                    'email': task['task_data']['email'],
-                    'roles': task['task_data']['roles'],
-                    'cohort': 'Invited',
-                    'status': task['status']}
+            user = {
+                'id': task['uuid'],
+                'name': task['task_data']['email'],
+                'email': task['task_data']['email'],
+                'roles': task['task_data']['roles'],
+                'inherited_roles':
+                    task['task_data']['inherited_roles'],
+                'cohort': 'Invited',
+                'status': task['status']
+            }
             if not settings.USERNAME_IS_EMAIL:
                 user['name'] = task['task_data']['username']
 
@@ -137,13 +174,18 @@ class UserDetail(tasks.TaskView):
 
         roles = [role.name for role in id_manager.get_roles(user, project)]
         roles_blacklisted = set(role_blacklist) & set(roles)
+        inherited_roles = [
+            role.name for role in id_manager.get_roles(user, project, True)]
+        inherited_roles_blacklisted = (
+            set(role_blacklist) & set(inherited_roles))
 
-        if not roles or roles_blacklisted:
+        if not roles or roles_blacklisted or inherited_roles_blacklisted:
             return Response(no_user, status=404)
         return Response({'id': user.id,
                          "username": user.name,
                          "email": getattr(user, 'email', ''),
-                         'roles': roles})
+                         'roles': roles,
+                         'inherited_roles': inherited_roles})
 
     @utils.mod_or_admin
     def delete(self, request, user_id):
@@ -185,12 +227,29 @@ class UserRoles(tasks.TaskView):
         """ Get role info based on the user id. """
         id_manager = user_store.IdentityManager()
         user = id_manager.get_user(user_id)
+
+        no_user = {'errors': ['No user with this id.']}
+        if not user:
+            return Response(no_user, status=404)
+
         project_id = request.keystone_user['project_id']
         project = id_manager.get_project(project_id)
-        roles = []
-        for role in id_manager.get_roles(user, project):
-            roles.append(role.to_dict())
-        return Response({"roles": roles})
+
+        class_conf = settings.TASK_SETTINGS.get(
+            self.task_type, settings.DEFAULT_TASK_SETTINGS)
+        role_blacklist = class_conf.get('role_blacklist', [])
+
+        roles = [role.name for role in id_manager.get_roles(user, project)]
+        roles_blacklisted = set(role_blacklist) & set(roles)
+        inherited_roles = [
+            role.name for role in id_manager.get_roles(user, project, True)]
+        inherited_roles_blacklisted = (
+            set(role_blacklist) & set(inherited_roles))
+
+        if not roles or roles_blacklisted or inherited_roles_blacklisted:
+            return Response(no_user, status=404)
+        return Response({'roles': roles,
+                         'inherited_roles': inherited_roles})
 
     @utils.mod_or_admin
     def put(self, args, **kwargs):

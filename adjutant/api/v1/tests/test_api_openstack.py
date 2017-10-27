@@ -22,8 +22,9 @@ from django.utils import timezone
 from django.conf import settings
 
 from adjutant.api.models import Token, Task
+from adjutant.common.tests import fake_clients
 from adjutant.common.tests.fake_clients import (
-    FakeManager, setup_temp_cache, get_fake_neutron, get_fake_novaclient,
+    FakeManager, setup_identity_cache, get_fake_neutron, get_fake_novaclient,
     get_fake_cinderclient, cinder_cache, nova_cache, neutron_cache,
     setup_mock_caches, setup_quota_cache, FakeResource)
 
@@ -45,25 +46,21 @@ class OpenstackAPITests(APITestCase):
         Ensure the new user workflow goes as expected.
         Create task, create token, submit token.
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         url = "/v1/openstack/users"
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
         data = {'email': "test@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json(), {'notes': ['created token']})
@@ -76,19 +73,16 @@ class OpenstackAPITests(APITestCase):
 
     def test_user_list(self):
         """
+        Test that a non-admin user can list users.
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         url = "/v1/openstack/users"
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
@@ -96,7 +90,7 @@ class OpenstackAPITests(APITestCase):
         }
 
         data = {'email': "test@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json(), {'notes': ['created token']})
@@ -109,7 +103,7 @@ class OpenstackAPITests(APITestCase):
 
         url = "/v1/openstack/users"
         data = {'email': "test2@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json(), {'notes': ['created token']})
@@ -119,27 +113,125 @@ class OpenstackAPITests(APITestCase):
         self.assertEqual(len(response.json()['users']), 2)
         self.assertTrue(b'test2@example.com' in response.content)
 
+    def test_user_list_inherited(self):
+        """
+        Test that user list returns inherited roles correctly.
+        """
+        project = fake_clients.FakeProject(name="test_project")
+        project2 = fake_clients.FakeProject(
+            name="test_project/child", parent_id=project.id)
+        project3 = fake_clients.FakeProject(
+            name="test_project/child/another", parent_id=project2.id)
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
+
+        user2 = fake_clients.FakeUser(
+            name="test2@example.com", password="123",
+            email="test2@example.com")
+
+        user3 = fake_clients.FakeUser(
+            name="test3@example.com", password="123",
+            email="test2@example.com")
+
+        assignments = [
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="project_admin",
+                user={'id': user.id},
+                inherited=True,
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project2.id}},
+                role_name="project_mod",
+                user={'id': user2.id},
+                inherited=True,
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project3.id}},
+                role_name="_member_",
+                user={'id': user3.id}
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project3.id}},
+                role_name="_member_",
+                user={'id': user3.id},
+                inherited=True,
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project3.id}},
+                role_name="project_mod",
+                user={'id': user3.id}
+            ),
+        ]
+
+        setup_identity_cache(
+            projects=[project, project2, project3], users=[user, user2, user3],
+            role_assignments=assignments)
+
+        url = "/v1/openstack/users"
+        headers = {
+            'project_name': "test_project",
+            'project_id': project3.id,
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+
+        response = self.client.get(url, headers=headers)
+        response_json = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        project_users = []
+        inherited_users = []
+        for u in response_json['users']:
+            if u['cohort'] == 'Inherited':
+                inherited_users.append(u)
+            else:
+                project_users.append(u)
+        self.assertEqual(len(inherited_users), 2)
+        self.assertEqual(len(project_users), 1)
+
+        for u in inherited_users:
+            if u['id'] == user.id:
+                self.assertEqual(u['roles'], ['project_admin'])
+            if u['id'] == user2.id:
+                self.assertEqual(u['roles'], ['project_mod'])
+
+        normal_user = project_users[0]
+        self.assertEqual(normal_user['roles'], ['_member_', 'project_mod'])
+        self.assertEqual(normal_user['inherited_roles'], ['_member_'])
+
     def test_user_detail(self):
         """
         Confirm that the user detail view functions as expected
         """
 
-        user = mock.Mock()
-        user.id = 'test_user_id'
-        user.name = 'test@example.com'
-        user.email = 'test@example.com'
+        project = fake_clients.FakeProject(name="test_project")
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {user.id: ['_member_']}
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({'test_project': project}, {user.id: user})
+        assignments = [
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="_member_",
+                user={'id': user.id},
+                inherited=True,
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="_member_",
+                user={'id': user.id}
+            ),
+        ]
+
+        setup_identity_cache(
+            projects=[project], users=[user], role_assignments=assignments)
 
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
@@ -151,39 +243,53 @@ class OpenstackAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()['username'], 'test@example.com')
         self.assertEqual(response.json()['roles'], ["_member_"])
+        self.assertEqual(response.json()['inherited_roles'], ["_member_"])
 
     def test_user_list_managable(self):
         """
         Confirm that the manageable value is set correctly.
         """
-        user = mock.Mock()
-        user.id = 'user_id_1'
-        user.name = "test1@example.com"
-        user.email = "test1@example.com"
-        user.domain = 'default'
 
-        user2 = mock.Mock()
-        user2.id = 'user_id_2'
-        user2.name = "test2@example.com"
-        user2.email = "test2@example.com"
-        user2.domain = 'default'
+        project = fake_clients.FakeProject(name="test_project")
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {
-            user.id: ['_member_', 'project_admin'],
-            user2.id: ['_member_', 'project_mod']}
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache(
-            {'test_project': project},
-            {user.id: user, user2.id: user2})
+        user2 = fake_clients.FakeUser(
+            name="test2@example.com", password="123",
+            email="test2@example.com")
+
+        assignments = [
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="_member_",
+                user={'id': user.id}
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="project_admin",
+                user={'id': user.id}
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="_member_",
+                user={'id': user2.id}
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="project_mod",
+                user={'id': user2.id}
+            ),
+        ]
+
+        setup_identity_cache(
+            projects=[project], users=[user, user2],
+            role_assignments=assignments)
 
         url = "/v1/openstack/users"
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
@@ -195,11 +301,11 @@ class OpenstackAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.json()['users']), 2)
 
-        for st_user in response.json()['users']:
-            if st_user['id'] == user.id:
-                self.assertFalse(st_user['manageable'])
-            if st_user['id'] == user2.id:
-                self.assertTrue(st_user['manageable'])
+        for adj_user in response.json()['users']:
+            if adj_user['id'] == user.id:
+                self.assertFalse(adj_user['manageable'])
+            if adj_user['id'] == user2.id:
+                self.assertTrue(adj_user['manageable'])
 
     def test_force_reset_password(self):
         """
@@ -209,14 +315,10 @@ class OpenstackAPITests(APITestCase):
         Should also check if template can be rendered.
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         headers = {
             'project_name': "test_project",
@@ -249,25 +351,23 @@ class OpenstackAPITests(APITestCase):
 
     def test_remove_user_role(self):
         """ Remove all roles on a user from our project """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {'user_id_1': ['_member_']}
+        project = fake_clients.FakeProject(name="test_project")
 
-        user1 = mock.Mock()
-        user1.id = 'user_id_1'
-        user1.name = 'test@example.com'
-        user1.password = 'testpassword'
-        user1.email = 'test@example.com'
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache(
-            {'test_project': project},
-            {'user_id_1': user1})
+        assignment = fake_clients.FakeRoleAssignment(
+            scope={'project': {'id': project.id}},
+            role_name="_member_",
+            user={'id': user.id}
+        )
+
+        setup_identity_cache(
+            projects=[project], users=[user], role_assignments=[assignment])
 
         admin_headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
@@ -275,7 +375,7 @@ class OpenstackAPITests(APITestCase):
         }
 
         # admins removes role from the test user
-        url = "/v1/openstack/users/%s/roles" % user1.id
+        url = "/v1/openstack/users/%s/roles" % user.id
         data = {'roles': ["_member_"]}
         response = self.client.delete(url, data,
                                       format='json', headers=admin_headers)
@@ -289,25 +389,21 @@ class OpenstackAPITests(APITestCase):
         Ensure the new user workflow goes as expected.
         Create task, create token, submit token.
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         url = "/v1/openstack/users"
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
         data = {'email': "test@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id', 'username': 'user_name'}
+                'project_id': project.id, 'username': 'user_name'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json(), {'notes': ['created token']})
@@ -345,16 +441,6 @@ class OpenstackAPITests(APITestCase):
     get_fake_cinderclient)
 class QuotaAPITests(APITestCase):
 
-    def tearDown(self):
-        """ Clears quota caches """
-        global cinder_cache
-        cinder_cache.clear()
-        global nova_cache
-        nova_cache.clear()
-        global neutron_cache
-        neutron_cache.clear()
-        super(QuotaAPITests, self).tearDown()
-
     def setUp(self):
         super(QuotaAPITests, self).setUp()
         setup_mock_caches('RegionOne', 'test_project_id')
@@ -380,29 +466,22 @@ class QuotaAPITests(APITestCase):
     def test_update_quota_no_history(self):
         """ Update the quota size of a project with no history """
 
+        project = fake_clients.FakeProject(
+            name="test_project", id='test_project_id')
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
+
+        setup_identity_cache(projects=[project], users=[user])
+
         admin_headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
         }
-
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
-
-        setup_temp_cache({'test_project': project}, {user.id: user})
 
         url = "/v1/openstack/quotas/"
 
@@ -415,7 +494,7 @@ class QuotaAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Then check to see the quotas have changed
-        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+        self.check_quota_cache('RegionOne', project.id, 'medium')
 
     def test_update_quota_history(self):
         """
@@ -423,29 +502,23 @@ class QuotaAPITests(APITestCase):
          It should update the quota the first time but wait for admin approval
          the second time
         """
+        project = fake_clients.FakeProject(
+            name="test_project", id='test_project_id')
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
+
+        setup_identity_cache(projects=[project], users=[user])
+
         admin_headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
         }
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
-
-        setup_temp_cache({'test_project': project}, {user.id: user})
         url = "/v1/openstack/quotas/"
 
         data = {'size': 'medium',
@@ -456,7 +529,7 @@ class QuotaAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Then check to see the quotas have changed
-        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+        self.check_quota_cache('RegionOne', project.id, 'medium')
 
         data = {'size': 'small',
                 'regions': ['RegionOne']}
@@ -466,12 +539,12 @@ class QuotaAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         # Then check to see the quotas have not changed
-        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+        self.check_quota_cache('RegionOne', project.id, 'medium')
 
         # Approve the quota change as admin
         headers = {
             'project_name': "admin_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "admin,_member_",
             'username': "admin",
             'user_id': "admin_id",
@@ -490,7 +563,7 @@ class QuotaAPITests(APITestCase):
         )
 
         # Quotas should have changed to small
-        self.check_quota_cache('RegionOne', 'test_project_id', 'small')
+        self.check_quota_cache('RegionOne', project.id, 'small')
 
     def test_update_quota_old_history(self):
         """
@@ -498,29 +571,22 @@ class QuotaAPITests(APITestCase):
          It should update the quota the first time without approval
         """
 
+        project = fake_clients.FakeProject(
+            name="test_project", id='test_project_id')
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
+
+        setup_identity_cache(projects=[project], users=[user])
+
         admin_headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
         }
-
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
-
-        setup_temp_cache({'test_project': project}, {user.id: user})
 
         url = "/v1/openstack/quotas/"
 
@@ -532,7 +598,7 @@ class QuotaAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Then check to see the quotas have changed
-        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+        self.check_quota_cache('RegionOne', project.id, 'medium')
 
         # Fudge the data to make the task occur 31 days ago
         task = Task.objects.all()[0]
@@ -547,7 +613,7 @@ class QuotaAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Then check to see the quotas have changed
-        self.check_quota_cache('RegionOne', 'test_project_id', 'small')
+        self.check_quota_cache('RegionOne', project.id, 'small')
 
     def test_update_quota_other_project_history(self):
         """
@@ -555,38 +621,27 @@ class QuotaAPITests(APITestCase):
          with the 30 days per project limit.
         """
 
+        project = fake_clients.FakeProject(
+            name="test_project", id='test_project_id')
+
+        project2 = fake_clients.FakeProject(
+            name="second_project")
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
+
+        setup_identity_cache(projects=[project, project2], users=[user])
+
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
         }
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        project2 = mock.Mock()
-        project2.id = 'second_project_id'
-        project2.name = 'second_project'
-        project2.domain = 'default'
-        project2.roles = {}
-
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
-
-        setup_temp_cache({'test_project': project, 'second_project': project2},
-                         {user.id: user})
-        setup_mock_caches('RegionOne', 'second_project_id')
-        # setup_quota_cache('RegionOne', 'second_project_id', 'small')
+        setup_mock_caches('RegionOne', project2.id)
 
         url = "/v1/openstack/quotas/"
 
@@ -597,10 +652,10 @@ class QuotaAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Then check to see the quotas have changed
-        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+        self.check_quota_cache('RegionOne', project.id, 'medium')
         headers = {
             'project_name': "second_project",
-            'project_id': "second_project_id",
+            'project_id': project2.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test2@example.com",
             'user_id': user.id,
@@ -608,13 +663,13 @@ class QuotaAPITests(APITestCase):
         }
 
         data = {'regions': ["RegionOne"], 'size': 'medium',
-                'project_id': 'second_project_id'}
+                'project_id': project2.id}
         response = self.client.post(url, data, headers=headers, format='json')
         # First check we can actually access the page correctly
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         # Then check to see the quotas have changed
-        self.check_quota_cache('RegionOne', 'second_project_id', 'medium')
+        self.check_quota_cache('RegionOne', project2.id, 'medium')
 
     def test_update_quota_outside_range(self):
         """
@@ -622,29 +677,22 @@ class QuotaAPITests(APITestCase):
         project's pre-approved range.
         """
 
+        project = fake_clients.FakeProject(
+            name="test_project", id='test_project_id')
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
+
+        setup_identity_cache(projects=[project], users=[user])
+
         admin_headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
         }
-
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
-
-        setup_temp_cache({'test_project': project}, {user.id: user})
 
         url = "/v1/openstack/quotas/"
 
@@ -656,7 +704,7 @@ class QuotaAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         # Then check to see the quotas have not changed (stayed small)
-        self.check_quota_cache('RegionOne', 'test_project_id', 'small')
+        self.check_quota_cache('RegionOne', project.id, 'small')
 
         # Approve and test for change
 
@@ -681,36 +729,30 @@ class QuotaAPITests(APITestCase):
             {'notes': ['Task completed successfully.']}
         )
 
-        self.check_quota_cache('RegionOne', 'test_project_id', 'large')
+        self.check_quota_cache('RegionOne', project.id, 'large')
 
     def test_calculate_custom_quota_size(self):
         """
         Calculates the best 'fit' quota size from a custom quota.
         """
 
+        project = fake_clients.FakeProject(
+            name="test_project", id='test_project_id')
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
+
+        setup_identity_cache(projects=[project], users=[user])
+
         admin_headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
         }
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
-
-        setup_temp_cache({'test_project': project}, {user.id})
         cinderquota = cinder_cache['RegionOne']['test_project_id']['quota']
         cinderquota['gigabytes'] = 6000
         novaquota = nova_cache['RegionOne']['test_project_id']['quota']
@@ -731,29 +773,22 @@ class QuotaAPITests(APITestCase):
         Ensures that the correct quota history and usage data is returned
         """
 
+        project = fake_clients.FakeProject(
+            name="test_project", id='test_project_id')
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
+
+        setup_identity_cache(projects=[project], users=[user])
+
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
         }
-
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
-
-        setup_temp_cache({'test_project_id': project}, {user.id: user})
 
         url = "/v1/openstack/quotas/"
 
@@ -777,29 +812,22 @@ class QuotaAPITests(APITestCase):
     def test_set_multi_region_quota(self):
         """ Sets a quota to all to all regions in a project """
 
+        project = fake_clients.FakeProject(
+            name="test_project", id='test_project_id')
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
+
+        setup_identity_cache(projects=[project], users=[user])
+
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
         }
-
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
-
-        setup_temp_cache({'test_project': project}, {user.id: user})
 
         url = "/v1/openstack/quotas/"
 
@@ -817,29 +845,22 @@ class QuotaAPITests(APITestCase):
         Attempts to set a multi region quota with a multi region update history
         """
 
+        project = fake_clients.FakeProject(
+            name="test_project", id='test_project_id')
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
+
+        setup_identity_cache(projects=[project], users=[user])
+
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
         }
-
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
-
-        setup_temp_cache({'test_project': project}, {user.id: user})
 
         url = "/v1/openstack/quotas/"
 
@@ -849,20 +870,19 @@ class QuotaAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+        self.check_quota_cache('RegionOne', project.id, 'medium')
 
-        self.check_quota_cache('RegionTwo', 'test_project_id', 'medium')
+        self.check_quota_cache('RegionTwo', project.id, 'medium')
 
-        data = {'size': 'small',
-                'project_id': 'test_project_id'}
+        data = {'size': 'small'}
         response = self.client.post(url, data, headers=headers, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         # All of them stay the same
-        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+        self.check_quota_cache('RegionOne', project.id, 'medium')
 
-        self.check_quota_cache('RegionTwo', 'test_project_id', 'medium')
+        self.check_quota_cache('RegionTwo', project.id, 'medium')
 
         # Approve the task
         headers = {
@@ -884,9 +904,9 @@ class QuotaAPITests(APITestCase):
             {'notes': ['Task completed successfully.']}
         )
 
-        self.check_quota_cache('RegionOne', 'test_project_id', 'small')
+        self.check_quota_cache('RegionOne', project.id, 'small')
 
-        self.check_quota_cache('RegionTwo', 'test_project_id', 'small')
+        self.check_quota_cache('RegionTwo', project.id, 'small')
 
     def test_set_multi_quota_single_history(self):
         """
@@ -894,29 +914,22 @@ class QuotaAPITests(APITestCase):
         update history
         """
 
+        project = fake_clients.FakeProject(
+            name="test_project", id='test_project_id')
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
+
+        setup_identity_cache(projects=[project], users=[user])
+
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
         }
-
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
-
-        setup_temp_cache({'test_project': project}, {user.id: user})
 
         # Setup custom parts of the quota still within 'small' however
 
@@ -928,7 +941,7 @@ class QuotaAPITests(APITestCase):
         # First check we can actually access the page correctly
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+        self.check_quota_cache('RegionOne', project.id, 'medium')
 
         url = "/v1/openstack/quotas/"
 
@@ -939,8 +952,8 @@ class QuotaAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         # Quotas stay the same
-        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
-        self.check_quota_cache('RegionTwo', 'test_project_id', 'small')
+        self.check_quota_cache('RegionOne', project.id, 'medium')
+        self.check_quota_cache('RegionTwo', project.id, 'small')
 
         headers = {
             'project_name': "admin_project",
@@ -962,40 +975,34 @@ class QuotaAPITests(APITestCase):
             {'notes': ['Task completed successfully.']}
         )
 
-        self.check_quota_cache('RegionOne', 'test_project_id', 'small')
-        self.check_quota_cache('RegionTwo', 'test_project_id', 'small')
+        self.check_quota_cache('RegionOne', project.id, 'small')
+        self.check_quota_cache('RegionTwo', project.id, 'small')
 
     def test_set_quota_over_limit(self):
         """ Attempts to set a smaller quota than the current usage """
+        project = fake_clients.FakeProject(
+            name="test_project", id='test_project_id')
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
+
+        setup_identity_cache(projects=[project], users=[user])
+
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
         }
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
-
-        setup_temp_cache({'test_project': project}, {user.id: user})
-        setup_quota_cache('RegionOne', 'test_project_id', 'medium')
+        setup_quota_cache('RegionOne', project.id, 'medium')
         # Setup current quota as medium
         # Create a number of lists with limits higher than the small quota
 
         global nova_cache
-        nova_cache['RegionOne']['test_project_id'][
+        nova_cache['RegionOne'][project.id][
             'absolute']["totalInstancesUsed"] = 11
 
         url = "/v1/openstack/quotas/"
@@ -1006,71 +1013,64 @@ class QuotaAPITests(APITestCase):
                                     headers=headers, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+        self.check_quota_cache('RegionOne', project.id, 'medium')
 
         data = {'size': 'small',
                 'regions': ['RegionOne']}
 
-        nova_cache['RegionOne']['test_project_id'][
+        nova_cache['RegionOne'][project.id][
             'absolute']["totalInstancesUsed"] = 10
 
         # Test for cinder resources
         volume_list = [FakeResource(10) for i in range(21)]
-        cinder_cache['RegionOne']['test_project_id']['volumes'] = volume_list
+        cinder_cache['RegionOne'][project.id]['volumes'] = volume_list
 
         response = self.client.post(url, data,
                                     headers=headers, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+        self.check_quota_cache('RegionOne', project.id, 'medium')
 
         # Test for neutron resources
-        cinder_cache['RegionOne']['test_project_id']['volumes'] = []
+        cinder_cache['RegionOne'][project.id]['volumes'] = []
         net_list = [{} for i in range(4)]
-        neutron_cache['RegionOne']['test_project_id']['networks'] = net_list
+        neutron_cache['RegionOne'][project.id]['networks'] = net_list
         response = self.client.post(url, data,
                                     headers=headers, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-        self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
+        self.check_quota_cache('RegionOne', project.id, 'medium')
 
         # Check that after they are all cleared to sub small levels
         # the quota updates
-        neutron_cache['RegionOne']['test_project_id']['networks'] = []
+        neutron_cache['RegionOne'][project.id]['networks'] = []
         response = self.client.post(url, data,
                                     headers=headers, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.check_quota_cache('RegionOne', 'test_project_id', 'small')
+        self.check_quota_cache('RegionOne', project.id, 'small')
 
     def test_set_quota_invalid_region(self):
         """ Attempts to set a quota on a non-existent region """
+        project = fake_clients.FakeProject(
+            name="test_project", id='test_project_id')
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
+
+        setup_identity_cache(projects=[project], users=[user])
+
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
         }
-
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
-
-        setup_temp_cache({'test_project': project}, {user.id: user})
 
         url = "/v1/openstack/quotas/"
 

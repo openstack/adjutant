@@ -21,7 +21,7 @@ from adjutant.actions.v1.users import (
     UpdateUserEmailAction)
 from adjutant.api.models import Task
 from adjutant.common.tests import fake_clients
-from adjutant.common.tests.fake_clients import setup_temp_cache
+from adjutant.common.tests.fake_clients import setup_identity_cache
 from adjutant.common.tests.utils import modify_dict_settings, AdjutantTestCase
 
 
@@ -34,26 +34,23 @@ class UserActionTests(AdjutantTestCase):
         Test the default case, all valid.
         No existing user, valid tenant.
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id',
+                'project_id': project.id,
                 'project_domain_id': 'default',
             })
 
         data = {
             'email': 'test@example.com',
-            'project_id': 'test_project_id',
+            'project_id': project.id,
             'roles': ['_member_'],
+            'inherited_roles': [],
             'domain_id': 'default',
         }
 
@@ -68,47 +65,43 @@ class UserActionTests(AdjutantTestCase):
         token_data = {'password': '123456'}
         action.submit(token_data)
         self.assertEquals(action.valid, True)
-        self.assertEquals(len(fake_clients.identity_temp_cache['users']), 2)
-        # The new user id in this case will be "user_id_1"
         self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].email,
-            'test@example.com')
-        self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].password,
-            '123456')
+            len(fake_clients.identity_temp_cache['new_users']), 1)
 
-        self.assertEquals(project.roles["user_id_1"], ['_member_'])
+        fake_client = fake_clients.FakeManager()
+
+        user = fake_client.find_user(name="test@example.com", domain="default")
+
+        self.assertEquals(user.email, 'test@example.com')
+        self.assertEquals(user.password, '123456')
+
+        roles = fake_client._get_roles_as_names(user, project)
+        self.assertEquals(roles, ['_member_'])
 
     def test_new_user_existing(self):
         """
         Existing user, valid tenant, no role.
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({'test_project': project}, {user.id: user})
+        setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id',
+                'project_id': project.id,
                 'project_domain_id': 'default',
             })
 
         data = {
             'email': 'test@example.com',
-            'project_id': 'test_project_id',
+            'project_id': project.id,
             'roles': ['_member_'],
+            'inherited_roles': [],
             'domain_id': 'default',
         }
 
@@ -124,39 +117,37 @@ class UserActionTests(AdjutantTestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
 
-        self.assertEquals(project.roles[user.id], ['_member_'])
+        fake_client = fake_clients.FakeManager()
+
+        roles = fake_client._get_roles_as_names(user, project)
+        self.assertEquals(roles, ['_member_'])
 
     def test_new_user_disabled(self):
         """
         Disabled user, valid existing tenant, no role.
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
 
-        user = mock.Mock()
-        user.id = 'user_id_1'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.enabled = False
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {user.id: user})
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com",
+            enabled=False)
+
+        setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id',
+                'project_id': project.id,
                 'project_domain_id': 'default',
             })
 
         data = {
             'email': 'test@example.com',
-            'project_id': 'test_project_id',
+            'project_id': project.id,
             'roles': ['_member_'],
+            'inherited_roles': [],
             'domain_id': 'default',
         }
 
@@ -172,18 +163,17 @@ class UserActionTests(AdjutantTestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
         self.assertEquals(len(fake_clients.identity_temp_cache['users']), 2)
-        # The new user id in this case will be "user_id_1"
-        self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].email,
-            'test@example.com')
-        self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].password,
-            '123456')
-        self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].enabled,
-            True)
 
-        self.assertEquals(project.roles["user_id_1"], ['_member_'])
+        fake_client = fake_clients.FakeManager()
+
+        user = fake_client.find_user(name="test@example.com", domain="default")
+
+        self.assertEquals(user.email, 'test@example.com')
+        self.assertEquals(user.password, '123456')
+        self.assertTrue(user.enabled)
+
+        roles = fake_client._get_roles_as_names(user, project)
+        self.assertEquals(roles, ['_member_'])
 
     def test_new_user_existing_role(self):
         """
@@ -193,32 +183,33 @@ class UserActionTests(AdjutantTestCase):
         but actually do nothing.
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        project = fake_clients.FakeProject(name="test_project")
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {user.id: ['_member_']}
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({'test_project': project}, {user.id: user})
+        assignment = fake_clients.FakeRoleAssignment(
+            scope={'project': {'id': project.id}},
+            role_name="_member_",
+            user={'id': user.id}
+        )
+
+        setup_identity_cache(
+            projects=[project], users=[user], role_assignments=[assignment])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id',
+                'project_id': project.id,
                 'project_domain_id': 'default',
             })
 
         data = {
             'email': 'test@example.com',
-            'project_id': 'test_project_id',
+            'project_id': project.id,
             'roles': ['_member_'],
+            'inherited_roles': [],
             'domain_id': 'default',
         }
 
@@ -235,14 +226,17 @@ class UserActionTests(AdjutantTestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
 
-        self.assertEquals(project.roles[user.id], ['_member_'])
+        fake_client = fake_clients.FakeManager()
+
+        roles = fake_client._get_roles_as_names(user, project)
+        self.assertEquals(roles, ['_member_'])
 
     def test_new_user_no_tenant(self):
         """
         No user, no tenant.
         """
 
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -256,6 +250,7 @@ class UserActionTests(AdjutantTestCase):
             'email': 'test@example.com',
             'project_id': 'test_project_id',
             'roles': ['_member_'],
+            'inherited_roles': [],
             'domain_id': 'default',
         }
 
@@ -278,19 +273,12 @@ class UserActionTests(AdjutantTestCase):
         Action should be invalid.
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        project = fake_clients.FakeProject(name="test_project")
 
-        project = mock.Mock()
-        project.id = 'test_project_id_1'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {user.id: ['_member_']}
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({'test_project': project}, {user.id: user})
+        setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -304,6 +292,7 @@ class UserActionTests(AdjutantTestCase):
             'email': 'test@example.com',
             'project_id': 'test_project_id_1',
             'roles': ['_member_'],
+            'inherited_roles': [],
             'domain_id': 'default',
         }
 
@@ -319,32 +308,26 @@ class UserActionTests(AdjutantTestCase):
         Action should be invalid.
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        project = fake_clients.FakeProject(name="test_project")
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {user.id: ['_member_']}
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({'test_project': project}, {user.id: user})
+        setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['_member_'],
-                'project_id': 'test_project_id',
+                'project_id': project.id,
                 'project_domain_id': 'default',
             })
 
         data = {
             'email': 'test@example.com',
-            'project_id': 'test_project_id',
+            'project_id': project.id,
             'roles': ['_member_'],
+            'inherited_roles': [],
             'domain_id': 'default',
         }
 
@@ -360,32 +343,33 @@ class UserActionTests(AdjutantTestCase):
         Action should be invalid.
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        project = fake_clients.FakeProject(name="test_project")
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {user.id: ['_member_']}
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({'test_project': project}, {user.id: user})
+        assignment = fake_clients.FakeRoleAssignment(
+            scope={'project': {'id': project.id}},
+            role_name="_member_",
+            user={'id': user.id}
+        )
+
+        setup_identity_cache(
+            projects=[project], users=[user], role_assignments=[assignment])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
             keystone_user={
-                'roles': ['_member_'],
-                'project_id': 'test_project_id',
+                'roles': ['project_admin'],
+                'project_id': project.id,
                 'project_domain_id': 'default',
             })
 
         data = {
             'email': 'test@example.com',
-            'project_id': 'test_project_id',
+            'project_id': project.id,
             'roles': ['_member_'],
+            'inherited_roles': [],
             'domain_id': 'not_default',
         }
 
@@ -399,14 +383,11 @@ class UserActionTests(AdjutantTestCase):
         Base case, existing user.
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "gibberish"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="gibberish",
+            email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -419,7 +400,6 @@ class UserActionTests(AdjutantTestCase):
         data = {
             'domain_name': 'Default',
             'email': 'test@example.com',
-            'project_name': 'test_project',
         }
 
         action = ResetUserPasswordAction(data, task=task, order=1)
@@ -445,14 +425,11 @@ class UserActionTests(AdjutantTestCase):
         USERNAME_IS_EMAIL=True
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "gibberish"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="gibberish",
+            email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -465,7 +442,6 @@ class UserActionTests(AdjutantTestCase):
         data = {
             'domain_name': 'Default',
             'email': 'TEST@example.com',
-            'project_name': 'test_project',
         }
 
         action = ResetUserPasswordAction(data, task=task, order=1)
@@ -489,7 +465,7 @@ class UserActionTests(AdjutantTestCase):
         Reset password for a non-existant user.
         """
 
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -502,7 +478,6 @@ class UserActionTests(AdjutantTestCase):
         data = {
             'domain_name': 'Default',
             'email': 'test@example.com',
-            'project_name': 'test_project',
         }
 
         action = ResetUserPasswordAction(data, task=task, order=1)
@@ -521,33 +496,28 @@ class UserActionTests(AdjutantTestCase):
         """
         Add roles to existing user.
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({'test_project': project}, {user.id: user})
+        setup_identity_cache(
+            projects=[project], users=[user])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id',
+                'project_id': project.id,
                 'project_domain_id': 'default',
             })
 
         data = {
             'domain_id': 'default',
-            'user_id': 'user_id',
-            'project_id': 'test_project_id',
+            'user_id': user.id,
+            'project_id': project.id,
             'roles': ['_member_', 'project_mod'],
+            'inherited_roles': [],
             'remove': False
         }
 
@@ -563,41 +533,50 @@ class UserActionTests(AdjutantTestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
 
-        self.assertEquals(len(project.roles[user.id]), 2)
-        self.assertEquals(set(project.roles[user.id]),
-                          set(['_member_', 'project_mod']))
+        fake_client = fake_clients.FakeManager()
+
+        roles = fake_client._get_roles_as_names(user, project)
+        self.assertEquals(sorted(roles), sorted(['_member_', 'project_mod']))
 
     def test_edit_user_roles_add_complete(self):
         """
         Add roles to existing user.
         """
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        project = fake_clients.FakeProject(name="test_project")
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {user.id: ['_member_', 'project_mod']}
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({'test_project': project}, {user.id: user})
+        assignments = [
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="_member_",
+                user={'id': user.id}
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="project_mod",
+                user={'id': user.id}
+            ),
+        ]
+
+        setup_identity_cache(
+            projects=[project], users=[user], role_assignments=assignments)
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id',
+                'project_id': project.id,
                 'project_domain_id': 'default',
             })
 
         data = {
             'domain_id': 'default',
-            'user_id': 'user_id',
-            'project_id': 'test_project_id',
+            'user_id': user.id,
+            'project_id': project.id,
             'roles': ['_member_', 'project_mod'],
+            'inherited_roles': [],
             'remove': False
         }
 
@@ -614,42 +593,51 @@ class UserActionTests(AdjutantTestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
 
-        self.assertEquals(len(project.roles[user.id]), 2)
-        self.assertEquals(set(project.roles[user.id]),
-                          set(['_member_', 'project_mod']))
+        fake_client = fake_clients.FakeManager()
+
+        roles = fake_client._get_roles_as_names(user, project)
+        self.assertEquals(roles, ['_member_', 'project_mod'])
 
     def test_edit_user_roles_remove(self):
         """
         Remove roles from existing user.
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        project = fake_clients.FakeProject(name="test_project")
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {user.id: ['_member_', 'project_mod']}
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({'test_project': project}, {user.id: user})
+        assignments = [
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="_member_",
+                user={'id': user.id}
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="project_mod",
+                user={'id': user.id}
+            ),
+        ]
+
+        setup_identity_cache(
+            projects=[project], users=[user], role_assignments=assignments)
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id',
+                'project_id': project.id,
                 'project_domain_id': 'default',
             })
 
         data = {
             'domain_id': 'default',
-            'user_id': 'user_id',
-            'project_id': 'test_project_id',
+            'user_id': user.id,
+            'project_id': project.id,
             'roles': ['project_mod'],
+            'inherited_roles': [],
             'remove': True
         }
 
@@ -665,40 +653,44 @@ class UserActionTests(AdjutantTestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
 
-        self.assertEquals(project.roles[user.id], ['_member_'])
+        fake_client = fake_clients.FakeManager()
+
+        roles = fake_client._get_roles_as_names(user, project)
+        self.assertEquals(roles, ['_member_'])
 
     def test_edit_user_roles_remove_complete(self):
         """
         Remove roles from user that does not have them.
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        project = fake_clients.FakeProject(name="test_project")
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {user.id: ['_member_']}
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({'test_project': project}, {user.id: user})
+        assignment = fake_clients.FakeRoleAssignment(
+            scope={'project': {'id': project.id}},
+            role_name="_member_",
+            user={'id': user.id}
+        )
+
+        setup_identity_cache(
+            projects=[project], users=[user], role_assignments=[assignment])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id',
+                'project_id': project.id,
                 'project_domain_id': 'default',
             })
 
         data = {
             'domain_id': 'default',
-            'user_id': 'user_id',
-            'project_id': 'test_project_id',
+            'user_id': user.id,
+            'project_id': project.id,
             'roles': ['project_mod'],
+            'inherited_roles': [],
             'remove': True
         }
 
@@ -715,40 +707,51 @@ class UserActionTests(AdjutantTestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
 
-        self.assertEquals(project.roles[user.id], ['_member_'])
+        fake_client = fake_clients.FakeManager()
+
+        roles = fake_client._get_roles_as_names(user, project)
+        self.assertEquals(roles, ['_member_'])
 
     def test_edit_user_roles_can_manage_all(self):
         """
         Confirm that you cannot edit a user unless all their roles
         can be managed by you.
         """
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        project = fake_clients.FakeProject(name="test_project")
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {user.id: ['_member_', 'project_admin']}
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({'test_project': project}, {user.id: user})
+        assignments = [
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="_member_",
+                user={'id': user.id}
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="project_admin",
+                user={'id': user.id}
+            ),
+        ]
+
+        setup_identity_cache(
+            projects=[project], users=[user], role_assignments=assignments)
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['project_mod'],
-                'project_id': 'test_project_id',
+                'project_id': project.id,
                 'project_domain_id': 'default',
             })
 
         data = {
             'domain_id': 'default',
             'user_id': 'user_id',
-            'project_id': 'test_project_id',
+            'project_id': project.id,
             'roles': ['project_mod'],
+            'inherited_roles': [],
             'remove': False
         }
 
@@ -757,42 +760,44 @@ class UserActionTests(AdjutantTestCase):
         action.pre_approve()
         self.assertEquals(action.valid, False)
 
-        self.assertEquals(
-            project.roles[user.id], ['_member_', 'project_admin'])
+        fake_client = fake_clients.FakeManager()
+
+        roles = fake_client._get_roles_as_names(user, project)
+        self.assertEquals(roles, ['_member_', 'project_admin'])
 
     def test_edit_user_roles_modified_settings(self):
         """
         Tests that the role mappings do come from settings and that they
         are enforced.
         """
+        project = fake_clients.FakeProject(name="test_project")
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {'user_id': ['project_mod']}
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        assignment = fake_clients.FakeRoleAssignment(
+            scope={'project': {'id': project.id}},
+            role_name="project_mod",
+            user={'id': user.id}
+        )
 
-        setup_temp_cache({'test_project': project}, {user.id: user})
+        setup_identity_cache(
+            projects=[project], users=[user], role_assignments=[assignment])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['project_mod'],
-                'project_id': 'test_project_id',
+                'project_id': project.id,
                 'project_domain_id': 'default',
             })
 
         data = {
             'domain_id': 'default',
-            'user_id': 'user_id',
-            'project_id': 'test_project_id',
+            'user_id': user.id,
+            'project_id': project.id,
             'roles': ['heat_stack_owner'],
+            'inherited_roles': [],
             'remove': False
         }
 
@@ -821,9 +826,10 @@ class UserActionTests(AdjutantTestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
 
-        self.assertEquals(len(project.roles[user.id]), 2)
-        self.assertEquals(set(project.roles[user.id]),
-                          set(['project_mod', 'heat_stack_owner']))
+        fake_client = fake_clients.FakeManager()
+
+        roles = fake_client._get_roles_as_names(user, project)
+        self.assertEquals(roles, ['project_mod', 'heat_stack_owner'])
 
     @modify_dict_settings(ROLES_MAPPING={'key_list': ['project_mod'],
                           'operation': "append", 'value': 'new_role'})
@@ -832,35 +838,38 @@ class UserActionTests(AdjutantTestCase):
         Tests that the role mappings do come from settings and a new role
         added there will be allowed.
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {'user_id': ['project_mod']}
+        project = fake_clients.FakeProject(name="test_project")
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({'test_project': project}, {user.id: user})
+        assignment = fake_clients.FakeRoleAssignment(
+            scope={'project': {'id': project.id}},
+            role_name="project_mod",
+            user={'id': user.id}
+        )
 
-        fake_clients.identity_temp_cache['roles']['new_role'] = 'new_role'
+        setup_identity_cache(
+            projects=[project], users=[user], role_assignments=[assignment])
+
+        new_role = fake_clients.FakeRole("new_role")
+
+        fake_clients.identity_temp_cache['roles'][new_role.id] = new_role
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['project_mod'],
-                'project_id': 'test_project_id',
+                'project_id': project.id,
                 'project_domain_id': 'default',
             })
 
         data = {
             'domain_id': 'default',
-            'user_id': 'user_id',
-            'project_id': 'test_project_id',
+            'user_id': user.id,
+            'project_id': project.id,
             'roles': ['new_role'],
+            'inherited_roles': [],
             'remove': False
         }
 
@@ -876,9 +885,10 @@ class UserActionTests(AdjutantTestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
 
-        self.assertEquals(len(project.roles[user.id]), 2)
-        self.assertEquals(set(project.roles[user.id]),
-                          set(['project_mod', 'new_role']))
+        fake_client = fake_clients.FakeManager()
+
+        roles = fake_client._get_roles_as_names(user, project)
+        self.assertEquals(roles, ['project_mod', 'new_role'])
 
     # Simple positive tests for when USERNAME_IS_EMAIL=False
     @override_settings(USERNAME_IS_EMAIL=False)
@@ -888,27 +898,24 @@ class UserActionTests(AdjutantTestCase):
         No existing user, valid tenant.
         Different username from email address
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id',
+                'project_id': project.id,
                 'project_domain_id': 'default',
             })
 
         data = {
             'username': 'test_user',
             'email': 'test@example.com',
-            'project_id': 'test_project_id',
+            'project_id': project.id,
             'roles': ['_member_'],
+            'inherited_roles': [],
             'domain_id': 'default',
         }
 
@@ -924,18 +931,17 @@ class UserActionTests(AdjutantTestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
         self.assertEquals(len(fake_clients.identity_temp_cache['users']), 2)
-        # The new user id in this case will be "user_id_1"
-        self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].email,
-            'test@example.com')
-        self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].name,
-            'test_user')
-        self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].password,
-            '123456')
 
-        self.assertEquals(project.roles["user_id_1"], ['_member_'])
+        fake_client = fake_clients.FakeManager()
+
+        user = fake_client.find_user(name="test_user", domain="default")
+
+        self.assertEquals(user.email, 'test@example.com')
+        self.assertEquals(user.password, '123456')
+        self.assertTrue(user.enabled)
+
+        roles = fake_client._get_roles_as_names(user, project)
+        self.assertEquals(roles, ['_member_'])
 
     @override_settings(USERNAME_IS_EMAIL=False)
     def test_reset_user_email_not_username(self):
@@ -943,15 +949,11 @@ class UserActionTests(AdjutantTestCase):
         Base case, existing user.
         Username not email address
         """
+        user = fake_clients.FakeUser(
+            name="test_user", password="gibberish",
+            email="test@example.com")
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test_user"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "gibberish"
-
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -965,7 +967,6 @@ class UserActionTests(AdjutantTestCase):
             'username': "test_user",
             'domain_name': 'Default',
             'email': 'test@example.com',
-            'project_name': 'test_project',
         }
 
         action = ResetUserPasswordAction(data, task=task, order=1)
@@ -980,15 +981,12 @@ class UserActionTests(AdjutantTestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
 
-        self.assertEquals(
-            fake_clients.identity_temp_cache['users'][user.id].password,
-            '123456')
-        self.assertEquals(
-            fake_clients.identity_temp_cache['users'][user.id].name,
-            'test_user')
-        self.assertEquals(
-            fake_clients.identity_temp_cache['users'][user.id].email,
-            'test@example.com')
+        fake_client = fake_clients.FakeManager()
+
+        user = fake_client.find_user(name="test_user", domain="default")
+
+        self.assertEquals(user.email, 'test@example.com')
+        self.assertEquals(user.password, '123456')
 
     @override_settings(USERNAME_IS_EMAIL=False)
     def test_reset_user_password_case_insensitive_not_username(self):
@@ -997,15 +995,11 @@ class UserActionTests(AdjutantTestCase):
 
         USERNAME_IS_EMAIL=False
         """
+        user = fake_clients.FakeUser(
+            name="test_USER", password="gibberish",
+            email="test@example.com")
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test_user"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "gibberish"
-
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -1019,7 +1013,6 @@ class UserActionTests(AdjutantTestCase):
             'domain_name': 'Default',
             'username': 'test_USER',
             'email': 'TEST@example.com',
-            'project_name': 'test_project',
         }
 
         action = ResetUserPasswordAction(data, task=task, order=1)
@@ -1043,19 +1036,11 @@ class UserActionTests(AdjutantTestCase):
         """
         Base test case for user updating email address.
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="gibberish",
+            email="test@example.com")
 
-        user = mock.Mock()
-        user.id = 'user_id_1'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-
-        setup_temp_cache({'test_project': project}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -1084,11 +1069,11 @@ class UserActionTests(AdjutantTestCase):
         self.assertEquals(action.valid, True)
 
         self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].email,
+            fake_clients.identity_temp_cache['users'][user.id].email,
             'new_test@example.com')
 
         self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].name,
+            fake_clients.identity_temp_cache['users'][user.id].name,
             'new_test@example.com')
 
     @override_settings(USERNAME_IS_EMAIL=True)
@@ -1096,19 +1081,7 @@ class UserActionTests(AdjutantTestCase):
         """
         Test case for an invalid user being updated.
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        user = mock.Mock()
-        user.id = 'user_id_1'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache()
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -1136,74 +1109,16 @@ class UserActionTests(AdjutantTestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, False)
 
-    @override_settings(USERNAME_IS_EMAIL=True)
-    def test_update_email_invalid_email(self):
-        """
-        Test case for a user attempting to update with an invalid email.
-        """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        user = mock.Mock()
-        user.id = 'user_id_1'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-
-        setup_temp_cache({'test_project': project}, {user.id: user})
-
-        task = Task.objects.create(
-            ip_address="0.0.0.0",
-            keystone_user={
-                'roles': ['project_mod'],
-                'project_id': 'test_project_id',
-                'project_domain_id': 'default',
-            })
-
-        data = {
-            'new_email': 'new_testexample.com',
-            'user_id': "non_user_id",
-        }
-
-        action = UpdateUserEmailAction(data, task=task, order=1)
-
-        action.pre_approve()
-        self.assertEquals(action.valid, False)
-
-        action.post_approve()
-        self.assertEquals(action.valid, False)
-
-        action.submit({'confirm': True})
-        self.assertEquals(action.valid, False)
-
-        self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].email,
-            'test@example.com')
-        self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].name,
-            'test@example.com')
-
     @override_settings(USERNAME_IS_EMAIL=False)
     def test_update_email_username_not_email(self):
         """
         Test case for a user attempting to update with an invalid email.
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        user = fake_clients.FakeUser(
+            name="test_user", password="gibberish",
+            email="test@example.com")
 
-        user = mock.Mock()
-        user.id = 'user_id_1'
-        user.name = "test_user"
-        user.email = "test@example.com"
-        user.domain = 'default'
-
-        setup_temp_cache({'test_project': project}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -1215,7 +1130,7 @@ class UserActionTests(AdjutantTestCase):
 
         data = {
             'new_email': 'new_testexample.com',
-            'user_id': "user_id_1",
+            'user_id': user.id,
         }
 
         action = UpdateUserEmailAction(data, task=task, order=1)
@@ -1230,9 +1145,9 @@ class UserActionTests(AdjutantTestCase):
         self.assertEquals(action.valid, True)
 
         self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].email,
+            fake_clients.identity_temp_cache['users'][user.id].email,
             'new_testexample.com')
 
         self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].name,
+            fake_clients.identity_temp_cache['users'][user.id].name,
             'test_user')

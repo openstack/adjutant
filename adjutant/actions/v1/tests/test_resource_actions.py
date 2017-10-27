@@ -23,7 +23,7 @@ from adjutant.actions.v1.resources import (
 from adjutant.api.models import Task
 from adjutant.common.tests.utils import modify_dict_settings
 from adjutant.common.tests.fake_clients import (
-    FakeManager, setup_temp_cache, get_fake_neutron, get_fake_novaclient,
+    FakeManager, setup_identity_cache, get_fake_neutron, get_fake_novaclient,
     get_fake_cinderclient, setup_neutron_cache, neutron_cache, cinder_cache,
     nova_cache, setup_mock_caches)
 
@@ -61,7 +61,7 @@ class ProjectSetupActionTests(TestCase):
         project.domain = 'default'
         project.roles = {}
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         data = {
             'setup_network': True,
@@ -111,7 +111,7 @@ class ProjectSetupActionTests(TestCase):
         project.domain = 'default'
         project.roles = {}
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         data = {
             'setup_network': False,
@@ -156,7 +156,7 @@ class ProjectSetupActionTests(TestCase):
         project.domain = 'default'
         project.roles = {}
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         data = {
             'setup_network': True,
@@ -248,7 +248,7 @@ class ProjectSetupActionTests(TestCase):
         project.domain = 'default'
         project.roles = {}
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         task.cache = {'project_id': "test_project_id"}
 
@@ -330,7 +330,7 @@ class ProjectSetupActionTests(TestCase):
         project.domain = 'default'
         project.roles = {}
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         task.cache = {'project_id': "test_project_id"}
 
@@ -377,7 +377,7 @@ class ProjectSetupActionTests(TestCase):
         project.domain = 'default'
         project.roles = {}
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         task.cache = {'project_id': "test_project_id"}
 
@@ -429,7 +429,7 @@ class ProjectSetupActionTests(TestCase):
         project.domain = 'default'
         project.roles = {}
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
         setup_mock_caches('RegionOne', 'test_project_id')
 
         task = Task.objects.create(
@@ -489,11 +489,6 @@ class ProjectSetupActionTests(TestCase):
     get_fake_cinderclient)
 class QuotaActionTests(TestCase):
 
-    def tearDown(self):
-        cinder_cache.clear()
-        nova_cache.clear()
-        neutron_cache.clear()
-
     def test_update_quota(self):
         """
         Sets a new quota on all services of a project in a single region
@@ -511,7 +506,7 @@ class QuotaActionTests(TestCase):
         user.domain = 'default'
         user.password = "test_password"
 
-        setup_temp_cache({'test_project': project, }, {user.id: user})
+        setup_identity_cache(projects=[project], users=[user])
         setup_neutron_cache('RegionOne', 'test_project_id')
 
         # Test sending to only a single region
@@ -559,7 +554,7 @@ class QuotaActionTests(TestCase):
         user.domain = 'default'
         user.password = "test_password"
 
-        setup_temp_cache({'test_project': project, }, {user.id: user})
+        setup_identity_cache(projects=[project], users=[user])
         setup_mock_caches('RegionOne', project.id)
         setup_mock_caches('RegionTwo', project.id)
 
@@ -618,7 +613,7 @@ class QuotaActionTests(TestCase):
         user.domain = 'default'
         user.password = "test_password"
 
-        setup_temp_cache({'test_project': project, }, {user.id: user})
+        setup_identity_cache(projects=[project], users=[user])
         setup_mock_caches('RegionOne', project.id)
         setup_mock_caches('RegionTwo', project.id)
 

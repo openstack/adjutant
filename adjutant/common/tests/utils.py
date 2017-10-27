@@ -20,6 +20,8 @@ from django.test.utils import override_settings
 from django.test import TestCase
 from rest_framework.test import APITestCase
 
+from adjutant.common.tests import fake_clients
+
 
 class modify_dict_settings(override_settings):
     """
@@ -199,6 +201,12 @@ class AdjutantTestCase(TestCase, TestCaseMixin):
         cls._remove_settings_changes()
         super(AdjutantTestCase, cls).tearDownClass()
 
+    def tearDown(self):
+        fake_clients.identity_temp_cache.clear()
+        fake_clients.neutron_cache.clear()
+        fake_clients.nova_cache.clear()
+        fake_clients.cinder_cache.clear()
+
 
 class AdjutantAPITestCase(APITestCase, TestCaseMixin):
     """
@@ -214,3 +222,9 @@ class AdjutantAPITestCase(APITestCase, TestCaseMixin):
     def tearDownClass(cls):
         cls._remove_settings_changes()
         super(AdjutantAPITestCase, cls).tearDownClass()
+
+    def tearDown(self):
+        fake_clients.identity_temp_cache.clear()
+        fake_clients.neutron_cache.clear()
+        fake_clients.nova_cache.clear()
+        fake_clients.cinder_cache.clear()

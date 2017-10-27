@@ -46,8 +46,18 @@ class BaseUserIdSerializer(serializers.Serializer):
 
 
 class NewUserSerializer(BaseUserNameSerializer):
-    roles = serializers.MultipleChoiceField(choices=role_options)
+    roles = serializers.MultipleChoiceField(
+        choices=role_options, default=set)
+    inherited_roles = serializers.MultipleChoiceField(
+        choices=role_options, default=set)
     project_id = serializers.CharField(max_length=64)
+
+    def validate(self, data):
+        if not data['roles'] and not data['inherited_roles']:
+            raise serializers.ValidationError(
+                "Must supply either 'roles' or 'inherited_roles', or both.")
+
+        return data
 
 
 class NewProjectSerializer(serializers.Serializer):
@@ -55,6 +65,7 @@ class NewProjectSerializer(serializers.Serializer):
         max_length=64, default=None, allow_null=True)
     project_name = serializers.CharField(max_length=64)
     domain_id = serializers.CharField(max_length=64, default='default')
+    description = serializers.CharField(default="", allow_blank=True)
 
 
 class NewProjectWithUserSerializer(BaseUserNameSerializer):
@@ -70,10 +81,20 @@ class ResetUserSerializer(BaseUserNameSerializer):
 
 
 class EditUserRolesSerializer(BaseUserIdSerializer):
-    roles = serializers.MultipleChoiceField(choices=role_options)
+    roles = serializers.MultipleChoiceField(
+        choices=role_options, default=set)
+    inherited_roles = serializers.MultipleChoiceField(
+        choices=role_options, default=set)
     remove = serializers.BooleanField(default=False)
     project_id = serializers.CharField(max_length=64)
     domain_id = serializers.CharField(max_length=64, default='default')
+
+    def validate(self, data):
+        if not data['roles'] and not data['inherited_roles']:
+            raise serializers.ValidationError(
+                "Must supply either 'roles' or 'inherited_roles', or both.")
+
+        return data
 
 
 class NewDefaultNetworkSerializer(serializers.Serializer):

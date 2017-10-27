@@ -27,7 +27,9 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from adjutant.api.models import Task, Token, Notification
-from adjutant.common.tests.fake_clients import FakeManager, setup_temp_cache
+from adjutant.common.tests import fake_clients
+from adjutant.common.tests.fake_clients import (
+    FakeManager, setup_identity_cache)
 from adjutant.common.tests.utils import modify_dict_settings
 
 
@@ -65,7 +67,7 @@ class AdminAPITests(APITestCase):
         """
         Test the basic task detail view.
         """
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
@@ -126,14 +128,10 @@ class AdminAPITests(APITestCase):
         Expired token should do nothing, then delete itself.
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
@@ -160,14 +158,10 @@ class AdminAPITests(APITestCase):
         Expired token should do nothing, then delete itself.
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
@@ -193,14 +187,10 @@ class AdminAPITests(APITestCase):
         Token should contain actions, task_type, required fields.
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
@@ -222,27 +212,26 @@ class AdminAPITests(APITestCase):
         self.assertEqual(1, Token.objects.count())
 
     def test_token_list_get(self):
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
+        """
+        Create two password resets, then confirm we can list tokens.
+        """
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        user2 = fake_clients.FakeUser(
+            name="test2@example.com", password="123",
+            email="test2@example.com")
+
+        setup_identity_cache(users=[user, user2])
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            response.data['notes'],
-            ['If user with email exists, reset token will be issued.'])
 
+        data = {'email': "test2@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        first_task_id = Task.objects.all()[0].uuid
 
         headers = {
             'project_name': "test_project",
@@ -256,16 +245,19 @@ class AdminAPITests(APITestCase):
 
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            len(response.json()['tokens']), 2)
-        self.assertEqual(response.json()['tokens'][1]['task'],
-                         first_task_id)
+        self.assertEqual(len(response.json()['tokens']), 2)
+
+        task_ids = [t.uuid for t in Task.objects.all()]
+
+        token_task_ids = [t['task'] for t in response.json()['tokens']]
+
+        self.assertEqual(sorted(task_ids), sorted(token_task_ids))
 
     def test_task_complete(self):
         """
         Can't approve a completed task.
         """
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
@@ -297,7 +289,7 @@ class AdminAPITests(APITestCase):
         and error notifcations
         """
 
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
@@ -358,13 +350,9 @@ class AdminAPITests(APITestCase):
         Updates it and attempts to reapprove.
         """
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
@@ -409,7 +397,7 @@ class AdminAPITests(APITestCase):
         """
         Test that you can get details of an induvidual notfication.
         """
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
@@ -444,7 +432,7 @@ class AdminAPITests(APITestCase):
         """
         Test that you get a 404 trying to access a non-existent notification.
         """
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         headers = {
             'project_name': "test_project",
@@ -466,7 +454,7 @@ class AdminAPITests(APITestCase):
         """
         Test that you can acknowledge a notification.
         """
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
@@ -513,7 +501,7 @@ class AdminAPITests(APITestCase):
         """
         Test that you cant acknowledge a non-existent notification.
         """
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         headers = {
             'project_name': "test_project",
@@ -535,7 +523,7 @@ class AdminAPITests(APITestCase):
         """
         Test that you cant reacknowledge a notification.
         """
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
@@ -568,7 +556,7 @@ class AdminAPITests(APITestCase):
         """
         Test that you have to include 'acknowledged': True to the request.
         """
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
@@ -596,7 +584,7 @@ class AdminAPITests(APITestCase):
         """
         Test that you can acknowledge a list of notifications.
         """
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
@@ -641,7 +629,7 @@ class AdminAPITests(APITestCase):
         """
         Test that you cannot acknowledge an empty list of notifications.
         """
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         headers = {
             'project_name': "test_project",
@@ -693,7 +681,7 @@ class AdminAPITests(APITestCase):
         """
         Tests the email notification engine
         """
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
@@ -727,21 +715,14 @@ class AdminAPITests(APITestCase):
         test deleting of expired tokens.
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        user2 = mock.Mock()
-        user2.id = 'user_id2'
-        user2.name = "test2@example.com"
-        user2.email = "test2@example.com"
-        user2.domain = 'default'
-        user2.password = "test_password"
+        user2 = fake_clients.FakeUser(
+            name="test2@example.com", password="123",
+            email="test2@example.com")
 
-        setup_temp_cache({}, {user.id: user, user2.name: user2})
+        setup_identity_cache(users=[user, user2])
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
@@ -787,14 +768,10 @@ class AdminAPITests(APITestCase):
         test for reissue of tokens
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
@@ -833,25 +810,21 @@ class AdminAPITests(APITestCase):
         test for reissue of tokens for non-admin
         """
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
         data = {'email': "test@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json(), {'notes': ['created token']})
@@ -885,14 +858,10 @@ class AdminAPITests(APITestCase):
         Tests that a cancelled task cannot have a token reissued
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
@@ -928,14 +897,10 @@ class AdminAPITests(APITestCase):
         Tests that a completed task cannot have a token reissued
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
@@ -971,7 +936,7 @@ class AdminAPITests(APITestCase):
         Tests that an unapproved task cannot have a token reissued
         """
 
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/CreateProject"
         data = {'email': "test@example.com", "project_name": "test_project"}
@@ -1003,7 +968,7 @@ class AdminAPITests(APITestCase):
         Ensure the ability to cancel a task.
         """
 
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
@@ -1037,7 +1002,7 @@ class AdminAPITests(APITestCase):
         Ensure the ability to cancel a task after the token is sent.
         """
 
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
@@ -1073,7 +1038,7 @@ class AdminAPITests(APITestCase):
         Tests that a reapproved task will delete all of it's previous tokens.
         """
 
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
@@ -1118,13 +1083,7 @@ class AdminAPITests(APITestCase):
         Ensure task update doesn't work for approved actions.
         """
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
@@ -1158,25 +1117,21 @@ class AdminAPITests(APITestCase):
         Ensure the ability to cancel your own task.
         """
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
         data = {'email': "test@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json(), {'notes': ['created token']})
@@ -1201,25 +1156,21 @@ class AdminAPITests(APITestCase):
         Ensure the ability to cancel ONLY your own task.
         """
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
         data = {'email': "test@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json(), {'notes': ['created token']})
@@ -1233,34 +1184,31 @@ class AdminAPITests(APITestCase):
 
     def test_task_list(self):
         """
+        Create some user invite tasks, then make sure we can list them.
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
         data = {'email': "test@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = {'email': "test2@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = {'email': "test3@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -1282,33 +1230,29 @@ class AdminAPITests(APITestCase):
         Test that tasks returns in the default sort.
         The default sort is by created_on descending.
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
         data = {'email': "test@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = {'email': "test2@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = {'email': "test3@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -1334,29 +1278,25 @@ class AdminAPITests(APITestCase):
     def test_task_list_filter(self):
         """
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
         data = {'email': "test@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = {'email': "test2@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
@@ -1418,13 +1358,13 @@ class AdminAPITests(APITestCase):
         project2.domain = 'default'
         project2.roles = {}
 
-        setup_temp_cache(
+        setup_identity_cache(
             {'test_project': project, 'test_project_2': project2}, {})
 
         url = "/v1/actions/InviteUser"
         headers = {
-            'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_name': project.name,
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "owner@example.com",
             'user_id': "test_user_id",
@@ -1436,8 +1376,8 @@ class AdminAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         headers = {
-            'project_name': "test_project",
-            'project_id': "test_project_id_2",
+            'project_name': project2.name,
+            'project_id': project2.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
@@ -1459,28 +1399,8 @@ class AdminAPITests(APITestCase):
 
     def test_task_list_filter_formating(self):
         """
+        Test error states for badly formatted filters.
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        setup_temp_cache({'test_project': project}, {})
-
-        url = "/v1/actions/InviteUser"
-        headers = {
-            'project_name': "test_project",
-            'project_id': "test_project_id",
-            'roles': "project_admin,_member_,project_mod",
-            'username': "test@example.com",
-            'user_id': "test_user_id",
-            'authenticated': True
-        }
-        data = {'email': "test@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
-        response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         headers = {
             'project_name': "test_project",
@@ -1557,20 +1477,19 @@ class AdminAPITests(APITestCase):
         admin user.
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
+        project = fake_clients.FakeProject(name="test_project")
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {user.id: ['admin']}
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({'test_project': project}, {user.id: user})
+        assignment = fake_clients.FakeRoleAssignment(
+            scope={'project': {'id': project.id}},
+            role_name="admin",
+            user={'id': user.id}
+        )
+
+        setup_identity_cache(
+            projects=[project], users=[user], role_assignments=[assignment])
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}

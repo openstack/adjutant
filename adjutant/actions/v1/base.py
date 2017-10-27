@@ -272,14 +272,17 @@ class UserMixin(ResourceMixin):
         return id_manager.find_user(self.username, self.domain_id)
 
     # Mutators
-    def grant_roles(self, user, roles, project_id):
-        return self._user_roles_edit(user, roles, project_id, remove=False)
+    def grant_roles(self, user, roles, project_id, inherited=False):
+        return self._user_roles_edit(
+            user, roles, project_id, remove=False, inherited=inherited)
 
-    def remove_roles(self, user, roles, project_id):
-        return self._user_roles_edit(user, roles, project_id, remove=True)
+    def remove_roles(self, user, roles, project_id, inherited=False):
+        return self._user_roles_edit(
+            user, roles, project_id, remove=True, inherited=inherited)
 
     # Helper function to add or remove roles
-    def _user_roles_edit(self, user, roles, project_id, remove=False):
+    def _user_roles_edit(self, user, roles, project_id, remove=False,
+                         inherited=False):
         id_manager = user_store.IdentityManager()
         if not remove:
             action_fn = id_manager.add_user_role
@@ -297,7 +300,7 @@ class UserMixin(ResourceMixin):
                     raise TypeError("Keystone missing role: %s" % role)
 
             for role in ks_roles:
-                action_fn(user, role, project_id)
+                action_fn(user, role, project_id, inherited=inherited)
         except Exception as e:
             self.add_note(
                 "Error: '%s' while %s the roles: %s on user: %s " %
@@ -398,10 +401,12 @@ class ProjectMixin(ResourceMixin):
 
     def _create_project(self):
         id_manager = user_store.IdentityManager()
+        description = getattr(self, "description", "")
         try:
             project = id_manager.create_project(
                 self.project_name, created_on=str(timezone.now()),
-                parent=self.parent_id, domain=self.domain_id)
+                parent=self.parent_id, domain=self.domain_id,
+                description=description)
         except Exception as e:
             self.add_note(
                 "Error: '%s' while creating project: %s" %

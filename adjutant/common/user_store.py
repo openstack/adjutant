@@ -36,7 +36,20 @@ def get_managable_roles(user_roles):
     return managable_role_names
 
 
-class IdentityManager(object):
+def subtree_ids_list(subtree, id_list=[]):
+    if not subtree:
+        return id_list
+    for key in subtree.iterkeys():
+        id_list.append(key)
+        if subtree[key]:
+            subtree_ids_list(subtree[key], id_list)
+    return id_list
+
+
+# NOTE(adriant): I'm adding no cover here since this class can never be covered
+# by unit and non-tempest functional tests. This class only works when talking
+# to a real Keystone, so tests can never cover it.
+class IdentityManager(object):  # pragma: no cover
     """
     A wrapper object for the Keystone Client. Mainly setup as
     such for easier testing, but also so it can be replaced
@@ -78,20 +91,67 @@ class IdentityManager(object):
             role_dict = {role.id: role for role in roles}
 
             users = {}
+
             user_assignments = self.ks_client.role_assignments.list(
                 project=project)
             for assignment in user_assignments:
                 try:
                     user = users.get(assignment.user['id'], None)
-                    if user:
-                        user.roles.append(role_dict[assignment.role['id']])
-                    else:
-                        user = self.ks_client.users.get(assignment.user['id'])
-                        user.roles = [role_dict[assignment.role['id']], ]
+                    if not user:
+                        user = self.ks_client.users.get(
+                            assignment.user['id'])
+                        user.roles = []
+                        user.inherited_roles = []
                         users[user.id] = user
+
+                    if assignment.scope.get('OS-INHERIT:inherited_to'):
+                        user.inherited_roles.append(
+                            role_dict[assignment.role['id']])
+                    else:
+                        user.roles.append(role_dict[assignment.role['id']])
                 except AttributeError:
                     # Just means the assignment is a group, so ignore it.
                     pass
+        except ks_exceptions.NotFound:
+            return []
+        return users.values()
+
+    def list_inherited_users(self, project):
+        """
+        Find all the users whose roles are inherited down to the given project.
+        """
+        try:
+            roles = self.ks_client.roles.list()
+            role_dict = {role.id: role for role in roles}
+
+            users = {}
+
+            project = self.ks_client.projects.get(project)
+            while project.parent_id:
+                project = self.ks_client.projects.get(project.parent_id)
+                user_assignments = self.ks_client.role_assignments.list(
+                    project=project)
+                for assignment in user_assignments:
+                    if not assignment.scope.get('OS-INHERIT:inherited_to'):
+                        continue
+                    try:
+                        user = users.get(
+                            assignment.user['id'], None)
+                        if user:
+                            user.roles.append(
+                                role_dict[assignment.role['id']])
+                        else:
+                            user = self.ks_client.users.get(
+                                assignment.user['id'])
+                            user.roles = [
+                                role_dict[assignment.role['id']], ]
+                            user.inherited_roles = []
+                            users[user.id] = user
+                    except AttributeError:
+                        # Just means the assignment is a group.
+                        pass
+            for user_id, user in users.iteritems():
+                user.roles = list(set(user.roles))
         except ks_exceptions.NotFound:
             return []
         return users.values()
@@ -126,8 +186,21 @@ class IdentityManager(object):
             role = None
         return role
 
-    def get_roles(self, user, project):
-        return self.ks_client.roles.list(user=user, project=project)
+    def get_roles(self, user, project, inherited=False):
+        roles = self.ks_client.roles.list()
+        role_dict = {role.id: role for role in roles}
+
+        user_roles = []
+        user_assignments = self.ks_client.role_assignments.list(
+            user=user, project=project)
+        for assignment in user_assignments:
+            if (assignment.scope.get('OS-INHERIT:inherited_to') and not
+                    inherited) or (
+                        inherited and not
+                        assignment.scope.get('OS-INHERIT:inherited_to')):
+                continue
+            user_roles.append(role_dict[assignment.role['id']])
+        return user_roles
 
     def get_all_roles(self, user):
         """
@@ -146,15 +219,25 @@ class IdentityManager(object):
 
         return projects
 
-    def add_user_role(self, user, role, project):
+    def add_user_role(self, user, role, project, inherited=False):
         try:
-            self.ks_client.roles.grant(role, user=user, project=project)
+            if inherited:
+                self.ks_client.roles.grant(
+                    role, user=user, project=project,
+                    os_inherit_extension_inherited=inherited)
+            else:
+                self.ks_client.roles.grant(role, user=user, project=project)
         except ks_exceptions.Conflict:
             # Conflict is ok, it means the user already has this role.
             pass
 
-    def remove_user_role(self, user, role, project):
-        self.ks_client.roles.revoke(role, user=user, project=project)
+    def remove_user_role(self, user, role, project, inherited=False):
+        if inherited:
+            self.ks_client.roles.revoke(
+                role, user=user, project=project,
+                os_inherit_extension_inherited=inherited)
+        else:
+            self.ks_client.roles.revoke(role, user=user, project=project)
 
     def find_project(self, project_name, domain):
         try:
@@ -172,11 +255,35 @@ class IdentityManager(object):
         except ks_exceptions.NotFound:
             return None
 
-    def get_project(self, project_id):
+    def get_project(self, project_id, subtree_as_ids=False,
+                    parents_as_ids=False):
         try:
-            return self.ks_client.projects.get(project_id)
+            project = self.ks_client.projects.get(
+                project_id, subtree_as_ids=subtree_as_ids,
+                parents_as_ids=parents_as_ids)
+            if parents_as_ids:
+                depth = 1
+                last_root = None
+                root = project.parents.keys()[0]
+                value = project.parents.values()[0]
+                while value is not None:
+                    depth += 1
+                    last_root = root
+                    root = value.keys()[0]
+                    value = value.values()[0]
+                project.root = last_root
+                project.depth = depth
+            if subtree_as_ids:
+                project.subtree_ids = subtree_ids_list(project.subtree)
+            return project
         except ks_exceptions.NotFound:
             return None
+
+    def list_sub_projects(self, project_id):
+        try:
+            return self.ks_client.projects.list(parent_id=project_id)
+        except ks_exceptions.NotFound:
+            return []
 
     def update_project(self, project, name=None, domain=None, description=None,
                        enabled=None, **kwargs):
@@ -189,9 +296,10 @@ class IdentityManager(object):
             return None
 
     def create_project(self, project_name, created_on, parent=None,
-                       domain=None):
+                       domain=None, description=""):
         project = self.ks_client.projects.create(
-            project_name, domain, parent=parent, created_on=created_on)
+            project_name, domain, parent=parent, created_on=created_on,
+            description=description)
         return project
 
     def get_domain(self, domain_id):

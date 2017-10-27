@@ -20,7 +20,8 @@ from django.core import mail
 from rest_framework import status
 
 from adjutant.api.models import Task, Token
-from adjutant.common.tests.fake_clients import FakeManager, setup_temp_cache
+from adjutant.common.tests.fake_clients import (
+    FakeManager, setup_identity_cache)
 from adjutant.common.tests import fake_clients
 from adjutant.common.tests.utils import (AdjutantAPITestCase,
                                          modify_dict_settings)
@@ -41,31 +42,28 @@ class TaskViewTests(AdjutantAPITestCase):
         Simple test to confirm the serializers are correctly processing
         wrong data or missing fields.
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
         data = {'wrong_email_field': "test@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.json(),
                          {'email': ['This field is required.']})
 
         data = {'email': "not_a_valid_email", 'roles': ["not_a_valid_role"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
@@ -78,25 +76,21 @@ class TaskViewTests(AdjutantAPITestCase):
         Ensure the new user workflow goes as expected.
         Create task, create token, submit token.
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
         data = {'email': "test@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json(), {'notes': ['created token']})
@@ -111,14 +105,14 @@ class TaskViewTests(AdjutantAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(mail.outbox), 2)
         self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].name,
+            fake_clients.identity_temp_cache['new_users'][0].name,
             'test@example.com')
 
     def test_new_user_no_project(self):
         """
         Can't create a user for a non-existent project.
         """
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/InviteUser"
         headers = {
@@ -137,9 +131,10 @@ class TaskViewTests(AdjutantAPITestCase):
 
     def test_new_user_not_my_project(self):
         """
-        Can't create a user for project that isn't mine.
+        Can't create a user for project that user isn't'
+        project admin or mod on.
         """
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/InviteUser"
         headers = {
@@ -160,7 +155,7 @@ class TaskViewTests(AdjutantAPITestCase):
         Can't create a user if unauthenticated.
         """
 
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/InviteUser"
         headers = {}
@@ -177,31 +172,24 @@ class TaskViewTests(AdjutantAPITestCase):
         """
         Adding existing user to project.
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="parent_project")
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({'test_project': project}, {user.id: user})
+        setup_identity_cache(projects=[project], users=[user])
 
         url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
         data = {'email': "test@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json(), {'notes': ['created token']})
@@ -218,31 +206,32 @@ class TaskViewTests(AdjutantAPITestCase):
         Already has role.
         Should 'complete' anyway but do nothing.
         """
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {user.id: ['_member_']}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {user.id: user})
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
+
+        assignment = fake_clients.FakeRoleAssignment(
+            scope={'project': {'id': project.id}},
+            role_name="_member_",
+            user={'id': user.id}
+        )
+
+        setup_identity_cache(
+            projects=[project], users=[user], role_assignments=[assignment])
 
         url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
         data = {'email': "test@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
@@ -254,7 +243,7 @@ class TaskViewTests(AdjutantAPITestCase):
         Ensure the new project workflow goes as expected.
         """
 
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
@@ -279,6 +268,9 @@ class TaskViewTests(AdjutantAPITestCase):
             {'notes': ['created token']}
         )
 
+        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        self.assertEquals(new_project.name, 'test_project')
+
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
         data = {'password': 'testpassword'}
@@ -291,7 +283,7 @@ class TaskViewTests(AdjutantAPITestCase):
         that the a 400 is recieved and no final emails are sent.
         """
 
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
@@ -315,6 +307,8 @@ class TaskViewTests(AdjutantAPITestCase):
             response.data,
             {'notes': ['created token']}
         )
+        self.assertEqual(len(mail.outbox), 3)
+
         fake_clients.identity_temp_cache['projects'] = {}
 
         new_token = Token.objects.all()[0]
@@ -322,6 +316,7 @@ class TaskViewTests(AdjutantAPITestCase):
         data = {'password': 'testpassword'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(len(mail.outbox), 3)
 
     def test_new_project_existing(self):
         """
@@ -329,13 +324,9 @@ class TaskViewTests(AdjutantAPITestCase):
         if project is already present.
         """
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
@@ -366,16 +357,10 @@ class TaskViewTests(AdjutantAPITestCase):
         No token should be needed.
         """
 
-        # pre-create user
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache(
-            projects={},
-            users={user.id: user})
+        setup_identity_cache(users=[user])
 
         # unauthenticated sign up as existing user
         url = "/v1/actions/CreateProject"
@@ -406,7 +391,7 @@ class TaskViewTests(AdjutantAPITestCase):
         """
         Project already exists but new user attempting to create it.
         """
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         # create signup#1 - project1 with user 1
         url = "/v1/actions/CreateProject"
@@ -455,14 +440,10 @@ class TaskViewTests(AdjutantAPITestCase):
         Create task + create token, submit token.
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
@@ -486,14 +467,10 @@ class TaskViewTests(AdjutantAPITestCase):
 
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         # Submit password reset
         url = "/v1/actions/ResetPassword"
@@ -517,7 +494,7 @@ class TaskViewTests(AdjutantAPITestCase):
         data = {'password': 'new_test_password1'}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(user.password, 'test_password')
+        self.assertEqual(user.password, '123')
 
         # Now reset with the second token
         second_token = Token.objects.all()[1]
@@ -532,7 +509,7 @@ class TaskViewTests(AdjutantAPITestCase):
         Actions should be successful, so usernames are not exposed.
         """
 
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@exampleinvalid.com"}
@@ -547,7 +524,7 @@ class TaskViewTests(AdjutantAPITestCase):
         CreateProject should create a notification.
         We should be able to grab it.
         """
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
@@ -577,13 +554,7 @@ class TaskViewTests(AdjutantAPITestCase):
         Ensure we can't submit duplicate tasks
         """
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com"}
@@ -600,25 +571,21 @@ class TaskViewTests(AdjutantAPITestCase):
         """
         Ensure we can't submit duplicate tasks
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
         data = {'email': "test@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json(), {'notes': ['created token']})
@@ -626,7 +593,7 @@ class TaskViewTests(AdjutantAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
         data = {'email': "test2@example.com", 'roles': ["_member_"],
-                'project_id': 'test_project_id'}
+                'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json(), {'notes': ['created token']})
@@ -638,14 +605,10 @@ class TaskViewTests(AdjutantAPITestCase):
         Confirm that the task id is returned when admin.
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         headers = {
             'project_name': "test_project",
@@ -660,7 +623,10 @@ class TaskViewTests(AdjutantAPITestCase):
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+        # make sure the task is actually valid
         new_task = Task.objects.all()[0]
+        self.assertTrue(all([a.valid for a in new_task.actions]))
+
         self.assertEqual(
             response.json()['task'],
             new_task.uuid)
@@ -670,14 +636,10 @@ class TaskViewTests(AdjutantAPITestCase):
         Confirm that the task id is not returned unless admin.
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         headers = {
             'project_name': "test_project",
@@ -692,6 +654,10 @@ class TaskViewTests(AdjutantAPITestCase):
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+        # make sure the task is actually valid
+        new_task = Task.objects.all()[0]
+        self.assertTrue(all([a.valid for a in new_task.actions]))
+
         self.assertFalse(response.json().get('task'))
 
     def test_update_email_task(self):
@@ -700,13 +666,10 @@ class TaskViewTests(AdjutantAPITestCase):
         Create task, create token, submit token.
         """
 
-        user = mock.Mock()
-        user.id = 'test_user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         url = "/v1/actions/UpdateEmail"
         headers = {
@@ -714,7 +677,7 @@ class TaskViewTests(AdjutantAPITestCase):
             'project_id': "test_project_id",
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
-            'user_id': "test_user_id",
+            'user_id': user.id,
             'authenticated': True
         }
 
@@ -753,13 +716,10 @@ class TaskViewTests(AdjutantAPITestCase):
         to send a confirmation email to the old email address it does.
         """
 
-        user = mock.Mock()
-        user.id = 'test_user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         url = "/v1/actions/UpdateEmail"
         headers = {
@@ -767,7 +727,7 @@ class TaskViewTests(AdjutantAPITestCase):
             'project_id': "test_project_id",
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
-            'user_id': "test_user_id",
+            'user_id': user.id,
             'authenticated': True
         }
 
@@ -816,13 +776,10 @@ class TaskViewTests(AdjutantAPITestCase):
         email address it does.
         """
 
-        user = mock.Mock()
-        user.id = 'test_user_id'
-        user.name = "nkdfslnkls"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        user = fake_clients.FakeUser(
+            name="nkdfslnkls", password="123", email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         url = "/v1/actions/UpdateEmail"
         headers = {
@@ -830,7 +787,7 @@ class TaskViewTests(AdjutantAPITestCase):
             'project_id': "test_project_id",
             'roles': "project_admin,_member_,project_mod",
             'username': "nkdfslnkls",
-            'user_id': "test_user_id",
+            'user_id': user.id,
             'authenticated': True,
             'email': 'test@example.com',
         }
@@ -859,13 +816,10 @@ class TaskViewTests(AdjutantAPITestCase):
 
     def test_update_email_task_invalid_email(self):
 
-        user = mock.Mock()
-        user.id = 'test_user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         url = "/v1/actions/UpdateEmail"
         headers = {
@@ -873,7 +827,7 @@ class TaskViewTests(AdjutantAPITestCase):
             'project_id': "test_project_id",
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
-            'user_id': "test_user_id",
+            'user_id': user.id,
             'authenticated': True
         }
 
@@ -887,19 +841,14 @@ class TaskViewTests(AdjutantAPITestCase):
     @override_settings(USERNAME_IS_EMAIL=True)
     def test_update_email_pre_existing_user_with_email(self):
 
-        user = mock.Mock()
-        user.id = 'test_user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        user2 = mock.Mock()
-        user2.id = 'new_user_id'
-        user2.name = "new_test@example.com"
-        user2.email = "new_test@example.com"
-        user2.domain = 'default'
+        user2 = fake_clients.FakeUser(
+            name="new_test@example.com", password="123",
+            email="new_test@example.com")
 
-        setup_temp_cache({}, {user.id: user, user2.id: user2})
+        setup_identity_cache(users=[user, user2])
 
         url = "/v1/actions/UpdateEmail"
         headers = {
@@ -924,19 +873,14 @@ class TaskViewTests(AdjutantAPITestCase):
     @override_settings(USERNAME_IS_EMAIL=False)
     def test_update_email_user_with_email_username_not_email(self):
 
-        user = mock.Mock()
-        user.id = 'test_user_id'
-        user.name = "test"
-        user.email = "test@example.com"
-        user.domain = 'Default'
+        user = fake_clients.FakeUser(
+            name="test", password="123", email="test@example.com")
 
-        user2 = mock.Mock()
-        user2.id = 'new_user_id'
-        user2.name = "new_test"
-        user2.email = "new_test@example.com"
-        user2.domain = 'Default'
+        user2 = fake_clients.FakeUser(
+            name="new_test", password="123",
+            email="new_test@example.com")
 
-        setup_temp_cache({}, {user.id: user, user2.id: user})
+        setup_identity_cache(users=[user, user2])
 
         url = "/v1/actions/UpdateEmail"
         headers = {
@@ -944,7 +888,7 @@ class TaskViewTests(AdjutantAPITestCase):
             'project_id': "test_project_id",
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
-            'user_id': "test_user_id",
+            'user_id': user.id,
             'authenticated': True
         }
 
@@ -969,13 +913,10 @@ class TaskViewTests(AdjutantAPITestCase):
         Ensure that an unauthenticated user cant access the endpoint.
         """
 
-        user = mock.Mock()
-        user.id = 'test_user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         url = "/v1/actions/UpdateEmail"
         headers = {
@@ -989,13 +930,10 @@ class TaskViewTests(AdjutantAPITestCase):
     @override_settings(USERNAME_IS_EMAIL=False)
     def test_update_email_task_username_not_email(self):
 
-        user = mock.Mock()
-        user.id = 'test_user_id'
-        user.name = "test_user"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        user = fake_clients.FakeUser(
+            name="test_user", password="123", email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         url = "/v1/actions/UpdateEmail"
         headers = {
@@ -1003,7 +941,7 @@ class TaskViewTests(AdjutantAPITestCase):
             'project_id': "test_project_id",
             'roles': "project_admin,_member_,project_mod",
             'username': "test_user",
-            'user_id': "test_user_id",
+            'user_id': user.id,
             'authenticated': True
         }
 
@@ -1028,25 +966,21 @@ class TaskViewTests(AdjutantAPITestCase):
         """
         Invites a user where the email is different to the username.
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "user",
             'user_id': "test_user_id",
             'authenticated': True
         }
         data = {'username': 'new_user', 'email': "new@example.com",
-                'roles': ["_member_"], 'project_id': 'test_project_id'}
+                'roles': ["_member_"], 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json(), {'notes': ['created token']})
@@ -1063,7 +997,7 @@ class TaskViewTests(AdjutantAPITestCase):
         self.assertEqual(len(mail.outbox), 2)
 
         self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].name,
+            fake_clients.identity_temp_cache['new_users'][0].name,
             'new_user')
 
     @override_settings(USERNAME_IS_EMAIL=False)
@@ -1073,14 +1007,10 @@ class TaskViewTests(AdjutantAPITestCase):
         Create task + create token, submit token.
         """
 
-        user = mock.Mock()
-        user.id = 'user_id'
-        user.name = "test_user"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.password = "test_password"
+        user = fake_clients.FakeUser(
+            name="test_user", password="123", email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         url = "/v1/actions/ResetPassword"
         # NOTE(amelia): Requiring both username and email here may be
@@ -1112,7 +1042,7 @@ class TaskViewTests(AdjutantAPITestCase):
 
     @override_settings(USERNAME_IS_EMAIL=False)
     def test_new_project_username_not_email(self):
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/CreateProject"
         data = {'project_name': "test_project", 'email': "test@example.com",
@@ -1175,40 +1105,60 @@ class TaskViewTests(AdjutantAPITestCase):
         # child project being created that all the project admins should be
         # notified of
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
+        project = fake_clients.FakeProject(name="test_project")
 
-        user = mock.Mock()
-        user.id = 'test_user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        user2 = mock.Mock()
-        user2.id = 'test_user_id_2'
-        user2.name = "test2@example.com"
-        user2.email = "test2@example.com"
-        user2.domain = 'default'
+        user2 = fake_clients.FakeUser(
+            name="test2@example.com", password="123",
+            email="test2@example.com")
 
-        user3 = mock.Mock()
-        user3.id = 'test_user_id_3'
-        user3.name = "test3@example.com"
-        user3.email = "test3@example.com"
-        user3.domain = 'default'
+        user3 = fake_clients.FakeUser(
+            name="test3@example.com", password="123",
+            email="test2@example.com")
 
-        project.roles = {user.id: ['project_admin', '_member_'],
-                         user2.id: ['project_admin', '_member_'],
-                         user3.id: ['project_mod', '_member_']}
+        assignments = [
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="_member_",
+                user={'id': user.id}
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="project_admin",
+                user={'id': user.id}
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="_member_",
+                user={'id': user2.id}
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="project_admin",
+                user={'id': user2.id}
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="_member_",
+                user={'id': user3.id}
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="project_mod",
+                user={'id': user3.id}
+            ),
+        ]
 
-        setup_temp_cache({'test_project': project},
-                         {user.id: user, user2.id: user2, user3.id: user3})
+        setup_identity_cache(
+            projects=[project], users=[user, user2, user3],
+            role_assignments=assignments)
 
         url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
@@ -1216,7 +1166,7 @@ class TaskViewTests(AdjutantAPITestCase):
         }
 
         data = {'email': "new_test@example.com",
-                'roles': ['_member_']}
+                'roles': ['_member_'], 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json(), {'notes': ['created token']})
@@ -1260,25 +1210,24 @@ class TaskViewTests(AdjutantAPITestCase):
         send to that the update action doesn't fall over
         """
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
+        project = fake_clients.FakeProject(name="test_project")
 
-        user = mock.Mock()
-        user.id = 'test_user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        project.roles = {user.id: ['_member_']}
+        assignment = fake_clients.FakeRoleAssignment(
+            scope={'project': {'id': project.id}},
+            role_name="_member_",
+            user={'id': user.id}
+        )
 
-        setup_temp_cache({'test_project': project}, {user.id: user})
+        setup_identity_cache(
+            projects=[project], users=[user], role_assignments=[assignment])
 
         url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
@@ -1324,25 +1273,31 @@ class TaskViewTests(AdjutantAPITestCase):
         Tests the sending of additional emails an admin email set in
         the conf
         """
+        project = fake_clients.FakeProject(name="test_project")
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        user = mock.Mock()
-        user.id = 'test_user_id'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        assignments = [
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="_member_",
+                user={'id': user.id}
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={'project': {'id': project.id}},
+                role_name="project_admin",
+                user={'id': user.id}
+            ),
+        ]
 
-        project.roles = {user.id: ['project_admin', '_member_']}
-        setup_temp_cache({'test_project': project}, {user.id: user, })
+        setup_identity_cache(
+            projects=[project], users=[user], role_assignments=assignments)
 
         url = "/v1/actions/InviteUser"
         headers = {
             'project_name': "test_project",
-            'project_id': "test_project_id",
+            'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
@@ -1392,7 +1347,7 @@ class TaskViewTests(AdjutantAPITestCase):
         action is invalid.
         """
 
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         url = "/v1/actions/InviteUser"
         headers = {

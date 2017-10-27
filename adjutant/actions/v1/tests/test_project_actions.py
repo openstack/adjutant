@@ -22,7 +22,8 @@ from adjutant.actions.v1.projects import (
     NewProjectAction)
 from adjutant.api.models import Task
 from adjutant.common.tests import fake_clients
-from adjutant.common.tests.fake_clients import FakeManager, setup_temp_cache
+from adjutant.common.tests.fake_clients import (
+    FakeManager, setup_identity_cache)
 from adjutant.common.tests.utils import modify_dict_settings
 
 
@@ -38,7 +39,7 @@ class ProjectActionTests(TestCase):
         user password at submit step.
         """
 
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -59,29 +60,29 @@ class ProjectActionTests(TestCase):
 
         action.post_approve()
         self.assertEquals(action.valid, True)
-        self.assertEquals(
-            fake_clients.identity_temp_cache['projects']['test_project'].name,
-            'test_project')
+
+        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        self.assertEquals(new_project.name, 'test_project')
+
+        new_user = fake_clients.identity_temp_cache['new_users'][0]
+        self.assertEquals(new_user.name, 'test@example.com')
+        self.assertEquals(new_user.email, 'test@example.com')
+
         self.assertEquals(
             task.cache,
-            {'project_id': 'project_id_1', 'user_id': 'user_id_1',
+            {'project_id': new_project.id, 'user_id': new_user.id,
              'user_state': 'default'})
-
-        action.post_approve()
-        self.assertEquals(action.valid, True)
 
         token_data = {'password': '123456'}
         action.submit(token_data)
         self.assertEquals(action.valid, True)
+
+        self.assertEquals(new_user.password, '123456')
+
+        fake_client = fake_clients.FakeManager()
+        roles = fake_client._get_roles_as_names(new_user, new_project)
         self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].name,
-            'test@example.com')
-        self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].email,
-            'test@example.com')
-        project = fake_clients.identity_temp_cache['projects']['test_project']
-        self.assertEquals(
-            sorted(project.roles["user_id_1"]),
+            sorted(roles),
             sorted(['_member_', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
@@ -91,7 +92,7 @@ class ProjectActionTests(TestCase):
         ensure reapprove does nothing.
         """
 
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -112,34 +113,40 @@ class ProjectActionTests(TestCase):
 
         action.post_approve()
         self.assertEquals(action.valid, True)
-        self.assertEquals(
-            fake_clients.identity_temp_cache['projects']['test_project'].name,
-            'test_project')
+
+        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        self.assertEquals(new_project.name, 'test_project')
+
+        new_user = fake_clients.identity_temp_cache['new_users'][0]
+        self.assertEquals(new_user.name, 'test@example.com')
+        self.assertEquals(new_user.email, 'test@example.com')
+
         self.assertEquals(
             task.cache,
-            {'project_id': 'project_id_1', 'user_id': 'user_id_1',
+            {'project_id': new_project.id, 'user_id': new_user.id,
              'user_state': 'default'})
 
         action.post_approve()
         self.assertEquals(action.valid, True)
-        self.assertEquals(
-            fake_clients.identity_temp_cache['projects']['test_project'].name,
-            'test_project')
+        self.assertEqual(
+            len(fake_clients.identity_temp_cache['new_projects']), 1)
+        self.assertEqual(
+            len(fake_clients.identity_temp_cache['new_users']), 1)
         self.assertEquals(
             task.cache,
-            {'project_id': 'project_id_1', 'user_id': 'user_id_1',
+            {'project_id': new_project.id, 'user_id': new_user.id,
              'user_state': 'default'})
 
         token_data = {'password': '123456'}
         action.submit(token_data)
         self.assertEquals(action.valid, True)
 
+        self.assertEquals(new_user.password, '123456')
+
+        fake_client = fake_clients.FakeManager()
+        roles = fake_client._get_roles_as_names(new_user, new_project)
         self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].email,
-            'test@example.com')
-        project = fake_clients.identity_temp_cache['projects']['test_project']
-        self.assertEquals(
-            sorted(project.roles["user_id_1"]),
+            sorted(roles),
             sorted(['_member_', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
@@ -150,7 +157,7 @@ class ProjectActionTests(TestCase):
         Ensure reapprove correctly finishes.
         """
 
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -187,11 +194,14 @@ class ProjectActionTests(TestCase):
         # No roles_granted yet, but user created
         self.assertTrue("user_id" in action.action.cache)
         self.assertFalse("roles_granted" in action.action.cache)
+        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        self.assertEquals(new_project.name, 'test_project')
+
+        new_user = fake_clients.identity_temp_cache['new_users'][0]
+        self.assertEquals(new_user.name, 'test@example.com')
+        self.assertEquals(new_user.email, 'test@example.com')
         self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].email,
-            'test@example.com')
-        project = fake_clients.identity_temp_cache['projects']['test_project']
-        self.assertFalse("user_id_1" in project.roles)
+            len(fake_clients.identity_temp_cache['role_assignments']), 0)
 
         # And then swap back the correct function
         action.grant_roles = old_grant_function
@@ -205,9 +215,12 @@ class ProjectActionTests(TestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
 
-        project = fake_clients.identity_temp_cache['projects']['test_project']
+        self.assertEquals(new_user.password, '123456')
+
+        fake_client = fake_clients.FakeManager()
+        roles = fake_client._get_roles_as_names(new_user, new_project)
         self.assertEquals(
-            sorted(project.roles["user_id_1"]),
+            sorted(roles),
             sorted(['_member_', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
@@ -216,13 +229,10 @@ class ProjectActionTests(TestCase):
         Create a project for a user that already exists.
         """
 
-        user = mock.Mock()
-        user.id = 'user_id_1'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -243,24 +253,28 @@ class ProjectActionTests(TestCase):
 
         action.post_approve()
         self.assertEquals(action.valid, True)
-        self.assertEquals(
-            fake_clients.identity_temp_cache['projects']['test_project'].name,
-            'test_project')
+
+        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        self.assertEquals(new_project.name, 'test_project')
+
+        self.assertEqual(
+            len(fake_clients.identity_temp_cache['new_users']), 0)
+
         self.assertEquals(
             task.cache,
-            {'user_id': 'user_id_1', 'project_id': 'project_id_1',
+            {'project_id': new_project.id, 'user_id': user.id,
              'user_state': 'existing'})
 
-        token_data = {'password': '123456'}
-        action.submit(token_data)
+        # submit does nothing for existing
+        action.submit({})
         self.assertEquals(action.valid, True)
 
+        self.assertEquals(user.password, '123')
+
+        fake_client = fake_clients.FakeManager()
+        roles = fake_client._get_roles_as_names(user, new_project)
         self.assertEquals(
-            fake_clients.identity_temp_cache['users'][user.id].email,
-            'test@example.com')
-        project = fake_clients.identity_temp_cache['projects']['test_project']
-        self.assertEquals(
-            sorted(project.roles[user.id]),
+            sorted(roles),
             sorted(['_member_', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
@@ -271,13 +285,10 @@ class ProjectActionTests(TestCase):
         a user with the same name but different email address
         """
 
-        user = mock.Mock()
-        user.id = "test_id"
-        user.name = "test_user"
-        user.email = "different@example.com"
-        user.domain = 'default'
+        user = fake_clients.FakeUser(
+            name="test_user", password="123", email="different@example.com")
 
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -313,7 +324,7 @@ class ProjectActionTests(TestCase):
         Tests when the project is removed after the post approve step.
         """
 
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -334,13 +345,9 @@ class ProjectActionTests(TestCase):
 
         action.post_approve()
         self.assertEquals(action.valid, True)
-        self.assertEquals(
-            fake_clients.identity_temp_cache['projects']['test_project'].name,
-            'test_project')
-        self.assertEquals(
-            task.cache,
-            {'project_id': 'project_id_1', 'user_id': 'user_id_1',
-             'user_state': 'default'})
+
+        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        self.assertEquals(new_project.name, 'test_project')
 
         fake_clients.identity_temp_cache['projects'] = {}
 
@@ -353,7 +360,7 @@ class ProjectActionTests(TestCase):
         Tests when the user is removed after the post approve step.
         """
 
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -374,13 +381,10 @@ class ProjectActionTests(TestCase):
 
         action.post_approve()
         self.assertEquals(action.valid, True)
-        self.assertEquals(
-            fake_clients.identity_temp_cache['projects']['test_project'].name,
-            'test_project')
-        self.assertEquals(
-            task.cache,
-            {'project_id': 'project_id_1', 'user_id': 'user_id_1',
-             'user_state': 'default'})
+
+        new_user = fake_clients.identity_temp_cache['new_users'][0]
+        self.assertEquals(new_user.name, 'test@example.com')
+        self.assertEquals(new_user.email, 'test@example.com')
 
         fake_clients.identity_temp_cache['users'] = {}
 
@@ -393,15 +397,11 @@ class ProjectActionTests(TestCase):
         Create a project for a user that is disabled.
         """
 
-        user = mock.Mock()
-        user.id = 'user_id_1'
-        user.name = "test@example.com"
-        user.email = "test@example.com"
-        user.domain = 'default'
-        user.enabled = False
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com",
+            enabled=False)
 
-        # create disabled user
-        setup_temp_cache({}, {user.id: user})
+        setup_identity_cache(users=[user])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -423,13 +423,17 @@ class ProjectActionTests(TestCase):
 
         action.post_approve()
         self.assertEquals(action.valid, True)
-        self.assertEquals(
-            fake_clients.identity_temp_cache['projects']['test_project'].name,
-            'test_project')
+
+        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        self.assertEquals(new_project.name, 'test_project')
+
+        self.assertEqual(
+            len(fake_clients.identity_temp_cache['new_users']), 0)
+
         self.assertEquals(
             task.cache,
-            {'user_id': 'user_id_1',
-             'project_id': 'project_id_1',
+            {'user_id': user.id,
+             'project_id': new_project.id,
              'user_state': 'disabled'})
         self.assertEquals(
             action.action.cache["token_fields"],
@@ -440,18 +444,17 @@ class ProjectActionTests(TestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
 
-        # check that user has been created correctly
-        self.assertEquals(
-            fake_clients.identity_temp_cache['users'][user.id].email,
-            'test@example.com')
-        self.assertEquals(
-            fake_clients.identity_temp_cache['users'][user.id].enabled,
-            True)
+        self.assertEquals(user.password, '123456')
+
+        # check that user has been enabled correctly
+        self.assertEquals(user.email, 'test@example.com')
+        self.assertEquals(user.enabled, True)
 
         # Check user has correct roles in new project
-        project = fake_clients.identity_temp_cache['projects']['test_project']
+        fake_client = fake_clients.FakeManager()
+        roles = fake_client._get_roles_as_names(user, new_project)
         self.assertEquals(
-            sorted(project.roles[user.id]),
+            sorted(roles),
             sorted(['_member_', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
@@ -464,7 +467,7 @@ class ProjectActionTests(TestCase):
         """
 
         # Start with nothing created
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         # Sign up for the project+user, validate.
         task = Task.objects.create(
@@ -485,8 +488,8 @@ class ProjectActionTests(TestCase):
         self.assertEquals(action.valid, True)
 
         # Create the disabled user directly with the Identity Manager.
-        fm = FakeManager()
-        user = fm.create_user(
+        fake_client = fake_clients.FakeManager()
+        user = fake_client.create_user(
             name="test@example.com",
             password='origpass',
             email="test@example.com",
@@ -494,19 +497,22 @@ class ProjectActionTests(TestCase):
             domain='default',
             default_project=None
         )
-        fm.disable_user(user.id)
+        fake_client.disable_user(user.id)
 
         # approve previous signup
         action.post_approve()
         self.assertEquals(action.valid, True)
-        project = fake_clients.identity_temp_cache['projects']['test_project']
-        self.assertEquals(
-            project.name,
-            'test_project')
+
+        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        self.assertEquals(new_project.name, 'test_project')
+
+        self.assertEqual(
+            len(fake_clients.identity_temp_cache['new_users']), 1)
+
         self.assertEquals(
             task.cache,
             {'user_id': user.id,
-             'project_id': project.id,
+             'project_id': new_project.id,
              'user_state': 'disabled'})
 
         # check that user has been re-enabled with a generated password.
@@ -521,18 +527,21 @@ class ProjectActionTests(TestCase):
         # Ensure user has new password:
         self.assertEquals(user.password, '123456')
 
+        fake_client = fake_clients.FakeManager()
+        roles = fake_client._get_roles_as_names(user, new_project)
+        self.assertEquals(
+            sorted(roles),
+            sorted(['_member_', 'project_admin',
+                    'project_mod', 'heat_stack_owner']))
+
     def test_new_project_existing_project(self):
         """
         Create a project that already exists.
         """
 
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({project.name: project}, {})
+        setup_identity_cache(projects=[project])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -560,7 +569,7 @@ class ProjectActionTests(TestCase):
     def test_new_project_invalid_domain_id(self):
         """ Create a project using an invalid domain """
 
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -594,7 +603,7 @@ class ProjectActionTests(TestCase):
         user password at submit step.
         """
 
-        setup_temp_cache({}, {})
+        setup_identity_cache()
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -616,26 +625,29 @@ class ProjectActionTests(TestCase):
 
         action.post_approve()
         self.assertEquals(action.valid, True)
-        self.assertEquals(
-            fake_clients.identity_temp_cache['projects']['test_project'].name,
-            'test_project')
+
+        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        self.assertEquals(new_project.name, 'test_project')
+
+        new_user = fake_clients.identity_temp_cache['new_users'][0]
+        self.assertEquals(new_user.name, 'test_user')
+        self.assertEquals(new_user.email, 'test@example.com')
+
         self.assertEquals(
             task.cache,
-            {'project_id': 'project_id_1', 'user_id': 'user_id_1',
+            {'project_id': new_project.id, 'user_id': new_user.id,
              'user_state': 'default'})
 
         token_data = {'password': '123456'}
         action.submit(token_data)
         self.assertEquals(action.valid, True)
+
+        self.assertEquals(new_user.password, '123456')
+
+        fake_client = fake_clients.FakeManager()
+        roles = fake_client._get_roles_as_names(new_user, new_project)
         self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].email,
-            'test@example.com')
-        self.assertEquals(
-            fake_clients.identity_temp_cache['users']["user_id_1"].name,
-            'test_user')
-        project = fake_clients.identity_temp_cache['projects']['test_project']
-        self.assertEquals(
-            sorted(project.roles["user_id_1"]),
+            sorted(roles),
             sorted(['_member_', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
@@ -653,18 +665,14 @@ class ProjectActionTests(TestCase):
         default_users = ['admin']
         default_roles = ['admin']
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         task = Task.objects.create(
             ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
 
-        task.cache = {'project_id': "test_project_id"}
+        task.cache = {'project_id': project.id}
 
         action = AddDefaultUsersToProjectAction(
             {'domain_id': 'default'}, task=task, order=1)
@@ -675,8 +683,10 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
 
-        project = fake_clients.identity_temp_cache['projects']['test_project']
-        self.assertEquals(project.roles['user_id_0'], ['admin'])
+        fake_client = fake_clients.FakeManager()
+        user = fake_client.find_user('admin', 'default')
+        roles = fake_client._get_roles_as_names(user, project)
+        self.assertEquals(roles, ['admin'])
 
     def test_add_default_users_invalid_project(self):
         """Add default users to a project that doesn't exist.
@@ -684,13 +694,7 @@ class ProjectActionTests(TestCase):
         Action should become invalid at the post_approve state, it's ok if
         the project isn't created yet during pre_approve.
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
-
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache()
 
         task = Task.objects.create(
             ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
@@ -716,18 +720,14 @@ class ProjectActionTests(TestCase):
         """
         Ensure nothing happens or changes during rerun of approve.
         """
-        project = mock.Mock()
-        project.id = 'test_project_id'
-        project.name = 'test_project'
-        project.domain = 'default'
-        project.roles = {}
+        project = fake_clients.FakeProject(name="test_project")
 
-        setup_temp_cache({'test_project': project}, {})
+        setup_identity_cache(projects=[project])
 
         task = Task.objects.create(
             ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
 
-        task.cache = {'project_id': "test_project_id"}
+        task.cache = {'project_id': project.id}
 
         action = AddDefaultUsersToProjectAction(
             {'domain_id': 'default'}, task=task, order=1)
@@ -738,41 +738,40 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
 
-        project = fake_clients.identity_temp_cache['projects']['test_project']
-        self.assertEquals(project.roles['user_id_0'], ['admin'])
+        fake_client = fake_clients.FakeManager()
+        user = fake_client.find_user('admin', 'default')
+        roles = fake_client._get_roles_as_names(user, project)
+        self.assertEquals(roles, ['admin'])
 
         action.post_approve()
         self.assertEquals(action.valid, True)
 
-        project = fake_clients.identity_temp_cache['projects']['test_project']
-        self.assertEquals(project.roles['user_id_0'], ['admin'])
+        roles = fake_client._get_roles_as_names(user, project)
+        self.assertEquals(roles, ['admin'])
 
     def test_new_project_action(self):
         """
         Tests the new project action for an existing user.
         """
 
-        user = mock.Mock()
-        user.id = "test_user_id"
-        user.name = "test_user"
-        user.domain = 'default'
+        project = fake_clients.FakeProject(name="parent_project")
 
-        project = mock.Mock()
-        project.id = "parent_project"
-        project.domain = "default"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({project.id: project}, {user.id: user})
+        setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
-            keystone_user={"user_id": "test_user_id",
-                           "project_id": "parent_project",
+            keystone_user={"user_id": user.id,
+                           "project_id": project.id,
                            "project_domain_id": 'default'})
 
         data = {
             'domain_id': 'default',
-            'parent_id': "parent_project",
+            'parent_id': project.id,
             'project_name': 'test_project',
+            'description': '',
         }
 
         action = NewProjectAction(data, task=task, order=1)
@@ -782,17 +781,15 @@ class ProjectActionTests(TestCase):
 
         action.post_approve()
         self.assertEquals(action.valid, True)
-        self.assertEquals(
-            fake_clients.identity_temp_cache['projects']['test_project'].name,
-            'test_project')
 
-        self.assertEquals(
-            fake_clients.identity_temp_cache['projects'][
-                'test_project'].parent, 'parent_project')
+        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        self.assertEquals(new_project.name, 'test_project')
+        self.assertEquals(new_project.parent_id, project.id)
 
-        project = fake_clients.identity_temp_cache['projects']['test_project']
+        fake_client = fake_clients.FakeManager()
+        roles = fake_client._get_roles_as_names(user, new_project)
         self.assertEquals(
-            sorted(project.roles["test_user_id"]),
+            sorted(roles),
             sorted(['_member_', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
@@ -801,30 +798,28 @@ class ProjectActionTests(TestCase):
 
     def test_new_project_action_rerun_post_approve(self):
         """
-        Tests the new project action for an existing user.
+        Tests the new project action for an existing user does
+        nothing on reapproval.
         """
 
-        user = mock.Mock()
-        user.id = "test_user_id"
-        user.name = "test_user"
-        user.domain = 'default'
+        project = fake_clients.FakeProject(name="parent_project")
 
-        project = mock.Mock()
-        project.id = "parent_project"
-        project.domain = "default"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({project.id: project}, {user.id: user})
+        setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
-            keystone_user={"user_id": "test_user_id",
-                           "project_id": "parent_project",
+            keystone_user={"user_id": user.id,
+                           "project_id": project.id,
                            "project_domain_id": 'default'})
 
         data = {
             'domain_id': 'default',
-            'parent_id': "parent_project",
+            'parent_id': project.id,
             'project_name': 'test_project',
+            'description': '',
         }
 
         action = NewProjectAction(data, task=task, order=1)
@@ -834,28 +829,28 @@ class ProjectActionTests(TestCase):
 
         action.post_approve()
         self.assertEquals(action.valid, True)
-        self.assertEquals(
-            fake_clients.identity_temp_cache['projects']['test_project'].name,
-            'test_project')
 
+        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        self.assertEquals(new_project.name, 'test_project')
+        self.assertEquals(new_project.parent_id, project.id)
+
+        fake_client = fake_clients.FakeManager()
+        roles = fake_client._get_roles_as_names(user, new_project)
         self.assertEquals(
-            fake_clients.identity_temp_cache[
-                'projects']['test_project'].parent, 'parent_project')
+            sorted(roles),
+            sorted(['_member_', 'project_admin',
+                    'project_mod', 'heat_stack_owner']))
 
         action.post_approve()
         # Nothing should change
         self.assertEquals(action.valid, True)
-        self.assertEquals(
-            fake_clients.identity_temp_cache['projects']['test_project'].name,
-            'test_project')
 
-        self.assertEquals(
-            fake_clients.identity_temp_cache[
-                'projects']['test_project'].parent, 'parent_project')
+        self.assertEquals(new_project.name, 'test_project')
+        self.assertEquals(new_project.parent_id, project.id)
 
-        project = fake_clients.identity_temp_cache['projects']['test_project']
+        roles = fake_client._get_roles_as_names(user, new_project)
         self.assertEquals(
-            sorted(project.roles["test_user_id"]),
+            sorted(roles),
             sorted(['_member_', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
@@ -868,27 +863,24 @@ class ProjectActionTests(TestCase):
         as the current user's project id
         """
 
-        user = mock.Mock()
-        user.id = "test_user_id"
-        user.name = "test_user"
-        user.domain = 'default'
+        project = fake_clients.FakeProject(name="parent_project")
 
-        project = mock.Mock()
-        project.id = "parent_project"
-        project.domain = "default"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({project.id: project}, {user.id: user})
+        setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
-            keystone_user={"user_id": "test_user_id",
-                           "project_id": "not_parent_project",
+            keystone_user={"user_id": user.id,
+                           "project_id": project.id,
                            "project_domain_id": 'default'})
 
         data = {
             'domain_id': 'default',
-            'parent_id': "parent_project",
+            'parent_id': "not_parent_project_id",
             'project_name': 'test_project',
+            'description': '',
         }
 
         action = NewProjectAction(data, task=task, order=1)
@@ -908,27 +900,24 @@ class ProjectActionTests(TestCase):
         as the current user's domain id
         """
 
-        user = mock.Mock()
-        user.id = "test_user_id"
-        user.name = "test_user"
-        user.domain = 'default'
+        project = fake_clients.FakeProject(name="parent_project")
 
-        project = mock.Mock()
-        project.id = "parent_project"
-        project.domain = "default"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({project.id: project}, {user.id: user})
+        setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
-            keystone_user={"user_id": "test_user_id",
-                           "project_id": "parent_project",
+            keystone_user={"user_id": user.id,
+                           "project_id": project.id,
                            "project_domain_id": 'default'})
 
         data = {
             'domain_id': 'notdefault',
-            'parent_id': "parent_project",
+            'parent_id': project.id,
             'project_name': 'test_project',
+            'description': '',
         }
 
         action = NewProjectAction(data, task=task, order=1)
@@ -947,27 +936,24 @@ class ProjectActionTests(TestCase):
         New project action where there is no specified parent id
         """
 
-        user = mock.Mock()
-        user.id = "test_user_id"
-        user.name = "test_user"
-        user.domain = 'default'
+        project = fake_clients.FakeProject(name="parent_project")
 
-        project = mock.Mock()
-        project.id = "parent_project"
-        project.domain = "default"
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
 
-        setup_temp_cache({project.id: project}, {user.id: user})
+        setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
-            keystone_user={"user_id": "test_user_id",
-                           "project_id": "parent_project",
+            keystone_user={"user_id": user.id,
+                           "project_id": project.id,
                            "project_domain_id": 'default'})
 
         data = {
             'domain_id': 'default',
             'parent_id': None,
             'project_name': 'test_project',
+            'description': '',
         }
 
         action = NewProjectAction(data, task=task, order=1)
@@ -978,9 +964,9 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
 
-        self.assertEquals(
-            fake_clients.identity_temp_cache[
-                'projects']['test_project'].parent, 'default')
+        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        self.assertEquals(new_project.name, 'test_project')
+        self.assertEquals(new_project.parent_id, None)
 
         action.submit({})
         self.assertEquals(action.valid, True)

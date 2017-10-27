@@ -32,6 +32,7 @@ class NewProjectAction(BaseAction, ProjectMixin, UserMixin):
         'domain_id',
         'parent_id',
         'project_name',
+        'description',
     ]
 
     def __init__(self, *args, **kwargs):
