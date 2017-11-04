@@ -8,6 +8,8 @@ Useful for automating generic admin tasks that users might request but otherwise
 
 ## Documentation:
 
+Documentation can be found at: https://adjutant.readthedocs.io/
+
 Documentation is stored in doc/, a sphinx build of the documentation can be generated with the command 'tox -e docs'.
 
 An API Reference is stored in api-ref. This is also a sphinx build and can be generated with 'tox -e api-ref'.
