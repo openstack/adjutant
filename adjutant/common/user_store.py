@@ -328,3 +328,22 @@ class IdentityManager(object):  # pragma: no cover
 
     def list_regions(self, **kwargs):
         return self.ks_client.regions.list(**kwargs)
+
+    def list_credentials(self, user_id, cred_type=None):
+        return self.ks_client.credentials.list(
+            user_id=user_id, type=cred_type)
+
+    def add_credential(self, user, cred_type, blob, project=None):
+        return self.ks_client.credentials.create(
+            user=user, type=cred_type, blob=blob, project=project)
+
+    def delete_credential(self, credential):
+        return self.ks_client.credentials.delete(credential)
+
+    def clear_credential_type(self, user_id, cred_type):
+        # list credentials of the type for the user
+        credentials = self.ks_client.credentials.list(
+            user_id=user_id, type=cred_type)
+        for cred in credentials:
+            if cred.user_id == user_id and cred.type == cred_type:
+                self.ks_client.credentials.delete(cred)
