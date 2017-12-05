@@ -61,10 +61,10 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
 
-        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        new_project = fake_clients.identity_cache['new_projects'][0]
         self.assertEquals(new_project.name, 'test_project')
 
-        new_user = fake_clients.identity_temp_cache['new_users'][0]
+        new_user = fake_clients.identity_cache['new_users'][0]
         self.assertEquals(new_user.name, 'test@example.com')
         self.assertEquals(new_user.email, 'test@example.com')
 
@@ -114,10 +114,10 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
 
-        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        new_project = fake_clients.identity_cache['new_projects'][0]
         self.assertEquals(new_project.name, 'test_project')
 
-        new_user = fake_clients.identity_temp_cache['new_users'][0]
+        new_user = fake_clients.identity_cache['new_users'][0]
         self.assertEquals(new_user.name, 'test@example.com')
         self.assertEquals(new_user.email, 'test@example.com')
 
@@ -129,9 +129,9 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
         self.assertEqual(
-            len(fake_clients.identity_temp_cache['new_projects']), 1)
+            len(fake_clients.identity_cache['new_projects']), 1)
         self.assertEqual(
-            len(fake_clients.identity_temp_cache['new_users']), 1)
+            len(fake_clients.identity_cache['new_users']), 1)
         self.assertEquals(
             task.cache,
             {'project_id': new_project.id, 'user_id': new_user.id,
@@ -194,14 +194,14 @@ class ProjectActionTests(TestCase):
         # No roles_granted yet, but user created
         self.assertTrue("user_id" in action.action.cache)
         self.assertFalse("roles_granted" in action.action.cache)
-        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        new_project = fake_clients.identity_cache['new_projects'][0]
         self.assertEquals(new_project.name, 'test_project')
 
-        new_user = fake_clients.identity_temp_cache['new_users'][0]
+        new_user = fake_clients.identity_cache['new_users'][0]
         self.assertEquals(new_user.name, 'test@example.com')
         self.assertEquals(new_user.email, 'test@example.com')
         self.assertEquals(
-            len(fake_clients.identity_temp_cache['role_assignments']), 0)
+            len(fake_clients.identity_cache['role_assignments']), 0)
 
         # And then swap back the correct function
         action.grant_roles = old_grant_function
@@ -254,11 +254,11 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
 
-        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        new_project = fake_clients.identity_cache['new_projects'][0]
         self.assertEquals(new_project.name, 'test_project')
 
         self.assertEqual(
-            len(fake_clients.identity_temp_cache['new_users']), 0)
+            len(fake_clients.identity_cache['new_users']), 0)
 
         self.assertEquals(
             task.cache,
@@ -312,7 +312,7 @@ class ProjectActionTests(TestCase):
         self.assertEquals(action.valid, False)
 
         self.assertEquals(
-            fake_clients.identity_temp_cache['projects'].get('test_project'),
+            fake_clients.identity_cache['projects'].get('test_project'),
             None)
 
         token_data = {'password': '123456'}
@@ -346,10 +346,10 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
 
-        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        new_project = fake_clients.identity_cache['new_projects'][0]
         self.assertEquals(new_project.name, 'test_project')
 
-        fake_clients.identity_temp_cache['projects'] = {}
+        fake_clients.identity_cache['projects'] = {}
 
         token_data = {'password': '123456'}
         action.submit(token_data)
@@ -382,11 +382,11 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
 
-        new_user = fake_clients.identity_temp_cache['new_users'][0]
+        new_user = fake_clients.identity_cache['new_users'][0]
         self.assertEquals(new_user.name, 'test@example.com')
         self.assertEquals(new_user.email, 'test@example.com')
 
-        fake_clients.identity_temp_cache['users'] = {}
+        fake_clients.identity_cache['users'] = {}
 
         token_data = {'password': '123456'}
         action.submit(token_data)
@@ -424,11 +424,11 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
 
-        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        new_project = fake_clients.identity_cache['new_projects'][0]
         self.assertEquals(new_project.name, 'test_project')
 
         self.assertEqual(
-            len(fake_clients.identity_temp_cache['new_users']), 0)
+            len(fake_clients.identity_cache['new_users']), 0)
 
         self.assertEquals(
             task.cache,
@@ -503,11 +503,11 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
 
-        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        new_project = fake_clients.identity_cache['new_projects'][0]
         self.assertEquals(new_project.name, 'test_project')
 
         self.assertEqual(
-            len(fake_clients.identity_temp_cache['new_users']), 1)
+            len(fake_clients.identity_cache['new_users']), 1)
 
         self.assertEquals(
             task.cache,
@@ -626,10 +626,10 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
 
-        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        new_project = fake_clients.identity_cache['new_projects'][0]
         self.assertEquals(new_project.name, 'test_project')
 
-        new_user = fake_clients.identity_temp_cache['new_users'][0]
+        new_user = fake_clients.identity_cache['new_users'][0]
         self.assertEquals(new_user.name, 'test_user')
         self.assertEquals(new_user.email, 'test@example.com')
 
@@ -782,7 +782,7 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
 
-        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        new_project = fake_clients.identity_cache['new_projects'][0]
         self.assertEquals(new_project.name, 'test_project')
         self.assertEquals(new_project.parent_id, project.id)
 
@@ -830,7 +830,7 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
 
-        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        new_project = fake_clients.identity_cache['new_projects'][0]
         self.assertEquals(new_project.name, 'test_project')
         self.assertEquals(new_project.parent_id, project.id)
 
@@ -964,7 +964,7 @@ class ProjectActionTests(TestCase):
         action.post_approve()
         self.assertEquals(action.valid, True)
 
-        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        new_project = fake_clients.identity_cache['new_projects'][0]
         self.assertEquals(new_project.name, 'test_project')
         self.assertEquals(new_project.parent_id, None)
 

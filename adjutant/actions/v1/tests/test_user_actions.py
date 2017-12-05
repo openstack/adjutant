@@ -66,7 +66,7 @@ class UserActionTests(AdjutantTestCase):
         action.submit(token_data)
         self.assertEquals(action.valid, True)
         self.assertEquals(
-            len(fake_clients.identity_temp_cache['new_users']), 1)
+            len(fake_clients.identity_cache['new_users']), 1)
 
         fake_client = fake_clients.FakeManager()
 
@@ -162,7 +162,7 @@ class UserActionTests(AdjutantTestCase):
         token_data = {'password': '123456'}
         action.submit(token_data)
         self.assertEquals(action.valid, True)
-        self.assertEquals(len(fake_clients.identity_temp_cache['users']), 2)
+        self.assertEquals(len(fake_clients.identity_cache['users']), 2)
 
         fake_client = fake_clients.FakeManager()
 
@@ -415,7 +415,7 @@ class UserActionTests(AdjutantTestCase):
         self.assertEquals(action.valid, True)
 
         self.assertEquals(
-            fake_clients.identity_temp_cache['users'][user.id].password,
+            fake_clients.identity_cache['users'][user.id].password,
             '123456')
 
     def test_reset_user_password_case_insensitive(self):
@@ -457,7 +457,7 @@ class UserActionTests(AdjutantTestCase):
         self.assertEquals(action.valid, True)
 
         self.assertEquals(
-            fake_clients.identity_temp_cache['users'][user.id].password,
+            fake_clients.identity_cache['users'][user.id].password,
             '123456')
 
     def test_reset_user_password_no_user(self):
@@ -854,7 +854,7 @@ class UserActionTests(AdjutantTestCase):
 
         new_role = fake_clients.FakeRole("new_role")
 
-        fake_clients.identity_temp_cache['roles'][new_role.id] = new_role
+        fake_clients.identity_cache['roles'][new_role.id] = new_role
 
         task = Task.objects.create(
             ip_address="0.0.0.0",
@@ -930,7 +930,7 @@ class UserActionTests(AdjutantTestCase):
         token_data = {'password': '123456'}
         action.submit(token_data)
         self.assertEquals(action.valid, True)
-        self.assertEquals(len(fake_clients.identity_temp_cache['users']), 2)
+        self.assertEquals(len(fake_clients.identity_cache['users']), 2)
 
         fake_client = fake_clients.FakeManager()
 
@@ -1028,7 +1028,7 @@ class UserActionTests(AdjutantTestCase):
         self.assertEquals(action.valid, True)
 
         self.assertEquals(
-            fake_clients.identity_temp_cache['users'][user.id].password,
+            fake_clients.identity_cache['users'][user.id].password,
             '123456')
 
     @override_settings(USERNAME_IS_EMAIL=True)
@@ -1069,11 +1069,11 @@ class UserActionTests(AdjutantTestCase):
         self.assertEquals(action.valid, True)
 
         self.assertEquals(
-            fake_clients.identity_temp_cache['users'][user.id].email,
+            fake_clients.identity_cache['users'][user.id].email,
             'new_test@example.com')
 
         self.assertEquals(
-            fake_clients.identity_temp_cache['users'][user.id].name,
+            fake_clients.identity_cache['users'][user.id].name,
             'new_test@example.com')
 
     @override_settings(USERNAME_IS_EMAIL=True)
@@ -1145,9 +1145,9 @@ class UserActionTests(AdjutantTestCase):
         self.assertEquals(action.valid, True)
 
         self.assertEquals(
-            fake_clients.identity_temp_cache['users'][user.id].email,
+            fake_clients.identity_cache['users'][user.id].email,
             'new_testexample.com')
 
         self.assertEquals(
-            fake_clients.identity_temp_cache['users'][user.id].name,
+            fake_clients.identity_cache['users'][user.id].name,
             'test_user')
