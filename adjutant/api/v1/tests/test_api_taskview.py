@@ -105,7 +105,7 @@ class TaskViewTests(AdjutantAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(mail.outbox), 2)
         self.assertEquals(
-            fake_clients.identity_temp_cache['new_users'][0].name,
+            fake_clients.identity_cache['new_users'][0].name,
             'test@example.com')
 
     def test_new_user_no_project(self):
@@ -268,7 +268,7 @@ class TaskViewTests(AdjutantAPITestCase):
             {'notes': ['created token']}
         )
 
-        new_project = fake_clients.identity_temp_cache['new_projects'][0]
+        new_project = fake_clients.identity_cache['new_projects'][0]
         self.assertEquals(new_project.name, 'test_project')
 
         new_token = Token.objects.all()[0]
@@ -309,7 +309,7 @@ class TaskViewTests(AdjutantAPITestCase):
         )
         self.assertEqual(len(mail.outbox), 3)
 
-        fake_clients.identity_temp_cache['projects'] = {}
+        fake_clients.identity_cache['projects'] = {}
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -997,7 +997,7 @@ class TaskViewTests(AdjutantAPITestCase):
         self.assertEqual(len(mail.outbox), 2)
 
         self.assertEquals(
-            fake_clients.identity_temp_cache['new_users'][0].name,
+            fake_clients.identity_cache['new_users'][0].name,
             'new_user')
 
     @override_settings(USERNAME_IS_EMAIL=False)

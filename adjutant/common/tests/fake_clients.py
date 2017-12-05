@@ -19,7 +19,7 @@ from django.conf import settings
 import mock
 
 
-identity_temp_cache = {}
+identity_cache = {}
 neutron_cache = {}
 nova_cache = {}
 cinder_cache = {}
@@ -121,9 +121,9 @@ def setup_identity_cache(projects=None, users=None, role_assignments=None,
     region_two = mock.Mock()
     region_two.id = 'RegionTwo'
 
-    global identity_temp_cache
+    global identity_cache
 
-    identity_temp_cache = {
+    identity_cache = {
         'users': {u.id: u for u in users},
         'new_users': [],
         'projects': {p.id: p for p in projects},
@@ -169,23 +169,23 @@ class FakeManager(object):
 
     def find_user(self, name, domain):
         domain = self._domain_from_id(domain)
-        global identity_temp_cache
-        for user in identity_temp_cache['users'].values():
+        global identity_cache
+        for user in identity_cache['users'].values():
             if (user.name.lower() == name.lower() and
                     user.domain_id == domain.id):
                 return user
         return None
 
     def get_user(self, user_id):
-        global identity_temp_cache
-        return identity_temp_cache['users'].get(user_id, None)
+        global identity_cache
+        return identity_cache['users'].get(user_id, None)
 
     def list_users(self, project):
         project = self._project_from_id(project)
-        global identity_temp_cache
+        global identity_cache
         users = {}
 
-        for assignment in identity_temp_cache['role_assignments']:
+        for assignment in identity_cache['role_assignments']:
             if assignment.scope['project']['id'] == project.id:
 
                 user = users.get(assignment.user['id'])
@@ -206,12 +206,12 @@ class FakeManager(object):
 
     def list_inherited_users(self, project):
         project = self._project_from_id(project)
-        global identity_temp_cache
+        global identity_cache
         users = {}
 
         while project.parent_id:
             project = self._project_from_id(project.parent_id)
-            for assignment in identity_temp_cache['role_assignments']:
+            for assignment in identity_cache['role_assignments']:
                 if assignment.scope['project']['id'] == project.id:
                     if not assignment.scope.get('OS-INHERIT:inherited_to'):
                         continue
@@ -233,12 +233,12 @@ class FakeManager(object):
                     domain='default', default_project=None):
         domain = self._domain_from_id(domain)
         default_project = self._project_from_id(default_project)
-        global identity_temp_cache
+        global identity_cache
         user = FakeUser(
             name=name, password=password, email=email,
             domain_id=domain.id, default_project=default_project)
-        identity_temp_cache['users'][user.id] = user
-        identity_temp_cache['new_users'].append(user)
+        identity_cache['users'][user.id] = user
+        identity_cache['new_users'].append(user)
         return user
 
     def update_user_password(self, user, password):
@@ -262,8 +262,8 @@ class FakeManager(object):
         user.enabled = False
 
     def find_role(self, name):
-        global identity_temp_cache
-        for role in identity_temp_cache['roles'].values():
+        global identity_cache
+        for role in identity_cache['roles'].values():
             if role.name == name:
                 return role
         return None
@@ -271,11 +271,11 @@ class FakeManager(object):
     def get_roles(self, user, project, inherited=False):
         user = self._user_from_id(user)
         project = self._project_from_id(project)
-        global identity_temp_cache
+        global identity_cache
 
         roles = []
 
-        for assignment in identity_temp_cache['role_assignments']:
+        for assignment in identity_cache['role_assignments']:
             if (assignment.user['id'] == user.id and
                     assignment.scope['project']['id'] == project.id):
 
@@ -295,9 +295,9 @@ class FakeManager(object):
 
     def get_all_roles(self, user):
         user = self._user_from_id(user)
-        global identity_temp_cache
+        global identity_cache
         projects = {}
-        for assignment in identity_temp_cache['role_assignments']:
+        for assignment in identity_cache['role_assignments']:
             if assignment.user['id'] == user.id:
                 r = self.find_role(assignment.role['name'])
                 try:
@@ -326,11 +326,11 @@ class FakeManager(object):
 
         role_assignment = self._make_role_assignment(user, role, project)
 
-        global identity_temp_cache
+        global identity_cache
 
-        if role_assignment not in identity_temp_cache['role_assignments']:
-            identity_temp_cache['role_assignments'].append(role_assignment)
-            identity_temp_cache['new_role_assignments'].append(role_assignment)
+        if role_assignment not in identity_cache['role_assignments']:
+            identity_cache['role_assignments'].append(role_assignment)
+            identity_cache['new_role_assignments'].append(role_assignment)
 
     def remove_user_role(self, user, role, project, inherited=False):
         user = self._user_from_id(user)
@@ -339,15 +339,15 @@ class FakeManager(object):
 
         role_assignment = self._make_role_assignment(user, role, project)
 
-        global identity_temp_cache
+        global identity_cache
 
-        if role_assignment in identity_temp_cache['role_assignments']:
-            identity_temp_cache['role_assignments'].remove(role_assignment)
+        if role_assignment in identity_cache['role_assignments']:
+            identity_cache['role_assignments'].remove(role_assignment)
 
     def find_project(self, project_name, domain):
         domain = self._domain_from_id(domain)
-        global identity_temp_cache
-        for project in identity_temp_cache['projects'].values():
+        global identity_cache
+        for project in identity_cache['projects'].values():
             if (project.name.lower() == project_name.lower() and
                     project.domain_id == domain.id):
                 return project
@@ -355,14 +355,14 @@ class FakeManager(object):
 
     def get_project(self, project_id, subtree_as_ids=False,
                     parents_as_ids=False):
-        global identity_temp_cache
-        return identity_temp_cache['projects'].get(project_id, None)
+        global identity_cache
+        return identity_cache['projects'].get(project_id, None)
 
     def create_project(self, project_name, created_on, parent=None,
                        domain='default', description=""):
         parent = self._project_from_id(parent)
         domain = self._domain_from_id(domain)
-        global identity_temp_cache
+        global identity_cache
 
         project = FakeProject(
             name=project_name, created_on=created_on, description=description,
@@ -370,8 +370,8 @@ class FakeManager(object):
         )
         if parent:
             project.parent_id = parent.id
-        identity_temp_cache['projects'][project.id] = project
-        identity_temp_cache['new_projects'].append(project)
+        identity_cache['projects'][project.id] = project
+        identity_cache['new_projects'].append(project)
         return project
 
     def update_project(self, project, **kwargs):
@@ -382,23 +382,23 @@ class FakeManager(object):
         return project
 
     def find_domain(self, domain_name):
-        global identity_temp_cache
-        for domain in identity_temp_cache['domains'].values():
+        global identity_cache
+        for domain in identity_cache['domains'].values():
             if domain.name.lower() == domain_name.lower():
                 return domain
         return None
 
     def get_domain(self, domain_id):
-        global identity_temp_cache
-        return identity_temp_cache['domains'].get(domain_id, None)
+        global identity_cache
+        return identity_cache['domains'].get(domain_id, None)
 
     def get_region(self, region_id):
-        global identity_temp_cache
-        return identity_temp_cache['regions'].get(region_id, None)
+        global identity_cache
+        return identity_cache['regions'].get(region_id, None)
 
     def list_regions(self):
-        global identity_temp_cache
-        return identity_temp_cache['regions'].values()
+        global identity_cache
+        return identity_cache['regions'].values()
 
 
 class FakeOpenstackClient(object):

@@ -202,7 +202,7 @@ class AdjutantTestCase(TestCase, TestCaseMixin):
         super(AdjutantTestCase, cls).tearDownClass()
 
     def tearDown(self):
-        fake_clients.identity_temp_cache.clear()
+        fake_clients.identity_cache.clear()
         fake_clients.neutron_cache.clear()
         fake_clients.nova_cache.clear()
         fake_clients.cinder_cache.clear()
@@ -224,7 +224,7 @@ class AdjutantAPITestCase(APITestCase, TestCaseMixin):
         super(AdjutantAPITestCase, cls).tearDownClass()
 
     def tearDown(self):
-        fake_clients.identity_temp_cache.clear()
+        fake_clients.identity_cache.clear()
         fake_clients.neutron_cache.clear()
         fake_clients.nova_cache.clear()
         fake_clients.cinder_cache.clear()
