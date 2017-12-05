@@ -45,5 +45,6 @@ conf = {
     "auth_url": settings.KEYSTONE['auth_url'],
     'delay_auth_decision': True,
     'include_service_catalog': False,
+    'token_cache_time': settings.TOKEN_CACHE_TIME,
 }
 application = AuthProtocol(application, conf)

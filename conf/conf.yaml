@@ -410,6 +410,9 @@ PROJECT_QUOTA_SIZES:
             router: 10
             port: 500
 
+# Time in seconds to cache token from Keystone
+TOKEN_CACHE_TIME: 600
+
 # Ordered list of quota sizes from smallest to biggest
 QUOTA_SIZES_ASC:
     - small
