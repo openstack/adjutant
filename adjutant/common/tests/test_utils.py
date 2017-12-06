@@ -242,8 +242,8 @@ class ModifySettingsTests(AdjutantAPITestCase):
 
         response = self.client.post(url, data, headers=headers, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEquals(len(mail.outbox), 1)
-        self.assertNotEquals(mail.outbox[0].subject, 'modified_token_email')
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertNotEqual(mail.outbox[0].subject, 'modified_token_email')
 
         with self.modify_dict_settings(TASK_SETTINGS=override):
             data = {'new_email': "test2@example.com"}
@@ -251,13 +251,13 @@ class ModifySettingsTests(AdjutantAPITestCase):
             response = self.client.post(url, data,
                                         headers=headers, format='json')
             self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEquals(len(mail.outbox), 2)
-            self.assertEquals(mail.outbox[1].subject, 'modified_token_email')
+            self.assertEqual(len(mail.outbox), 2)
+            self.assertEqual(mail.outbox[1].subject, 'modified_token_email')
 
         data = {'new_email': "test3@example.com"}
 
         response = self.client.post(url, data, headers=headers, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        self.assertEquals(len(mail.outbox), 3)
-        self.assertNotEquals(mail.outbox[2].subject, 'modified_token_email')
+        self.assertEqual(len(mail.outbox), 3)
+        self.assertNotEqual(mail.outbox[2].subject, 'modified_token_email')

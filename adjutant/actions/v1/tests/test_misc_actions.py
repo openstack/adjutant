@@ -109,13 +109,13 @@ class MiscActionTests(AdjutantTestCase):
         action = SendAdditionalEmailAction({}, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         task.cache["additional_emails"] = ["thisguy@righthere.com",
                                            "nope@example.com"]
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         self.assertEqual(len(mail.outbox), 0)
         self.assertTrue(
@@ -123,7 +123,7 @@ class MiscActionTests(AdjutantTestCase):
             action.action.task.action_notes['SendAdditionalEmailAction'][1])
 
         action.submit({})
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
     @modify_dict_settings(DEFAULT_ACTION_SETTINGS={
         'operation': 'update',
@@ -149,20 +149,20 @@ class MiscActionTests(AdjutantTestCase):
         action = SendAdditionalEmailAction({}, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         task.cache["additional_emails"] = ["thisguy@righthere.com",
                                            "nope@example.com"]
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(set(mail.outbox[0].to),
                          set(["thisguy@righthere.com", "nope@example.com"]))
 
         action.submit({})
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
         self.assertEqual(len(mail.outbox), 1)
 
     @modify_dict_settings(DEFAULT_ACTION_SETTINGS={
@@ -189,15 +189,15 @@ class MiscActionTests(AdjutantTestCase):
         action = SendAdditionalEmailAction({}, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         self.assertEqual(len(mail.outbox), 0)
 
         action.submit({})
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
     @modify_dict_settings(DEFAULT_ACTION_SETTINGS={
         'operation': 'update',
@@ -223,15 +223,15 @@ class MiscActionTests(AdjutantTestCase):
         action = SendAdditionalEmailAction({}, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         self.assertEqual(len(mail.outbox), 1)
         self.assertEqual(mail.outbox[0].to,
                          ["anadminwhocares@example.com"])
 
         action.submit({})
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
         self.assertEqual(len(mail.outbox), 1)

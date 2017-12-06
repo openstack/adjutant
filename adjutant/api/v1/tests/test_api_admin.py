@@ -803,7 +803,7 @@ class AdminAPITests(APITestCase):
                          {'notes': ['Token reissued.']})
         self.assertEqual(Token.objects.count(), 1)
         new_token = Token.objects.all()[0]
-        self.assertNotEquals(new_token.token, uuid)
+        self.assertNotEqual(new_token.token, uuid)
 
     def test_token_reissue_non_admin(self):
         """
@@ -843,7 +843,7 @@ class AdminAPITests(APITestCase):
                          {'notes': ['Token reissued.']})
         self.assertEqual(Token.objects.count(), 1)
         new_token = Token.objects.all()[0]
-        self.assertNotEquals(new_token.token, uuid)
+        self.assertNotEqual(new_token.token, uuid)
 
         # Now confirm it is limited by project id properly.
         headers['project_id'] = "test_project_id2"

@@ -57,26 +57,26 @@ class UserActionTests(AdjutantTestCase):
         action = NewUserAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         token_data = {'password': '123456'}
         action.submit(token_data)
-        self.assertEquals(action.valid, True)
-        self.assertEquals(
+        self.assertEqual(action.valid, True)
+        self.assertEqual(
             len(fake_clients.identity_cache['new_users']), 1)
 
         fake_client = fake_clients.FakeManager()
 
         user = fake_client.find_user(name="test@example.com", domain="default")
 
-        self.assertEquals(user.email, 'test@example.com')
-        self.assertEquals(user.password, '123456')
+        self.assertEqual(user.email, 'test@example.com')
+        self.assertEqual(user.password, '123456')
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEquals(roles, ['_member_'])
+        self.assertEqual(roles, ['_member_'])
 
     def test_new_user_existing(self):
         """
@@ -108,19 +108,19 @@ class UserActionTests(AdjutantTestCase):
         action = NewUserAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         token_data = {}
         action.submit(token_data)
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEquals(roles, ['_member_'])
+        self.assertEqual(roles, ['_member_'])
 
     def test_new_user_disabled(self):
         """
@@ -154,26 +154,26 @@ class UserActionTests(AdjutantTestCase):
         action = NewUserAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         token_data = {'password': '123456'}
         action.submit(token_data)
-        self.assertEquals(action.valid, True)
-        self.assertEquals(len(fake_clients.identity_cache['users']), 2)
+        self.assertEqual(action.valid, True)
+        self.assertEqual(len(fake_clients.identity_cache['users']), 2)
 
         fake_client = fake_clients.FakeManager()
 
         user = fake_client.find_user(name="test@example.com", domain="default")
 
-        self.assertEquals(user.email, 'test@example.com')
-        self.assertEquals(user.password, '123456')
+        self.assertEqual(user.email, 'test@example.com')
+        self.assertEqual(user.password, '123456')
         self.assertTrue(user.enabled)
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEquals(roles, ['_member_'])
+        self.assertEqual(roles, ['_member_'])
 
     def test_new_user_existing_role(self):
         """
@@ -216,20 +216,20 @@ class UserActionTests(AdjutantTestCase):
         action = NewUserAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
-        self.assertEquals(action.action.state, 'complete')
+        self.assertEqual(action.valid, True)
+        self.assertEqual(action.action.state, 'complete')
 
         token_data = {}
         action.submit(token_data)
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEquals(roles, ['_member_'])
+        self.assertEqual(roles, ['_member_'])
 
     def test_new_user_no_tenant(self):
         """
@@ -257,14 +257,14 @@ class UserActionTests(AdjutantTestCase):
         action = NewUserAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, False)
+        self.assertEqual(action.valid, False)
 
         action.post_approve()
-        self.assertEquals(action.valid, False)
+        self.assertEqual(action.valid, False)
 
         token_data = {}
         action.submit(token_data)
-        self.assertEquals(action.valid, False)
+        self.assertEqual(action.valid, False)
 
     def test_new_user_wrong_project(self):
         """
@@ -299,7 +299,7 @@ class UserActionTests(AdjutantTestCase):
         action = NewUserAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, False)
+        self.assertEqual(action.valid, False)
 
     def test_new_user_only_member(self):
         """
@@ -405,16 +405,16 @@ class UserActionTests(AdjutantTestCase):
         action = ResetUserPasswordAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         token_data = {'password': '123456'}
         action.submit(token_data)
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
-        self.assertEquals(
+        self.assertEqual(
             fake_clients.identity_cache['users'][user.id].password,
             '123456')
 
@@ -447,16 +447,16 @@ class UserActionTests(AdjutantTestCase):
         action = ResetUserPasswordAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         token_data = {'password': '123456'}
         action.submit(token_data)
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
-        self.assertEquals(
+        self.assertEqual(
             fake_clients.identity_cache['users'][user.id].password,
             '123456')
 
@@ -483,14 +483,14 @@ class UserActionTests(AdjutantTestCase):
         action = ResetUserPasswordAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, False)
+        self.assertEqual(action.valid, False)
 
         action.post_approve()
-        self.assertEquals(action.valid, False)
+        self.assertEqual(action.valid, False)
 
         token_data = {}
         action.submit(token_data)
-        self.assertEquals(action.valid, False)
+        self.assertEqual(action.valid, False)
 
     def test_edit_user_roles_add(self):
         """
@@ -524,19 +524,19 @@ class UserActionTests(AdjutantTestCase):
         action = EditUserRolesAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         token_data = {}
         action.submit(token_data)
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEquals(sorted(roles), sorted(['_member_', 'project_mod']))
+        self.assertEqual(sorted(roles), sorted(['_member_', 'project_mod']))
 
     def test_edit_user_roles_add_complete(self):
         """
@@ -583,20 +583,20 @@ class UserActionTests(AdjutantTestCase):
         action = EditUserRolesAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
-        self.assertEquals(action.action.state, "complete")
+        self.assertEqual(action.valid, True)
+        self.assertEqual(action.action.state, "complete")
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         token_data = {}
         action.submit(token_data)
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEquals(roles, ['_member_', 'project_mod'])
+        self.assertEqual(roles, ['_member_', 'project_mod'])
 
     def test_edit_user_roles_remove(self):
         """
@@ -644,19 +644,19 @@ class UserActionTests(AdjutantTestCase):
         action = EditUserRolesAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         token_data = {}
         action.submit(token_data)
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEquals(roles, ['_member_'])
+        self.assertEqual(roles, ['_member_'])
 
     def test_edit_user_roles_remove_complete(self):
         """
@@ -697,20 +697,20 @@ class UserActionTests(AdjutantTestCase):
         action = EditUserRolesAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
-        self.assertEquals(action.action.state, "complete")
+        self.assertEqual(action.valid, True)
+        self.assertEqual(action.action.state, "complete")
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         token_data = {}
         action.submit(token_data)
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEquals(roles, ['_member_'])
+        self.assertEqual(roles, ['_member_'])
 
     def test_edit_user_roles_can_manage_all(self):
         """
@@ -758,12 +758,12 @@ class UserActionTests(AdjutantTestCase):
         action = EditUserRolesAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, False)
+        self.assertEqual(action.valid, False)
 
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEquals(roles, ['_member_', 'project_admin'])
+        self.assertEqual(roles, ['_member_', 'project_admin'])
 
     def test_edit_user_roles_modified_settings(self):
         """
@@ -804,7 +804,7 @@ class UserActionTests(AdjutantTestCase):
         action = EditUserRolesAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         # Change settings
         with self.modify_dict_settings(ROLES_MAPPING={
@@ -812,24 +812,24 @@ class UserActionTests(AdjutantTestCase):
                 'operation': "remove",
                 'value': 'heat_stack_owner'}):
             action.post_approve()
-            self.assertEquals(action.valid, False)
+            self.assertEqual(action.valid, False)
 
             token_data = {}
             action.submit(token_data)
-            self.assertEquals(action.valid, False)
+            self.assertEqual(action.valid, False)
 
         # After Settings Reset
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         token_data = {}
         action.submit(token_data)
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEquals(roles, ['project_mod', 'heat_stack_owner'])
+        self.assertEqual(roles, ['project_mod', 'heat_stack_owner'])
 
     @modify_dict_settings(ROLES_MAPPING={'key_list': ['project_mod'],
                           'operation': "append", 'value': 'new_role'})
@@ -876,19 +876,19 @@ class UserActionTests(AdjutantTestCase):
         action = EditUserRolesAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         token_data = {}
         action.submit(token_data)
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEquals(roles, ['project_mod', 'new_role'])
+        self.assertEqual(roles, ['project_mod', 'new_role'])
 
     # Simple positive tests for when USERNAME_IS_EMAIL=False
     @override_settings(USERNAME_IS_EMAIL=False)
@@ -922,26 +922,26 @@ class UserActionTests(AdjutantTestCase):
         action = NewUserAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         token_data = {'password': '123456'}
         action.submit(token_data)
-        self.assertEquals(action.valid, True)
-        self.assertEquals(len(fake_clients.identity_cache['users']), 2)
+        self.assertEqual(action.valid, True)
+        self.assertEqual(len(fake_clients.identity_cache['users']), 2)
 
         fake_client = fake_clients.FakeManager()
 
         user = fake_client.find_user(name="test_user", domain="default")
 
-        self.assertEquals(user.email, 'test@example.com')
-        self.assertEquals(user.password, '123456')
+        self.assertEqual(user.email, 'test@example.com')
+        self.assertEqual(user.password, '123456')
         self.assertTrue(user.enabled)
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEquals(roles, ['_member_'])
+        self.assertEqual(roles, ['_member_'])
 
     @override_settings(USERNAME_IS_EMAIL=False)
     def test_reset_user_email_not_username(self):
@@ -972,21 +972,21 @@ class UserActionTests(AdjutantTestCase):
         action = ResetUserPasswordAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         token_data = {'password': '123456'}
         action.submit(token_data)
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         fake_client = fake_clients.FakeManager()
 
         user = fake_client.find_user(name="test_user", domain="default")
 
-        self.assertEquals(user.email, 'test@example.com')
-        self.assertEquals(user.password, '123456')
+        self.assertEqual(user.email, 'test@example.com')
+        self.assertEqual(user.password, '123456')
 
     @override_settings(USERNAME_IS_EMAIL=False)
     def test_reset_user_password_case_insensitive_not_username(self):
@@ -1018,16 +1018,16 @@ class UserActionTests(AdjutantTestCase):
         action = ResetUserPasswordAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         token_data = {'password': '123456'}
         action.submit(token_data)
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
-        self.assertEquals(
+        self.assertEqual(
             fake_clients.identity_cache['users'][user.id].password,
             '123456')
 
@@ -1058,21 +1058,21 @@ class UserActionTests(AdjutantTestCase):
         action = UpdateUserEmailAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         token_data = {'confirm': True}
 
         action.submit(token_data)
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
-        self.assertEquals(
+        self.assertEqual(
             fake_clients.identity_cache['users'][user.id].email,
             'new_test@example.com')
 
-        self.assertEquals(
+        self.assertEqual(
             fake_clients.identity_cache['users'][user.id].name,
             'new_test@example.com')
 
@@ -1099,15 +1099,15 @@ class UserActionTests(AdjutantTestCase):
         action = UpdateUserEmailAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, False)
+        self.assertEqual(action.valid, False)
 
         action.post_approve()
-        self.assertEquals(action.valid, False)
+        self.assertEqual(action.valid, False)
 
         token_data = {'confirm': True}
 
         action.submit(token_data)
-        self.assertEquals(action.valid, False)
+        self.assertEqual(action.valid, False)
 
     @override_settings(USERNAME_IS_EMAIL=False)
     def test_update_email_username_not_email(self):
@@ -1136,18 +1136,18 @@ class UserActionTests(AdjutantTestCase):
         action = UpdateUserEmailAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.submit({'confirm': True})
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
-        self.assertEquals(
+        self.assertEqual(
             fake_clients.identity_cache['users'][user.id].email,
             'new_testexample.com')
 
-        self.assertEquals(
+        self.assertEqual(
             fake_clients.identity_cache['users'][user.id].name,
             'test_user')

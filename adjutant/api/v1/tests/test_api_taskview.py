@@ -104,7 +104,7 @@ class TaskViewTests(AdjutantAPITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(mail.outbox), 2)
-        self.assertEquals(
+        self.assertEqual(
             fake_clients.identity_cache['new_users'][0].name,
             'test@example.com')
 
@@ -269,7 +269,7 @@ class TaskViewTests(AdjutantAPITestCase):
         )
 
         new_project = fake_clients.identity_cache['new_projects'][0]
-        self.assertEquals(new_project.name, 'test_project')
+        self.assertEqual(new_project.name, 'test_project')
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -693,7 +693,7 @@ class TaskViewTests(AdjutantAPITestCase):
         data = {'confirm': True}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEquals(user.name, 'new_test@example.com')
+        self.assertEqual(user.name, 'new_test@example.com')
 
     @modify_dict_settings(TASK_SETTINGS=[
         {'key_list': ['update_email', 'additional_actions'],
@@ -906,7 +906,7 @@ class TaskViewTests(AdjutantAPITestCase):
         data = {'confirm': True}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEquals(user.email, 'new_test@example.com')
+        self.assertEqual(user.email, 'new_test@example.com')
 
     def test_update_email_task_not_authenticated(self):
         """
@@ -957,8 +957,8 @@ class TaskViewTests(AdjutantAPITestCase):
         data = {'confirm': True}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEquals(user.name, "test_user")
-        self.assertEquals(user.email, 'new_test@example.com')
+        self.assertEqual(user.name, "test_user")
+        self.assertEqual(user.email, 'new_test@example.com')
 
     # Tests for USERNAME_IS_EMAIL=False
     @override_settings(USERNAME_IS_EMAIL=False)
@@ -986,8 +986,8 @@ class TaskViewTests(AdjutantAPITestCase):
         self.assertEqual(response.json(), {'notes': ['created token']})
 
         self.assertEqual(len(mail.outbox), 1)
-        self.assertEquals(mail.outbox[0].subject, 'invite_user')
-        self.assertEquals(mail.outbox[0].to[0], 'new@example.com')
+        self.assertEqual(mail.outbox[0].subject, 'invite_user')
+        self.assertEqual(mail.outbox[0].to[0], 'new@example.com')
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -996,7 +996,7 @@ class TaskViewTests(AdjutantAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(mail.outbox), 2)
 
-        self.assertEquals(
+        self.assertEqual(
             fake_clients.identity_cache['new_users'][0].name,
             'new_user')
 

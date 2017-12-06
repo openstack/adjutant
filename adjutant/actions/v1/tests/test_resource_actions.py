@@ -73,12 +73,12 @@ class ProjectSetupActionTests(TestCase):
             data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
-        self.assertEquals(
+        self.assertEqual(
             action.action.cache,
             {'network_id': 'net_id_0',
              'port_id': 'port_id_3',
@@ -87,11 +87,11 @@ class ProjectSetupActionTests(TestCase):
         )
 
         global neutron_cache
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['networks']), 1)
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['routers']), 1)
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['subnets']), 1)
 
     def test_network_setup_no_setup(self):
@@ -123,19 +123,19 @@ class ProjectSetupActionTests(TestCase):
             data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
-        self.assertEquals(action.action.cache, {})
+        self.assertEqual(action.action.cache, {})
 
         global neutron_cache
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['networks']), 0)
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['routers']), 0)
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['subnets']), 0)
 
     def test_network_setup_fail(self):
@@ -168,7 +168,7 @@ class ProjectSetupActionTests(TestCase):
             data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         neutron_cache['RegionOne']['test_project_id']['routers'] = []
 
@@ -178,24 +178,24 @@ class ProjectSetupActionTests(TestCase):
         except Exception:
             pass
 
-        self.assertEquals(
+        self.assertEqual(
             action.action.cache,
             {'network_id': 'net_id_0',
              'subnet_id': 'subnet_id_1'}
         )
 
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['networks']), 1)
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['subnets']), 1)
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['routers']), 0)
 
         neutron_cache['RegionOne']['test_project_id']['routers'] = {}
 
         action.post_approve()
 
-        self.assertEquals(
+        self.assertEqual(
             action.action.cache,
             {'network_id': 'net_id_0',
              'port_id': 'port_id_3',
@@ -203,11 +203,11 @@ class ProjectSetupActionTests(TestCase):
              'subnet_id': 'subnet_id_1'}
         )
 
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['networks']), 1)
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['routers']), 1)
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['subnets']), 1)
 
     @modify_dict_settings(DEFAULT_ACTION_SETTINGS={
@@ -238,7 +238,7 @@ class ProjectSetupActionTests(TestCase):
             data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         # Now we add the project data as this is where the project
         # would be created:
@@ -253,9 +253,9 @@ class ProjectSetupActionTests(TestCase):
         task.cache = {'project_id': "test_project_id"}
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
-        self.assertEquals(
+        self.assertEqual(
             action.action.cache,
             {'network_id': 'net_id_0',
              'port_id': 'port_id_3',
@@ -264,11 +264,11 @@ class ProjectSetupActionTests(TestCase):
         )
 
         global neutron_cache
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['networks']), 1)
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['routers']), 1)
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['subnets']), 1)
 
     def test_new_project_network_setup_no_id(self):
@@ -288,19 +288,19 @@ class ProjectSetupActionTests(TestCase):
             data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, False)
+        self.assertEqual(action.valid, False)
 
-        self.assertEquals(action.action.cache, {})
+        self.assertEqual(action.action.cache, {})
 
         global neutron_cache
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['networks']), 0)
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['routers']), 0)
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['subnets']), 0)
 
     def test_new_project_network_setup_no_setup(self):
@@ -320,7 +320,7 @@ class ProjectSetupActionTests(TestCase):
             data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         # Now we add the project data as this is where the project
         # would be created:
@@ -335,16 +335,16 @@ class ProjectSetupActionTests(TestCase):
         task.cache = {'project_id': "test_project_id"}
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
-        self.assertEquals(action.action.cache, {})
+        self.assertEqual(action.action.cache, {})
 
         global neutron_cache
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['networks']), 0)
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['routers']), 0)
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['subnets']), 0)
 
     def test_new_project_network_setup_fail(self):
@@ -365,7 +365,7 @@ class ProjectSetupActionTests(TestCase):
             data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         neutron_cache['RegionOne']['test_project_id']['routers'] = []
 
@@ -387,24 +387,24 @@ class ProjectSetupActionTests(TestCase):
         except Exception:
             pass
 
-        self.assertEquals(
+        self.assertEqual(
             action.action.cache,
             {'network_id': 'net_id_0',
              'subnet_id': 'subnet_id_1'}
         )
 
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['networks']), 1)
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['subnets']), 1)
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['routers']), 0)
 
         neutron_cache['RegionOne']['test_project_id']['routers'] = {}
 
         action.post_approve()
 
-        self.assertEquals(
+        self.assertEqual(
             action.action.cache,
             {'network_id': 'net_id_0',
              'port_id': 'port_id_3',
@@ -412,11 +412,11 @@ class ProjectSetupActionTests(TestCase):
              'subnet_id': 'subnet_id_1'}
         )
 
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['networks']), 1)
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['routers']), 1)
-        self.assertEquals(len(
+        self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['subnets']), 1)
 
     def test_set_quota(self):
@@ -440,27 +440,27 @@ class ProjectSetupActionTests(TestCase):
         action = SetProjectQuotaAction({}, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         # check the quotas were updated
         # This relies on test_settings heavily.
         cinderquota = cinder_cache['RegionOne']['test_project_id']['quota']
-        self.assertEquals(cinderquota['gigabytes'], 5000)
+        self.assertEqual(cinderquota['gigabytes'], 5000)
         novaquota = nova_cache['RegionOne']['test_project_id']['quota']
-        self.assertEquals(novaquota['ram'], 65536)
+        self.assertEqual(novaquota['ram'], 65536)
         neutronquota = neutron_cache['RegionOne']['test_project_id']['quota']
-        self.assertEquals(neutronquota['network'], 3)
+        self.assertEqual(neutronquota['network'], 3)
 
         # RegionThree, cinder only
         self.assertFalse('RegionThree' in nova_cache)
         r2_cinderquota = cinder_cache['RegionThree'][
             'test_project_id']['quota']
-        self.assertEquals(r2_cinderquota['gigabytes'], 50000)
-        self.assertEquals(r2_cinderquota['snapshots'], 600)
-        self.assertEquals(r2_cinderquota['volumes'], 200)
+        self.assertEqual(r2_cinderquota['gigabytes'], 50000)
+        self.assertEqual(r2_cinderquota['snapshots'], 600)
+        self.assertEqual(r2_cinderquota['volumes'], 200)
 
 
 @mock.patch(
@@ -523,19 +523,19 @@ class QuotaActionTests(TestCase):
         action = UpdateProjectQuotasAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         # check the quotas were updated
         # This relies on test_settings heavily.
         cinderquota = cinder_cache['RegionOne']['test_project_id']['quota']
-        self.assertEquals(cinderquota['gigabytes'], 10000)
+        self.assertEqual(cinderquota['gigabytes'], 10000)
         novaquota = nova_cache['RegionOne']['test_project_id']['quota']
-        self.assertEquals(novaquota['ram'], 327680)
+        self.assertEqual(novaquota['ram'], 327680)
         neutronquota = neutron_cache['RegionOne']['test_project_id']['quota']
-        self.assertEquals(neutronquota['network'], 5)
+        self.assertEqual(neutronquota['network'], 5)
 
     def test_update_quota_multi_region(self):
         """
@@ -572,26 +572,26 @@ class QuotaActionTests(TestCase):
         action = UpdateProjectQuotasAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         # check the quotas were updated
         # This relies on test_settings heavily.
         cinderquota = cinder_cache['RegionOne']['test_project_id']['quota']
-        self.assertEquals(cinderquota['gigabytes'], 50000)
+        self.assertEqual(cinderquota['gigabytes'], 50000)
         novaquota = nova_cache['RegionOne']['test_project_id']['quota']
-        self.assertEquals(novaquota['ram'], 655360)
+        self.assertEqual(novaquota['ram'], 655360)
         neutronquota = neutron_cache['RegionOne']['test_project_id']['quota']
-        self.assertEquals(neutronquota['network'], 10)
+        self.assertEqual(neutronquota['network'], 10)
 
         cinderquota = cinder_cache['RegionTwo']['test_project_id']['quota']
-        self.assertEquals(cinderquota['gigabytes'], 50000)
+        self.assertEqual(cinderquota['gigabytes'], 50000)
         novaquota = nova_cache['RegionTwo']['test_project_id']['quota']
-        self.assertEquals(novaquota['ram'], 655360)
+        self.assertEqual(novaquota['ram'], 655360)
         neutronquota = neutron_cache['RegionTwo']['test_project_id']['quota']
-        self.assertEquals(neutronquota['network'], 10)
+        self.assertEqual(neutronquota['network'], 10)
 
     @override_settings(QUOTA_SIZES_ASC=[])
     def test_update_quota_not_in_sizes_asc(self):
@@ -630,23 +630,23 @@ class QuotaActionTests(TestCase):
         action = UpdateProjectQuotasAction(data, task=task, order=1)
 
         action.pre_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         action.post_approve()
-        self.assertEquals(action.valid, True)
+        self.assertEqual(action.valid, True)
 
         # check the quotas were updated
         # This relies on test_settings heavily.
         cinderquota = cinder_cache['RegionOne']['test_project_id']['quota']
-        self.assertEquals(cinderquota['gigabytes'], 50000)
+        self.assertEqual(cinderquota['gigabytes'], 50000)
         novaquota = nova_cache['RegionOne']['test_project_id']['quota']
-        self.assertEquals(novaquota['ram'], 655360)
+        self.assertEqual(novaquota['ram'], 655360)
         neutronquota = neutron_cache['RegionOne']['test_project_id']['quota']
-        self.assertEquals(neutronquota['network'], 10)
+        self.assertEqual(neutronquota['network'], 10)
 
         cinderquota = cinder_cache['RegionTwo']['test_project_id']['quota']
-        self.assertEquals(cinderquota['gigabytes'], 50000)
+        self.assertEqual(cinderquota['gigabytes'], 50000)
         novaquota = nova_cache['RegionTwo']['test_project_id']['quota']
-        self.assertEquals(novaquota['ram'], 655360)
+        self.assertEqual(novaquota['ram'], 655360)
         neutronquota = neutron_cache['RegionTwo']['test_project_id']['quota']
-        self.assertEquals(neutronquota['network'], 10)
+        self.assertEqual(neutronquota['network'], 10)

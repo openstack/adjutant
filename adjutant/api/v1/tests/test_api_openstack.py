@@ -453,15 +453,15 @@ class QuotaAPITests(APITestCase):
         """
         cinderquota = cinder_cache[region_name][project_id]['quota']
         gigabytes = settings.PROJECT_QUOTA_SIZES[size]['cinder']['gigabytes']
-        self.assertEquals(cinderquota['gigabytes'], gigabytes)
+        self.assertEqual(cinderquota['gigabytes'], gigabytes)
 
         novaquota = nova_cache[region_name][project_id]['quota']
         ram = settings.PROJECT_QUOTA_SIZES[size]['nova']['ram']
-        self.assertEquals(novaquota['ram'], ram)
+        self.assertEqual(novaquota['ram'], ram)
 
         neutronquota = neutron_cache[region_name][project_id]['quota']
         network = settings.PROJECT_QUOTA_SIZES[size]['neutron']['network']
-        self.assertEquals(neutronquota['network'], network)
+        self.assertEqual(neutronquota['network'], network)
 
     def test_update_quota_no_history(self):
         """ Update the quota size of a project with no history """
