@@ -748,7 +748,7 @@ class UserActionTests(AdjutantTestCase):
 
         data = {
             'domain_id': 'default',
-            'user_id': 'user_id',
+            'user_id': user.id,
             'project_id': project.id,
             'roles': ['project_mod'],
             'inherited_roles': [],

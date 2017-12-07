@@ -286,10 +286,29 @@ class EditUserRolesAction(UserIdAction, ProjectMixin, UserMixin):
                 self.roles = list(missing)
                 self.inherited_roles = list(missing_inherited)
                 self.add_note(
-                    'User user missing roles.')
+                    'User missing roles.')
         # All paths are valid here
         # We've just set state and roles that need to be changed.
         return True
+
+    def _validate_role_permissions(self):
+
+        id_manager = user_store.IdentityManager()
+
+        current_user_roles = id_manager.get_roles(project=self.project_id,
+                                                  user=self.user_id)
+        current_user_roles = [role.name for role in current_user_roles]
+
+        current_roles_manageable = self.are_roles_managable(
+            self.action.task.keystone_user['roles'], current_user_roles)
+
+        all_roles = set()
+        all_roles.update(self.roles)
+        all_roles.update(self.inherited_roles)
+        new_roles_manageable = self.are_roles_managable(
+            self.action.task.keystone_user['roles'], all_roles)
+
+        return new_roles_manageable and current_roles_manageable
 
     def _validate(self):
         self.action.valid = (
