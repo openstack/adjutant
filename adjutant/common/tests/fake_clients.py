@@ -337,7 +337,8 @@ class FakeManager(object):
         role = self._role_from_id(role)
         project = self._project_from_id(project)
 
-        role_assignment = self._make_role_assignment(user, role, project)
+        role_assignment = self._make_role_assignment(user, role, project,
+                                                     inherited=inherited)
 
         global identity_cache
 
