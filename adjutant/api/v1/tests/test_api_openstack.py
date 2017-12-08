@@ -17,9 +17,10 @@ import mock
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from django.conf import settings
+from django.test.utils import modify_settings
 from django.test.utils import override_settings
 from django.utils import timezone
-from django.conf import settings
 
 from adjutant.api.models import Token, Task
 from adjutant.common.tests import fake_clients
@@ -27,6 +28,7 @@ from adjutant.common.tests.fake_clients import (
     FakeManager, setup_identity_cache, get_fake_neutron, get_fake_novaclient,
     get_fake_cinderclient, cinder_cache, nova_cache, neutron_cache,
     setup_mock_caches, setup_quota_cache, FakeResource)
+from adjutant.common.tests.utils import modify_dict_settings
 
 from datetime import timedelta
 
@@ -749,7 +751,7 @@ class QuotaAPITests(APITestCase):
             'project_id': project.id,
             'roles': "project_admin,_member_,project_mod",
             'username': "test@example.com",
-            'user_id': "user_id",
+            'user_id': user.id,
             'authenticated': True
         }
 
@@ -767,6 +769,83 @@ class QuotaAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             response.data['regions'][0]['current_quota_size'], 'small')
+
+    @modify_dict_settings(PROJECT_QUOTA_SIZES=[
+        {'key_list': ['zero'],
+         'operation': 'override',
+         'value':
+            {'nova': {
+                'instances': 0, 'cores': 0, 'ram': 0, 'floating_ips': 0,
+                'fixed_ips': 0, 'metadata_items': 0, 'injected_files': 0,
+                'injected_file_content_bytes': 0, 'key_pairs': 50,
+                'security_groups': 0, 'security_group_rules': 0, },
+             'cinder': {
+                'gigabytes': 0, 'snapshots': 0, 'volumes': 0, },
+             'neutron': {
+                'floatingip': 0, 'network': 0, 'port': 0, 'router': 0,
+                'security_group': 0, 'security_group_rule': 0}
+             }
+         }])
+    @modify_settings(QUOTA_SIZES_ASC={'prepend': 'zero'})
+    def test_calculate_quota_size_zero(self):
+        """
+        Ensures that a zero quota enabled picks up
+        """
+
+        project = fake_clients.FakeProject(
+            name="test_project", id='test_project_id')
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
+
+        setup_identity_cache(projects=[project], users=[user])
+
+        admin_headers = {
+            'project_name': "test_project",
+            'project_id': project.id,
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "user_id",
+            'authenticated': True
+        }
+
+        setup_quota_cache('RegionOne', project.id, 'small')
+
+        url = "/v1/openstack/quotas/?regions=RegionOne"
+
+        response = self.client.get(url, headers=admin_headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data['regions'][0]['current_quota_size'], 'small')
+
+        cinderquota = cinder_cache['RegionOne'][project.id]['quota']
+        cinderquota['gigabytes'] = 0
+
+        # Check that the zero value doesn't interfer with being small
+        response = self.client.get(url, headers=admin_headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data['regions'][0]['current_quota_size'], 'small')
+
+        setup_quota_cache('RegionOne', project.id, 'zero')
+
+        url = "/v1/openstack/quotas/?regions=RegionOne"
+
+        response = self.client.get(url, headers=admin_headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data['regions'][0]['current_quota_size'], 'zero')
+
+        # Check that the zero quota will still be counted even if
+        # one value is not zero
+        cinderquota = cinder_cache['RegionOne'][project.id]['quota']
+        cinderquota['gigabytes'] = 600
+
+        response = self.client.get(url, headers=admin_headers)
+        # First check we can actually access the page correctly
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data['regions'][0]['current_quota_size'], 'zero')
 
     def test_return_quota_history(self):
         """

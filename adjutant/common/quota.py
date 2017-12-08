@@ -52,8 +52,15 @@ class QuotaManager(object):
             for service_name, values in setting.items():
                 for name, value in values.items():
                     if value != 0:
-                        match_percentages.append(
-                            float(current_quota[service_name][name]) / value)
+                        try:
+                            current = current_quota[service_name][name]
+                            match_percentages.append(float(current) / value)
+                        except KeyError:
+                            pass
+                    elif current_quota[service_name][name] == 0:
+                        match_percentages.append(1.0)
+                    else:
+                        match_percentages.append(0.0)
             # Calculate the average of how much it matches the setting
             difference = abs(
                 (sum(match_percentages) / float(len(match_percentages))) - 1)
