@@ -295,3 +295,139 @@ Response Example
     {
       "notes": ["task created"]
     }
+
+
+Show Quota Details
+========================
+.. rest_method:: GET /v1/openstack/quota
+
+Authentication: Project Moderator or Admin
+
+List details of the quota for the current project.
+
+
+.. rest_parameters:: parameters.yaml
+
+    - region: region
+
+Request Example
+----------------
+.. code-block:: bash
+
+    curl -H "X-Auth-Token: $NOS_TOKEN" http://0.0.0.0:5050/v1/openstack/quota
+
+Response Example
+-----------------
+.. code-block:: javascript
+
+    {
+        "active_quota_tasks": [],
+        "quota_size_order": [
+            "small",
+            "medium",
+            "large"
+        ],
+        "quota_sizes": {
+            "large": {
+                "cinder": {
+                    "gigabytes": 50000,
+                    "snapshots": 600,
+                    "volumes": 200
+                },
+                "neutron": {
+                    "floatingip": 50,
+                    "network": 10,
+                    "port": 500,
+                    ...
+                },
+                "nova": {
+                    "cores": 200,
+                    "fixed_ips": 0,
+                    "floating_ips": 50,
+                    "injected_file_content_bytes": 10240,
+                    ...
+                }
+            },
+            'small': { ... },
+            'medium': { ... }
+        },
+        "regions": [
+            {
+                "current_quota": {
+                    "cinder": {
+                        "backup_gigabytes": 1000,
+                        "backups": 10,
+                        "gigabytes": 1000,
+                        ...
+                    },
+                    "neutron": {
+                        "floatingip": 50,
+                        "network": 10,
+                        "port": 50,
+                        ...
+                    },
+                    "nova": {
+                        "cores": 20,
+                        "fixed_ips": -1,
+                        "floating_ips": 10,
+                        "injected_file_content_bytes": 10240,
+                        ...
+                    }
+                },
+                "current_quota_size": "custom",
+                "current_usage": {
+                    "cinder": {
+                        "gigabytes": 1,
+                        "snapshots": 0,
+                        "volumes": 1
+                    },
+                    "neutron": {
+                        "floatingip": 0,
+                        "network": 1,
+                        "port": 2,
+                        "router": 1
+                        ...
+                    },
+                    "nova": {
+                        "cores": 0,
+                        "floating_ips": 0,
+                        ...
+                    }
+                },
+                "quota_change_options": [],
+                "region": "RegionOne"
+            }
+        ]
+    }
+
+
+
+Update Quota
+========================
+.. rest_method:: POST /v1/openstack/quota
+
+Authentication: Project Moderator or Admin
+
+Starts an update quota task. If regions are not specified it will update
+the quota across all regions.
+
+.. rest_parameters:: parameters.yaml
+
+    - regions: regions
+    - size: size
+
+Request Example
+----------------
+.. code-block:: bash
+
+    curl -H "X-Auth-Token: $NOS_TOKEN" http://0.0.0.0:5050/v1/openstack/quotas
+      -d '{"region": "RegionOne", "size": "small"}' -H "Content-Type: application/json"
+
+
+Response Example
+-----------------
+.. code-block:: javascript
+
+  {
+    "notes": ["Task processed. Awaiting Aprroval."]
+  }

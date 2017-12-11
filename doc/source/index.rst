@@ -14,6 +14,7 @@ Welcome to Adjutant's documentation!
    devstack-guide
    configuration
    plugins
+   quota
 
    .. standard task views and actions
 

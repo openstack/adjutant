@@ -45,7 +45,7 @@ filters:
     type: dictionary
 region:
     description: |
-        Region to setup the default network in.
+        Region to perform actions in.
     in: query
     required: true
     type: string
@@ -112,12 +112,25 @@ notifications:
     in: body
     required: true
     type: array
+regions:
+    description: |
+        Regions to perform actions in.
+    in: body
+    required: false
+    type: array
 roles:
     description: |
       List of roles for the user.
     in: body
     required: true
     type: array
+size:
+    description: |
+        Which size out of the selections shown in the quota get request should
+        the region(s) be updated to.
+    in: body
+    required: true
+    type: string
 task_data:
     description: |
         A dictionary replacing all the data for a task. See the task details
