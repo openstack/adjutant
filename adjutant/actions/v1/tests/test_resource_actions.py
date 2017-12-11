@@ -35,12 +35,13 @@ from adjutant.common.tests.fake_clients import (
     'openstack_clients.get_neutronclient',
     get_fake_neutron)
 @mock.patch(
-    'adjutant.actions.v1.resources.' +
-    'openstack_clients.get_novaclient',
+    'adjutant.common.quota.get_neutronclient',
+    get_fake_neutron)
+@mock.patch(
+    'adjutant.common.quota.get_novaclient',
     get_fake_novaclient)
 @mock.patch(
-    'adjutant.actions.v1.resources.' +
-    'openstack_clients.get_cinderclient',
+    'adjutant.common.quota.get_cinderclient',
     get_fake_cinderclient)
 class ProjectSetupActionTests(TestCase):
 
@@ -474,18 +475,6 @@ class ProjectSetupActionTests(TestCase):
     get_fake_novaclient)
 @mock.patch(
     'adjutant.common.quota.get_cinderclient',
-    get_fake_cinderclient)
-@mock.patch(
-    'adjutant.actions.v1.resources.' +
-    'openstack_clients.get_neutronclient',
-    get_fake_neutron)
-@mock.patch(
-    'adjutant.actions.v1.resources.' +
-    'openstack_clients.get_novaclient',
-    get_fake_novaclient)
-@mock.patch(
-    'adjutant.actions.v1.resources.' +
-    'openstack_clients.get_cinderclient',
     get_fake_cinderclient)
 class QuotaActionTests(TestCase):
 

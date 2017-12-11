@@ -235,37 +235,6 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
 
     default_days_between_autoapprove = 30
 
-    class ServiceQuotaFunctor(object):
-        def __call__(self, project_id, values):
-            self.client.quotas.update(project_id, **values)
-
-    class ServiceQuotaCinderFunctor(ServiceQuotaFunctor):
-        def __init__(self, region_name):
-            self.client = openstack_clients.get_cinderclient(
-                region=region_name)
-
-    class ServiceQuotaNovaFunctor(ServiceQuotaFunctor):
-        def __init__(self, region_name):
-            self.client = openstack_clients.get_novaclient(
-                region=region_name)
-
-    class ServiceQuotaNeutronFunctor(ServiceQuotaFunctor):
-        def __init__(self, region_name):
-            self.client = openstack_clients.get_neutronclient(
-                region=region_name)
-
-        def __call__(self, project_id, values):
-            body = {
-                'quota': values
-            }
-            self.client.update_quota(project_id, body)
-
-    _quota_updaters = {
-        'cinder': ServiceQuotaCinderFunctor,
-        'nova': ServiceQuotaNovaFunctor,
-        'neutron': ServiceQuotaNeutronFunctor
-    }
-
     def __init__(self, *args, **kwargs):
         super(UpdateProjectQuotasAction, self).__init__(*args, **kwargs)
         self.size_difference_threshold = settings.TASK_SETTINGS.get(
@@ -302,15 +271,11 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
                     quota_size, region_name))
             return
 
-        for service_name, values in quota_settings.items():
-            updater_class = self._quota_updaters.get(service_name)
-            if not updater_class:
-                self.add_note("No quota updater found for %s. Ignoring" %
-                              service_name)
-                continue
-            # functor for the service+region
-            service_functor = updater_class(region_name)
-            service_functor(self.project_id, values)
+        quota_manager = QuotaManager(self.project_id,
+                                     self.size_difference_threshold)
+
+        quota_manager.set_region_quota(region_name, quota_settings)
+
         self.add_note("Project quota for region %s set to %s" % (
                       region_name, quota_size))
 
@@ -387,6 +352,8 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
         if not self.valid or self.action.state == "completed":
             return
 
+        # Use manager here instead, it will make it easier to add has_more
+        # in later
         for region in self.regions:
             self._set_region_quota(region, self.size)
 

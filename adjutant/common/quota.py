@@ -27,22 +27,133 @@ class QuotaManager(object):
 
     default_size_diff_threshold = .2
 
+    class ServiceQuotaHelper(object):
+        def set_quota(self, values):
+            self.client.quotas.update(self.project_id, **values)
+
+    class ServiceQuotaCinderHelper(ServiceQuotaHelper):
+        def __init__(self, region_name, project_id):
+            self.client = get_cinderclient(
+                region=region_name)
+            self.project_id = project_id
+
+        def get_quota(self):
+            return self.client.quotas.get(self.project_id).to_dict()
+
+        def get_usage(self):
+            volumes = self.client.volumes.list(
+                search_opts={'all_tenants': 1, 'project_id': self.project_id})
+            snapshots = self.client.volume_snapshots.list(
+                search_opts={'all_tenants': 1, 'project_id': self.project_id})
+
+            # gigabytesUsed should be a total of volumes and snapshots
+            gigabytes = sum([getattr(volume, 'size', 0) for volume
+                            in volumes])
+            gigabytes += sum([getattr(snap, 'size', 0) for snap
+                             in snapshots])
+
+            return {'gigabytes': gigabytes,
+                    'volumes': len(volumes),
+                    'snapshots': len(snapshots)
+                    }
+
+    class ServiceQuotaNovaHelper(ServiceQuotaHelper):
+        def __init__(self, region_name, project_id):
+            self.client = get_novaclient(
+                region=region_name)
+            self.project_id = project_id
+
+        def get_quota(self):
+            return self.client.quotas.get(self.project_id).to_dict()
+
+        def get_usage(self):
+            nova_usage = self.client.limits.get(
+                tenant_id=self.project_id).to_dict()['absolute']
+            nova_usage_keys = [
+                ('instances', 'totalInstancesUsed'),
+                ('floating_ips', 'totalFloatingIpsUsed'),
+                ('ram', 'totalRAMUsed'),
+                ('cores', 'totalCoresUsed'),
+                ('secuirty_groups', 'totalSecurityGroupsUsed')
+            ]
+
+            nova_usage_dict = {}
+            for key, usage_key in nova_usage_keys:
+                nova_usage_dict[key] = nova_usage[usage_key]
+
+            return nova_usage_dict
+
+    class ServiceQuotaNeutronHelper(ServiceQuotaHelper):
+        def __init__(self, region_name, project_id):
+            self.client = get_neutronclient(
+                region=region_name)
+            self.project_id = project_id
+
+        def set_quota(self, values):
+            body = {
+                'quota': values
+            }
+            self.client.update_quota(self.project_id, body)
+
+        def get_usage(self):
+            networks = self.client.list_networks(
+                tenant_id=self.project_id)['networks']
+            routers = self.client.list_routers(
+                tenant_id=self.project_id)['routers']
+            floatingips = self.client.list_floatingips(
+                tenant_id=self.project_id)['floatingips']
+            ports = self.client.list_ports(
+                tenant_id=self.project_id)['ports']
+            subnets = self.client.list_subnets(
+                tenant_id=self.project_id)['subnets']
+            security_groups = self.client.list_security_groups(
+                tenant_id=self.project_id)['security_groups']
+            security_group_rules = self.client.list_security_group_rules(
+                tenant_id=self.project_id)['security_group_rules']
+
+            return {'network': len(networks),
+                    'router': len(routers),
+                    'floatingip': len(floatingips),
+                    'port': len(ports),
+                    'subnet': len(subnets),
+                    'secuirty_group': len(security_groups),
+                    'security_group_rule': len(security_group_rules)
+                    }
+
+        def get_quota(self):
+            return self.client.show_quota(self.project_id)['quota']
+
+    _quota_updaters = {
+        'cinder': ServiceQuotaCinderHelper,
+        'nova': ServiceQuotaNovaHelper,
+        'neutron': ServiceQuotaNeutronHelper
+    }
+
     def __init__(self, project_id, size_difference_threshold=None):
+        # TODO(amelia): Try to find out which endpoints are available and get
+        # the non enabled ones out of the list
+
+        # Check configured removal of quota updaters
+        self.helpers = dict(self._quota_updaters)
+
+        # Configurable services
+        if settings.QUOTA_SERVICES:
+            self.helpers = {}
+            for name in settings.QUOTA_SERVICES:
+                if name in self._quota_updaters:
+                    self.helpers[name] = self._quota_updaters[name]
+
         self.project_id = project_id
         self.size_diff_threshold = (size_difference_threshold or
                                     self.default_size_diff_threshold)
 
     def get_current_region_quota(self, region_id):
-        ci_quota = get_cinderclient(region_id) \
-            .quotas.get(self.project_id).to_dict()
-        neutron_quota = get_neutronclient(region_id) \
-            .show_quota(self.project_id)['quota']
-        nova_quota = get_novaclient(region_id) \
-            .quotas.get(self.project_id).to_dict()
+        current_quota = {}
+        for name, service in self.helpers.items():
+            helper = service(region_id, self.project_id)
+            current_quota[name] = helper.get_quota()
 
-        return {'cinder': ci_quota,
-                'nova': nova_quota,
-                'neutron': neutron_quota}
+        return current_quota
 
     def get_quota_size(self, current_quota, difference_threshold=None):
         """ Gets the closest matching quota size for a given quota """
@@ -104,73 +215,34 @@ class QuotaManager(object):
                 }
 
     def get_current_usage(self, region_id):
-        cinder_usage = self.get_cinder_usage(region_id)
-        nova_usage = self.get_nova_usage(region_id)
-        neutron_usage = self.get_neutron_usage(region_id)
-        return {'cinder': cinder_usage,
-                'nova': nova_usage,
-                'neutron': neutron_usage}
+        current_usage = {}
 
-    def get_cinder_usage(self, region_id):
-        client = get_cinderclient(region_id)
+        for name, service in self.helpers.items():
+            try:
+                helper = service(region_id, self.project_id)
+                current_usage[name] = helper.get_usage()
+            except Exception:
+                pass
+        return current_usage
 
-        volumes = client.volumes.list(
-            search_opts={'all_tenants': 1, 'project_id': self.project_id})
-        snapshots = client.volume_snapshots.list(
-            search_opts={'all_tenants': 1, 'project_id': self.project_id})
+    def set_region_quota(self, region_id, quota_dict):
+        notes = []
+        for service_name, values in quota_dict.items():
+            updater_class = self.helpers.get(service_name)
+            if not updater_class:
+                notes.append("No quota updater found for %s. Ignoring" %
+                             service_name)
+                continue
 
-        # gigabytesUsed should be a total of volumes and snapshots
-        gigabytes = sum([getattr(volume, 'size', 0) for volume
-                        in volumes])
-        gigabytes += sum([getattr(snap, 'size', 0) for snap
-                         in snapshots])
+            try:
+                service_helper = updater_class(region_id, self.project_id)
+            except Exception:
+                # NOTE(amelia): We will assume if there are issues connecting
+                #               to a service that it will be due to the
+                #               service not existing in this region.
+                notes.append("Couldn't access %s client, region %s" %
+                             (service_name, region_id))
+                continue
 
-        return {'gigabytes': gigabytes,
-                'volumes': len(volumes),
-                'snapshots': len(snapshots)
-                }
-
-    def get_neutron_usage(self, region_id):
-        client = get_neutronclient(region_id)
-
-        networks = client.list_networks(
-            tenant_id=self.project_id)['networks']
-        routers = client.list_routers(
-            tenant_id=self.project_id)['routers']
-        floatingips = client.list_floatingips(
-            tenant_id=self.project_id)['floatingips']
-        ports = client.list_ports(
-            tenant_id=self.project_id)['ports']
-        subnets = client.list_subnets(
-            tenant_id=self.project_id)['subnets']
-        security_groups = client.list_security_groups(
-            tenant_id=self.project_id)['security_groups']
-        security_group_rules = client.list_security_group_rules(
-            tenant_id=self.project_id)['security_group_rules']
-
-        return {'network': len(networks),
-                'router': len(routers),
-                'floatingip': len(floatingips),
-                'port': len(ports),
-                'subnet': len(subnets),
-                'secuirty_group': len(security_groups),
-                'security_group_rule': len(security_group_rules)
-                }
-
-    def get_nova_usage(self, region_id):
-        client = get_novaclient(region_id)
-        nova_usage = client.limits.get(
-            tenant_id=self.project_id).to_dict()['absolute']
-        nova_usage_keys = [
-            ('instances', 'totalInstancesUsed'),
-            ('floating_ips', 'totalFloatingIpsUsed'),
-            ('ram', 'totalRAMUsed'),
-            ('cores', 'totalCoresUsed'),
-            ('secuirty_groups', 'totalSecurityGroupsUsed')
-        ]
-
-        nova_usage_dict = {}
-        for key, usage_key in nova_usage_keys:
-            nova_usage_dict[key] = nova_usage[usage_key]
-
-        return nova_usage_dict
+            service_helper.set_quota(values)
+        return notes
