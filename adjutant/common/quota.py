@@ -13,8 +13,7 @@
 #    under the License.
 
 
-from adjutant.common.openstack_clients import (
-    get_novaclient, get_cinderclient, get_neutronclient)
+from adjutant.common import openstack_clients
 
 from django.conf import settings
 
@@ -33,7 +32,7 @@ class QuotaManager(object):
 
     class ServiceQuotaCinderHelper(ServiceQuotaHelper):
         def __init__(self, region_name, project_id):
-            self.client = get_cinderclient(
+            self.client = openstack_clients.get_cinderclient(
                 region=region_name)
             self.project_id = project_id
 
@@ -59,7 +58,7 @@ class QuotaManager(object):
 
     class ServiceQuotaNovaHelper(ServiceQuotaHelper):
         def __init__(self, region_name, project_id):
-            self.client = get_novaclient(
+            self.client = openstack_clients.get_novaclient(
                 region=region_name)
             self.project_id = project_id
 
@@ -85,7 +84,7 @@ class QuotaManager(object):
 
     class ServiceQuotaNeutronHelper(ServiceQuotaHelper):
         def __init__(self, region_name, project_id):
-            self.client = get_neutronclient(
+            self.client = openstack_clients.get_neutronclient(
                 region=region_name)
             self.project_id = project_id
 
@@ -123,10 +122,57 @@ class QuotaManager(object):
         def get_quota(self):
             return self.client.show_quota(self.project_id)['quota']
 
+    class ServiceQuotaOctaviaHelper(ServiceQuotaNeutronHelper):
+        def __init__(self, region_name, project_id):
+            self.client = openstack_clients.get_octaviaclient(
+                region=region_name)
+            self.project_id = project_id
+
+        def get_quota(self):
+            project_quota = self.client.quota_show(
+                project_id=self.project_id)
+
+            # NOTE(amelia): Instead of returning the default quota if ANY
+            #               of the quotas are the default, the endpoint
+            #               returns None
+            default_quota = None
+            for name, quota in project_quota.items():
+                if quota is None:
+                    if not default_quota:
+                        default_quota = self.client.quota_defaults_show()[
+                            'quota']
+                    project_quota[name] = default_quota[name]
+
+            return project_quota
+
+        def set_quota(self, values):
+            self.client.quota_set(self.project_id, json={'quota': values})
+
+        def get_usage(self):
+            usage = {}
+            usage['load_balancer'] = len(self.client.load_balancer_list(
+                project_id=self.project_id)['loadbalancers'])
+            usage['listener'] = len(self.client.listener_list(
+                project_id=self.project_id)['listeners'])
+
+            pools = self.client.pool_list(
+                project_id=self.project_id)['pools']
+            usage['pool'] = len(pools)
+
+            members = []
+            for pool in pools:
+                members += pool['members']
+
+            usage['member'] = len(members)
+            usage['health_monitor'] = len(self.client.health_monitor_list(
+                project_id=self.project_id)['healthmonitors'])
+            return usage
+
     _quota_updaters = {
         'cinder': ServiceQuotaCinderHelper,
         'nova': ServiceQuotaNovaHelper,
-        'neutron': ServiceQuotaNeutronHelper
+        'neutron': ServiceQuotaNeutronHelper,
+        'octavia': ServiceQuotaOctaviaHelper,
     }
 
     def __init__(self, project_id, size_difference_threshold=None):
@@ -175,12 +221,18 @@ class QuotaManager(object):
             match_percentages = []
             for service_name, values in setting.items():
                 for name, value in values.items():
-                    if value != 0:
+                    if value > 0:
                         try:
                             current = current_quota[service_name][name]
                             match_percentages.append(float(current) / value)
                         except KeyError:
                             pass
+                    elif value < 0:
+                        # NOTE(amelia): Sub-zero quota means unlimited
+                        if current_quota[service_name][name] < 0:
+                            match_percentages.append(1.0)
+                        else:
+                            match_percentages.append(0.0)
                     elif current_quota[service_name][name] == 0:
                         match_percentages.append(1.0)
                     else:
@@ -188,8 +240,7 @@ class QuotaManager(object):
             # Calculate the average of how much it matches the setting
             difference = abs(
                 (sum(match_percentages) / float(len(match_percentages))) - 1)
-            # TODO(amelia): Nicer form of this due to the new way of doing
-            #               per action settings
+
             if (difference <= self.size_diff_threshold):
                 quota_differences[size] = difference
 

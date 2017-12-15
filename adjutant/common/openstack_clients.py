@@ -22,6 +22,7 @@ from keystoneclient import client as ks_client
 from cinderclient import client as cinderclient
 from neutronclient.v2_0 import client as neutronclient
 from novaclient import client as novaclient
+from octaviaclient.api.v2 import octavia
 
 # Defined for use locally
 DEFAULT_COMPUTE_VERSION = "2"
@@ -79,3 +80,14 @@ def get_cinderclient(region, version=DEFAULT_VOLUME_VERSION):
         version,
         session=get_auth_session(),
         region_name=region)
+
+
+def get_octaviaclient(region):
+    ks = get_keystoneclient()
+
+    service = ks.services.list(name='octavia')[0]
+    endpoint = ks.endpoints.list(service=service,
+                                 region=region, interface='public')[0]
+    return octavia.OctaviaAPI(
+        session=get_auth_session(),
+        endpoint=endpoint.url)

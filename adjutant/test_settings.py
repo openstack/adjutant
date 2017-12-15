@@ -313,6 +313,13 @@ PROJECT_QUOTA_SIZES = {
             'security_group_rule': 100,
             'subnet': 3,
         },
+        "octavia": {
+            'health_monitor': 5,
+            "listener": 1,
+            "load_balancer": 1,
+            "member": 2,
+            "pool": 1,
+        },
     },
     "medium": {
         "cinder": {
@@ -341,7 +348,14 @@ PROJECT_QUOTA_SIZES = {
             "security_group": 50,
             "router": 5,
             "port": 250
-        }
+        },
+        "octavia": {
+            'health_monitor': 50,
+            "listener": 5,
+            "load_balancer": 5,
+            "member": 5,
+            "pool": 5,
+        },
     },
     "large": {
         "cinder": {
@@ -370,7 +384,14 @@ PROJECT_QUOTA_SIZES = {
             "security_group": 100,
             "router": 10,
             "port": 500
-        }
+        },
+        "octavia": {
+            'health_monitor': 100,
+            "listener": 10,
+            "load_balancer": 10,
+            "member": 10,
+            "pool": 10,
+        },
     },
     "large_cinder_only": {
         "cinder": {

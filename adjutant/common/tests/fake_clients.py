@@ -23,6 +23,7 @@ identity_cache = {}
 neutron_cache = {}
 nova_cache = {}
 cinder_cache = {}
+octavia_cache = {}
 
 
 class FakeProject(object):
@@ -595,6 +596,75 @@ class FakeNeutronClient(object):
         return neutron_cache[self.region][tenant_id]
 
 
+class FakeOctaviaClient(object):
+    # {name in client call: name in response}
+    resource_dict = {'load_balancer': 'loadbalancers',
+                     'listener': 'listeners',
+                     'member': 'members',
+                     'pool': 'pools',
+                     'health_monitor': 'healthmonitors'}
+
+    # NOTE(amelia): Using the current octavia client we will get back
+    #               dicts for everything, rather than the resources the
+    #               other clients wrap.
+    #               Additionally the openstacksdk octavia implemenation
+    #               does not have quota commands
+
+    def __init__(self, region):
+        global octavia_cache
+        self.region = region
+        if region not in octavia_cache:
+            octavia_cache[region] = {}
+        self.cache = octavia_cache[region]
+
+    def quota_show(self, project_id):
+        self._ensure_project_exists(project_id)
+        quota = self.cache.get(project_id, {}).get('quota', [])
+        for item in self.resource_dict:
+            if item not in quota:
+                quota[item] = None
+        return {'quota': quota}
+
+    def quota_set(self, project_id, json):
+        self._ensure_project_exists(project_id)
+        self.cache[project_id]['quota'] = json['quota']
+
+    def quota_defaults_show(self):
+        return {
+            "quota": {
+                "load_balancer": 10,
+                "listener": -1,
+                "member": 50,
+                "pool": -1,
+                "health_monitor": -1
+            }
+        }
+
+    def lister(self, resource_type):
+        def action(project_id=None):
+            self._ensure_project_exists(project_id)
+            resource = self.cache.get(project_id, {}).get(resource_type, [])
+            links_name = resource_type + '_links'
+            resource_name = self.resource_dict[resource_type]
+            return {resource_name: resource, links_name: []}
+        return action
+
+    def _ensure_project_exists(self, project_id):
+        if project_id not in self.cache:
+            self.cache[project_id] = {
+                name: [] for name in self.resource_dict.keys()}
+            self.cache[project_id]['quota'] = dict(
+                settings.PROJECT_QUOTA_SIZES['small']['octavia'])
+
+    def __getattr__(self, name):
+        # NOTE(amelia): This is out of pure laziness
+        global octavia_cache
+        if name[-5:] == '_list' and name[:-5] in self.resource_dict:
+            return self.lister(name[:-5])
+        else:
+            raise AttributeError
+
+
 class FakeNovaClient(FakeOpenstackClient):
 
     def __init__(self, region):
@@ -754,6 +824,10 @@ def setup_mock_caches(region, project_id):
     setup_nova_cache(region, project_id)
     setup_cinder_cache(region, project_id)
     setup_neutron_cache(region, project_id)
+    client = FakeOctaviaClient(region)
+    if project_id in octavia_cache[region]:
+        del octavia_cache[region][project_id]
+    client._ensure_project_exists(project_id)
 
 
 def get_fake_neutron(region):
@@ -767,3 +841,7 @@ def get_fake_novaclient(region):
 def get_fake_cinderclient(region):
     global cinder_cache
     return FakeCinderClient(region)
+
+
+def get_fake_octaviaclient(region):
+    return FakeOctaviaClient(region)

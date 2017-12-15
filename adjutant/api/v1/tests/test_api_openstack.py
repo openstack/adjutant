@@ -15,7 +15,6 @@
 import mock
 
 from rest_framework import status
-from rest_framework.test import APITestCase
 
 from django.conf import settings
 from django.test.utils import modify_settings
@@ -26,16 +25,18 @@ from adjutant.api.models import Token, Task
 from adjutant.common.tests import fake_clients
 from adjutant.common.tests.fake_clients import (
     FakeManager, setup_identity_cache, get_fake_neutron, get_fake_novaclient,
-    get_fake_cinderclient, cinder_cache, nova_cache, neutron_cache,
-    setup_mock_caches, setup_quota_cache, FakeResource)
-from adjutant.common.tests.utils import modify_dict_settings
+    get_fake_cinderclient, get_fake_octaviaclient, cinder_cache, nova_cache,
+    neutron_cache, octavia_cache, setup_mock_caches, setup_quota_cache,
+    FakeResource)
+from adjutant.common.tests.utils import (
+    modify_dict_settings, AdjutantAPITestCase)
 
 from datetime import timedelta
 
 
 @mock.patch('adjutant.common.user_store.IdentityManager',
             FakeManager)
-class OpenstackAPITests(APITestCase):
+class OpenstackAPITests(AdjutantAPITestCase):
     """
     TaskView tests specific to the openstack style urls.
     Many of the original TaskView tests are valid and need
@@ -421,34 +422,26 @@ class OpenstackAPITests(APITestCase):
     'adjutant.common.user_store.IdentityManager',
     FakeManager)
 @mock.patch(
-    'adjutant.common.quota.get_novaclient',
+    'adjutant.common.openstack_clients.get_novaclient',
     get_fake_novaclient)
 @mock.patch(
-    'adjutant.common.quota.get_neutronclient',
+    'adjutant.common.openstack_clients.get_neutronclient',
     get_fake_neutron)
 @mock.patch(
-    'adjutant.common.quota.get_cinderclient',
+    'adjutant.common.openstack_clients.get_cinderclient',
     get_fake_cinderclient)
 @mock.patch(
-    'adjutant.actions.v1.resources.' +
-    'openstack_clients.get_neutronclient',
-    get_fake_neutron)
-@mock.patch(
-    'adjutant.actions.v1.resources.' +
-    'openstack_clients.get_novaclient',
-    get_fake_novaclient)
-@mock.patch(
-    'adjutant.actions.v1.resources.' +
-    'openstack_clients.get_cinderclient',
-    get_fake_cinderclient)
-class QuotaAPITests(APITestCase):
+    'adjutant.common.openstack_clients.get_octaviaclient',
+    get_fake_octaviaclient)
+class QuotaAPITests(AdjutantAPITestCase):
 
     def setUp(self):
         super(QuotaAPITests, self).setUp()
         setup_mock_caches('RegionOne', 'test_project_id')
         setup_mock_caches('RegionTwo', 'test_project_id')
 
-    def check_quota_cache(self, region_name, project_id, size):
+    def check_quota_cache(self, region_name, project_id, size,
+                          extra_services=[]):
         """
         Helper function to check if the global quota caches now match the size
         defined in the config
@@ -464,6 +457,12 @@ class QuotaAPITests(APITestCase):
         neutronquota = neutron_cache[region_name][project_id]['quota']
         network = settings.PROJECT_QUOTA_SIZES[size]['neutron']['network']
         self.assertEqual(neutronquota['network'], network)
+
+        if 'octavia' in extra_services:
+            octaviaquota = octavia_cache[region_name][project_id]['quota']
+            load_balancer = settings.PROJECT_QUOTA_SIZES.get(
+                size)['octavia']['load_balancer']
+            self.assertEqual(octaviaquota['load_balancer'], load_balancer)
 
     def test_update_quota_no_history(self):
         """ Update the quota size of a project with no history """
@@ -1286,3 +1285,42 @@ class QuotaAPITests(APITestCase):
         self.assertEqual(
             response.data['regions'][0]['quota_change_options'],
             ['small', 'medium'])
+
+    @modify_dict_settings(QUOTA_SERVICES={
+        'operation': 'append',
+        'key_list': ['*'],
+        'value': 'octavia'
+    })
+    def test_update_quota_no_history_with_octavia(self):
+        """ Update quota for octavia."""
+
+        project = fake_clients.FakeProject(
+            name="test_project", id='test_project_id')
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
+
+        setup_identity_cache(projects=[project], users=[user])
+
+        admin_headers = {
+            'project_name': "test_project",
+            'project_id': project.id,
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "user_id",
+            'authenticated': True
+        }
+
+        url = "/v1/openstack/quotas/"
+
+        data = {'size': 'medium',
+                'regions': ['RegionOne']}
+
+        response = self.client.post(url, data,
+                                    headers=admin_headers, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Then check to see the quotas have changed
+        self.check_quota_cache(
+            'RegionOne', project.id, 'medium', extra_services=['octavia'])

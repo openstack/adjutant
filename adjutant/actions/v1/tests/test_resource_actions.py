@@ -25,7 +25,7 @@ from adjutant.common.tests.utils import modify_dict_settings
 from adjutant.common.tests.fake_clients import (
     FakeManager, setup_identity_cache, get_fake_neutron, get_fake_novaclient,
     get_fake_cinderclient, setup_neutron_cache, neutron_cache, cinder_cache,
-    nova_cache, setup_mock_caches)
+    nova_cache, setup_mock_caches, get_fake_octaviaclient, octavia_cache)
 
 
 @mock.patch('adjutant.common.user_store.IdentityManager',
@@ -35,13 +35,13 @@ from adjutant.common.tests.fake_clients import (
     'openstack_clients.get_neutronclient',
     get_fake_neutron)
 @mock.patch(
-    'adjutant.common.quota.get_neutronclient',
+    'adjutant.common.openstack_clients.get_neutronclient',
     get_fake_neutron)
 @mock.patch(
-    'adjutant.common.quota.get_novaclient',
+    'adjutant.common.openstack_clients.get_novaclient',
     get_fake_novaclient)
 @mock.patch(
-    'adjutant.common.quota.get_cinderclient',
+    'adjutant.common.openstack_clients.get_cinderclient',
     get_fake_cinderclient)
 class ProjectSetupActionTests(TestCase):
 
@@ -468,14 +468,17 @@ class ProjectSetupActionTests(TestCase):
     'adjutant.common.user_store.IdentityManager',
     FakeManager)
 @mock.patch(
-    'adjutant.common.quota.get_neutronclient',
+    'adjutant.common.openstack_clients.get_neutronclient',
     get_fake_neutron)
 @mock.patch(
-    'adjutant.common.quota.get_novaclient',
+    'adjutant.common.openstack_clients.get_novaclient',
     get_fake_novaclient)
 @mock.patch(
-    'adjutant.common.quota.get_cinderclient',
+    'adjutant.common.openstack_clients.get_cinderclient',
     get_fake_cinderclient)
+@mock.patch(
+    'adjutant.common.openstack_clients.get_octaviaclient',
+    get_fake_octaviaclient)
 class QuotaActionTests(TestCase):
 
     def test_update_quota(self):
@@ -639,3 +642,107 @@ class QuotaActionTests(TestCase):
         self.assertEqual(novaquota['ram'], 655360)
         neutronquota = neutron_cache['RegionTwo']['test_project_id']['quota']
         self.assertEqual(neutronquota['network'], 10)
+
+    @modify_dict_settings(QUOTA_SERVICES={
+        'operation': 'append',
+        'key_list': ['*'],
+        'value': 'octavia'
+    })
+    def test_update_quota_octavia(self):
+        """Tests the quota update of the octavia service"""
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_identity_cache(projects=[project], users=[user])
+        setup_mock_caches('RegionOne', project.id)
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+
+        data = {
+            'project_id': 'test_project_id',
+            'size': 'large',
+            'domain_id': 'default',
+            'regions': ['RegionOne'],
+        }
+
+        action = UpdateProjectQuotasAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEqual(action.valid, True)
+
+        action.post_approve()
+        self.assertEqual(action.valid, True)
+
+        # check the quotas were updated
+        # This relies on test_settings heavily.
+        cinderquota = cinder_cache['RegionOne']['test_project_id']['quota']
+        self.assertEqual(cinderquota['gigabytes'], 50000)
+        novaquota = nova_cache['RegionOne']['test_project_id']['quota']
+        self.assertEqual(novaquota['ram'], 655360)
+        neutronquota = neutron_cache['RegionOne']['test_project_id']['quota']
+        self.assertEqual(neutronquota['network'], 10)
+        octaviaquota = octavia_cache['RegionOne']['test_project_id']['quota']
+        self.assertEqual(octaviaquota['load_balancer'], 10)
+
+    @modify_dict_settings(QUOTA_SERVICES={
+        'operation': 'append',
+        'key_list': ['*'],
+        'value': 'octavia'
+    })
+    def test_update_quota_octavia_over_usage(self):
+        """When octavia usage is higher than new quota it won't be changed"""
+        project = mock.Mock()
+        project.id = 'test_project_id'
+        project.name = 'test_project'
+        project.domain = 'default'
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = 'user_id'
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = 'default'
+        user.password = "test_password"
+
+        setup_identity_cache(projects=[project], users=[user])
+        setup_mock_caches('RegionOne', project.id)
+
+        task = Task.objects.create(
+            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+
+        data = {
+            'project_id': 'test_project_id',
+            'size': 'small',
+            'domain_id': 'default',
+            'regions': ['RegionOne'],
+        }
+
+        # setup 2 load balancers
+        octavia_cache['RegionOne'][project.id]['load_balancer'] = [
+            {'id': 'fake_id'},
+            {'id': 'fake_id2'}]
+
+        action = UpdateProjectQuotasAction(data, task=task, order=1)
+
+        action.pre_approve()
+        self.assertEqual(action.valid, False)
+
+        action.post_approve()
+        self.assertEqual(action.valid, False)
+
+        # check the quotas were updated
+        # This relies on test_settings heavily.
+        octaviaquota = octavia_cache['RegionOne']['test_project_id']['quota']
+        # Still set to default
+        self.assertEqual(octaviaquota['load_balancer'], 1)
