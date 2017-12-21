@@ -1159,3 +1159,39 @@ class QuotaAPITests(APITestCase):
                                     headers=headers, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @modify_dict_settings(TASK_SETTINGS=[
+        {'key_list': ['update_quota', 'allow_auto_approve'],
+         'operation': 'override',
+         'value': False,
+         }])
+    def test_no_auto_approved_quota_change(self):
+        """ Test allow_auto_approve config setting on a task."""
+
+        project = fake_clients.FakeProject(
+            name="test_project", id='test_project_id')
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
+
+        setup_identity_cache(projects=[project], users=[user])
+
+        headers = {
+            'project_name': "test_project",
+            'project_id': project.id,
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "user_id",
+            'authenticated': True
+        }
+
+        url = "/v1/openstack/quotas/"
+
+        data = {'size': 'medium', 'regions': ['RegionOne', 'RegionTwo']}
+        response = self.client.post(url, data, headers=headers, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+
+        self.check_quota_cache('RegionOne', 'test_project_id', 'small')
+
+        self.check_quota_cache('RegionTwo', 'test_project_id', 'small')

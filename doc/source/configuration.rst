@@ -135,17 +135,26 @@ options are available, overriding the default actions or adding in additional
 actions. These will run in the order specified.
 
 .. code-block:: yaml
-
-    signup:
-        default_actions:
-             - NewProjectAction
-    invite_user:
-        additional_actions:
-            - SendAdditionalEmailAction
+    TASK_SETTINGS:
+        signup:
+            default_actions:
+                 - NewProjectAction
+        invite_user:
+            additional_actions:
+                - SendAdditionalEmailAction
 
 
 By default duplicate tasks will be marked as invalid, however the duplicate
 policy can be set to 'cancel' to cancel duplicates and start a new class.
+
+You can also here at the task settings layer ensure that the task is never auto
+approved by it's underlying actions.
+
+.. code-block:: yaml
+    TASK_SETTINGS:
+        update_quota:
+            allow_auto_approve: False
+
 
 Email Settings
 ~~~~~~~~~~~~~~

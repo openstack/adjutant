@@ -120,9 +120,15 @@ class BaseAction(object):
         return self.action.auto_approve
 
     def set_auto_approve(self, can_approve=True):
-        self.add_note("Auto approve set to %s." % can_approve)
-        self.action.auto_approve = can_approve
-        self.action.save()
+        task_conf = settings.TASK_SETTINGS.get(self.action.task.task_type, {})
+        if task_conf.get('allow_auto_approve', True):
+            self.add_note("Auto approve set to %s." % can_approve)
+            self.action.auto_approve = can_approve
+            self.action.save()
+        else:
+            self.add_note("Task disallows action auto approve.")
+            self.action.auto_approve = False
+            self.action.save()
 
     def add_note(self, note):
         """
