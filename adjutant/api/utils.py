@@ -47,6 +47,15 @@ def mod_or_admin(func, *args, **kwargs):
 
 
 @decorator
+def project_admin(func, *args, **kwargs):
+    """
+    endpoints setup with this decorator require the admin/project admin role.
+    """
+    return require_roles(
+        {'project_admin', 'admin'}, func, *args, **kwargs)
+
+
+@decorator
 def admin(func, *args, **kwargs):
     """
     endpoints setup with this decorator require the admin role.
