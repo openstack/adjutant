@@ -209,7 +209,7 @@ class TaskView(APIViewWithLogger):
                         ["Error: Something went wrong on the server. " +
                          "It will be looked into shortly."]
                 }
-                return response_dict, 200
+                return response_dict, 500
 
         # send initial confirmation email:
         email_conf = class_conf.get('emails', {}).get('initial', None)
