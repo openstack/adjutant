@@ -20,7 +20,7 @@ from django.core import mail
 
 from rest_framework import status
 
-from adjutant.api.models import Task, Token
+from adjutant.api.models import Task, Token, Notification
 from adjutant.api.v1.tasks import CreateProject
 from adjutant.common.tests.fake_clients import (
     FakeManager, setup_identity_cache)
@@ -61,17 +61,19 @@ class TaskViewTests(AdjutantAPITestCase):
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json(),
-                         {'email': ['This field is required.']})
+        self.assertEqual(
+            response.json(),
+            {'errors': {'email': ['This field is required.']}})
 
         data = {'email': "not_a_valid_email", 'roles': ["not_a_valid_role"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
-            response.json(), {
+            response.json(),
+            {'errors': {
                 'email': ['Enter a valid email address.'],
-                'roles': ['"not_a_valid_role" is not a valid choice.']})
+                'roles': ['"not_a_valid_role" is not a valid choice.']}})
 
     def test_new_user(self):
         """
@@ -837,8 +839,9 @@ class TaskViewTests(AdjutantAPITestCase):
         response = self.client.post(url, data, format='json', headers=headers)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json(),
-                         {'new_email': [u'Enter a valid email address.']})
+        self.assertEqual(
+            response.json(),
+            {'errors': {'new_email': [u'Enter a valid email address.']}})
 
     @override_settings(USERNAME_IS_EMAIL=True)
     def test_update_email_pre_existing_user_with_email(self):
@@ -867,7 +870,7 @@ class TaskViewTests(AdjutantAPITestCase):
         response = self.client.post(url, data, format='json', headers=headers)
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.json(), ['actions invalid'])
+        self.assertEqual(response.json(), {'errors': ['actions invalid']})
         self.assertEqual(len(Token.objects.all()), 0)
 
         self.assertEqual(len(mail.outbox), 0)
@@ -1398,3 +1401,35 @@ class TaskViewTests(AdjutantAPITestCase):
         actions = new_task.actions
         observed_action_names = [a.action_name for a in actions]
         self.assertEqual(observed_action_names, expected_action_names)
+
+    @mock.patch('adjutant.common.tests.fake_clients.FakeManager.find_project')
+    def test_task_error_handler(self, mocked_find):
+        """
+        Ensure the _handle_task_error function works as expected.
+        """
+
+        setup_identity_cache()
+
+        mocked_find.side_effect = KeyError("Forced key error.")
+
+        url = "/v1/actions/CreateProject"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(
+            response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        self.assertEqual(
+            response.json(),
+            {'errors': ["Error: Something went wrong on the server. " +
+                        "It will be looked into shortly."]})
+
+        new_task = Task.objects.all()[0]
+        new_notification = Notification.objects.all()[0]
+
+        self.assertTrue(new_notification.error)
+        self.assertEqual(
+            new_notification.notes,
+            {'errors': [
+                "Error: KeyError('Forced key error.') while setting up " +
+                "task. See task itself for details."]})
+        self.assertEqual(new_notification.task, new_task)

@@ -281,7 +281,7 @@ class UserRoles(tasks.TaskView):
         if errors:
             self.logger.info("(%s) - Validation errors with registration." %
                              timezone.now())
-            return Response(errors, status=status)
+            return Response({'errors': errors}, status=status)
 
         response_dict = {'notes': processed.get('notes')}
 
@@ -493,7 +493,7 @@ class UpdateProjectQuotas(tasks.TaskView):
         if errors:
             self.logger.info("(%s) - Validation errors with task." %
                              timezone.now())
-            return Response(errors, status=status)
+            return Response({'errors': errors}, status=status)
 
         if processed.get('auto_approved', False):
             response_dict = {'notes': processed['notes']}

@@ -163,19 +163,12 @@ class TaskView(APIViewWithLogger):
         # Instantiate Task
         ip_address = request.META['REMOTE_ADDR']
         keystone_user = request.keystone_user
-        try:
-            task = Task.objects.create(
-                ip_address=ip_address,
-                keystone_user=keystone_user,
-                project_id=keystone_user['project_id'],
-                task_type=self.task_type,
-                hash_key=hash_key)
-        except KeyError:
-            task = Task.objects.create(
-                ip_address=ip_address,
-                keystone_user=keystone_user,
-                task_type=self.task_type,
-                hash_key=hash_key)
+        task = Task.objects.create(
+            ip_address=ip_address,
+            keystone_user=keystone_user,
+            project_id=keystone_user.get('project_id'),
+            task_type=self.task_type,
+            hash_key=hash_key)
         task.save()
 
         # Instantiate actions with serializers
@@ -195,24 +188,8 @@ class TaskView(APIViewWithLogger):
             try:
                 action_instance.pre_approve()
             except Exception as e:
-                import traceback
-                trace = traceback.format_exc()
-                self.logger.critical((
-                    "(%s) - Exception escaped! %s\nTrace: \n%s") % (
-                        timezone.now(), e, trace))
-                notes = {
-                    'errors':
-                        [("Error: '%s' while setting up task. " +
-                          "See task itself for details.") % e]
-                }
-                create_notification(task, notes, error=True)
-
-                response_dict = {
-                    'errors':
-                        ["Error: Something went wrong on the server. " +
-                         "It will be looked into shortly."]
-                }
-                return response_dict, 500
+                return self._handle_task_error(
+                    e, task, error_text='while setting up task')
 
         # send initial confirmation email:
         email_conf = class_conf.get('emails', {}).get('initial', None)
@@ -255,25 +232,8 @@ class TaskView(APIViewWithLogger):
             send_stage_email(task, email_conf, token)
             return {'notes': ['created token']}, 200
         except KeyError as e:
-            import traceback
-            trace = traceback.format_exc()
-            self.logger.critical((
-                "(%s) - Exception escaped! %s\nTrace: \n%s") % (
-                    timezone.now(), e, trace))
-            notes = {
-                'errors':
-                    [("Error: '%s' while sending " +
-                      "token. See task " +
-                      "itself for details.") % e]
-            }
-            create_notification(task, notes, error=True)
-
-            response_dict = {
-                'errors':
-                    ["Error: Something went wrong on the " +
-                     "server. It will be looked into shortly."]
-            }
-            return response_dict, 500
+            return self._handle_task_error(
+                e, task, error_text='while sending token')
 
     def approve(self, request, task):
         """
@@ -297,30 +257,15 @@ class TaskView(APIViewWithLogger):
         valid = all([act.valid for act in actions])
         if not valid:
             return {'errors': ['actions invalid']}, 400
+            # TODO(amelia): get action invalidation reasons
 
         # post_approve all actions
         for action in actions:
             try:
                 action.post_approve()
             except Exception as e:
-                import traceback
-                trace = traceback.format_exc()
-                self.logger.critical((
-                    "(%s) - Exception escaped! %s\nTrace: \n%s") % (
-                        timezone.now(), e, trace))
-                notes = {
-                    'errors':
-                        [("Error: '%s' while approving task. " +
-                          "See task itself for details.") % e]
-                }
-                create_notification(task, notes, error=True)
-
-                response_dict = {
-                    'errors':
-                        ["Error: Something went wrong on the server. " +
-                         "It will be looked into shortly."]
-                }
-                return response_dict, 500
+                return self._handle_task_error(
+                    e, task, error_text='while approving task')
 
         valid = all([act.valid for act in actions])
         if not valid:
@@ -335,25 +280,8 @@ class TaskView(APIViewWithLogger):
             try:
                 action.submit({})
             except Exception as e:
-                import traceback
-                trace = traceback.format_exc()
-                self.logger.critical((
-                    "(%s) - Exception escaped! %s\nTrace: \n%s") % (
-                        timezone.now(), e, trace))
-                notes = {
-                    'errors':
-                        [("Error: '%s' while submitting " +
-                          "task. See task " +
-                          "itself for details.") % e]
-                }
-                create_notification(task, notes, error=True)
-
-                response_dict = {
-                    'errors':
-                        ["Error: Something went wrong on the " +
-                         "server. It will be looked into shortly."]
-                }
-                return response_dict, 500
+                self._handle_task_error(
+                    e, task, error_text='while submitting task')
 
         task.completed = True
         task.completed_on = timezone.now()
@@ -403,7 +331,7 @@ class CreateProject(TaskView):
         if errors:
             self.logger.info("(%s) - Validation errors with task." %
                              timezone.now())
-            return Response(errors, status=status)
+            return Response({'errors': errors}, status=status)
 
         notes = {
             'notes':
@@ -452,8 +380,6 @@ class InviteUser(TaskView):
             self.logger.info("(%s) - Validation errors with task." %
                              timezone.now())
 
-            if isinstance(errors, dict):
-                return Response(errors, status=status)
             return Response({'errors': errors}, status=status)
 
         response_dict = {'notes': processed['notes']}
@@ -499,7 +425,7 @@ class ResetPassword(TaskView):
         if errors:
             self.logger.info("(%s) - Validation errors with task." %
                              timezone.now())
-            return Response(errors, status=status)
+            return Response({'errors': errors}, status=status)
 
         task = processed['task']
         self.logger.info("(%s) - AutoApproving Resetuser request."
@@ -581,7 +507,7 @@ class EditUser(TaskView):
         if errors:
             self.logger.info("(%s) - Validation errors with task." %
                              timezone.now())
-            return Response(errors, status=status)
+            return Response({'errors': errors}, status=status)
 
         response_dict = {'notes': processed.get('notes')}
         add_task_id_for_roles(request, processed, response_dict, ['admin'])
@@ -609,7 +535,7 @@ class UpdateEmail(TaskView):
         if errors:
             self.logger.info("(%s) - Validation errors with task." %
                              timezone.now())
-            return Response(errors, status=status)
+            return Response({'errors': errors}, status=status)
 
         response_dict = {'notes': processed['notes']}
         return Response(response_dict, status=status)

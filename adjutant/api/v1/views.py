@@ -41,6 +41,29 @@ class APIViewWithLogger(APIView):
         super(APIViewWithLogger, self).__init__(*args, **kwargs)
         self.logger = getLogger('adjutant')
 
+    def _handle_task_error(self, e, task, error_text="while running task",
+                           return_response=False):
+        import traceback
+        trace = traceback.format_exc()
+        self.logger.critical((
+            "(%s) - Exception escaped! %s\nTrace: \n%s") % (
+                timezone.now(), e, trace))
+        notes = {
+            'errors':
+                [("Error: %s(%s) %s. See task " +
+                  "itself for details.") % (type(e).__name__, e, error_text)]
+        }
+        create_notification(task, notes, error=True)
+
+        response_dict = {
+            'errors':
+                ["Error: Something went wrong on the " +
+                 "server. It will be looked into shortly."]
+        }
+        if return_response:
+            return Response(response_dict, status=500)
+        return response_dict, 500
+
 
 class StatusView(APIViewWithLogger):
 
@@ -101,9 +124,9 @@ class NotificationList(APIViewWithLogger):
             try:
                 notifications = paginator.page(page)
             except EmptyPage:
-                return Response({'error': 'Empty page'}, status=400)
+                return Response({'errors': ['Empty page']}, status=400)
             except PageNotAnInteger:
-                return Response({'error': 'Page not an integer'},
+                return Response({'errors': ['Page not an integer']},
                                 status=400)
 
         note_list = []
@@ -211,9 +234,9 @@ class TaskList(APIViewWithLogger):
             try:
                 tasks = paginator.page(page)
             except EmptyPage:
-                return Response({'error': 'Empty page'}, status=400)
+                return Response({'errors': ['Empty page']}, status=400)
             except PageNotAnInteger:
-                return Response({'error': 'Page not an integer'},
+                return Response({'errors': ['Page not an integer']},
                                 status=400)
         task_list = []
         for task in tasks:
@@ -315,26 +338,8 @@ class TaskDetail(APIViewWithLogger):
                 try:
                     act['action'].get_action().pre_approve()
                 except Exception as e:
-                    notes = {
-                        'errors':
-                            [("Error: '%s' while updating task. " +
-                              "See task itself for details.") % e],
-                        'task': task.uuid
-                    }
-                    create_notification(task, notes, error=True)
-
-                    import traceback
-                    trace = traceback.format_exc()
-                    self.logger.critical(("(%s) - Exception escaped! %s\n" +
-                                          "Trace: \n%s") %
-                                         (timezone.now(), e, trace))
-
-                    response_dict = {
-                        'errors':
-                            ["Error: Something went wrong on the server. " +
-                             "It will be looked into shortly."]
-                    }
-                    return Response(response_dict, status=500)
+                    return self._handle_task_error(
+                        e, task, "while updating task", return_response=True)
 
             return Response(
                 {'notes': ["Task successfully updated."]},
@@ -419,21 +424,8 @@ class TaskDetail(APIViewWithLogger):
             try:
                 act_model.post_approve()
             except Exception as e:
-                notes = {
-                    'errors':
-                        [("Error: '%s' while approving task. " +
-                          "See task itself for details.") % e],
-                    'task': task.uuid
-                }
-                create_notification(task, notes, error=True)
-
-                import traceback
-                trace = traceback.format_exc()
-                self.logger.critical(("(%s) - Exception escaped! %s\n" +
-                                      "Trace: \n%s") %
-                                     (timezone.now(), e, trace))
-
-                return Response(notes, status=500)
+                return self._handle_task_error(
+                    e, task, "while approving task", return_response=True)
 
             if not action.valid:
                 valid = False
@@ -454,48 +446,16 @@ class TaskDetail(APIViewWithLogger):
                     return Response({'notes': ['created token']},
                                     status=200)
                 except KeyError as e:
-                    notes = {
-                        'errors':
-                            [("Error: '%s' while sending " +
-                              "token. See task " +
-                              "itself for details.") % e],
-                        'task': task.uuid
-                    }
-                    create_notification(task, notes, error=True)
-
-                    import traceback
-                    trace = traceback.format_exc()
-                    self.logger.critical(("(%s) - Exception escaped!" +
-                                          " %s\n Trace: \n%s") %
-                                         (timezone.now(), e, trace))
-
-                    response_dict = {
-                        'errors':
-                            ["Error: Something went wrong on the " +
-                             "server. It will be looked into shortly."]
-                    }
-                    return Response(response_dict, status=500)
+                    return self._handle_task_error(
+                        e, task, "while sending token", return_response=True)
             else:
                 for action in actions:
                     try:
                         action.submit({})
                     except Exception as e:
-                        notes = {
-                            'errors':
-                                [("Error: '%s' while submitting " +
-                                  "task. See task " +
-                                  "itself for details.") % e],
-                            'task': task.uuid
-                        }
-                        create_notification(task, notes, error=True)
-
-                        import traceback
-                        trace = traceback.format_exc()
-                        self.logger.critical(("(%s) - Exception escaped!" +
-                                              " %s\n Trace: \n%s") %
-                                             (timezone.now(), e, trace))
-
-                        return Response(notes, status=500)
+                        return self._handle_task_error(
+                            e, task, "while submitting task",
+                            return_response=True)
 
                 task.completed = True
                 task.completed_on = timezone.now()
@@ -582,7 +542,7 @@ class TokenList(APIViewWithLogger):
         uuid = request.data.get('task', None)
         if uuid is None:
             return Response(
-                {'task': ["This field is required.", ]},
+                {'errors': {'task': ["This field is required.", ]}},
                 status=400)
         try:
             if 'admin' in request.keystone_user['roles']:
@@ -625,27 +585,8 @@ class TokenList(APIViewWithLogger):
             email_conf = class_conf['emails']['token']
             send_stage_email(task, email_conf, token)
         except KeyError as e:
-            notes = {
-                'errors': [
-                    ("Error: '%(error)s' while sending token. " +
-                     "See registration itself for details.") % {'error': e}
-                ],
-                'task': task.uuid
-            }
-            create_notification(task, notes, error=True)
-
-            import traceback
-            trace = traceback.format_exc()
-            self.logger.critical(("(%s) - Exception escaped!" +
-                                  " %s\n Trace: \n%s") %
-                                 (timezone.now(), e, trace))
-
-            response_dict = {
-                'errors':
-                    ["Error: Something went wrong on the " +
-                     "server. It will be looked into shortly."]
-            }
-            return Response(response_dict, status=500)
+            return self._handle_task_error(
+                e, task, "while sending token", return_response=True)
         return Response(
             {'notes': ['Token reissued.']}, status=200)
 
@@ -764,26 +705,9 @@ class TokenDetail(APIViewWithLogger):
                     valid = False
 
             except Exception as e:
-                notes = {
-                    'errors':
-                        [("Error: '%s' while submitting task. " +
-                          "See task itself for details.") % e],
-                    'task': token.task.uuid
-                }
-                create_notification(token.task, notes, error=True)
-
-                import traceback
-                trace = traceback.format_exc()
-                self.logger.critical(("(%s) - Exception escaped! %s\n" +
-                                      "Trace: \n%s") %
-                                     (timezone.now(), e, trace))
-
-                response_dict = {
-                    'errors':
-                        ["Error: Something went wrong on the server. " +
-                         "It will be looked into shortly."]
-                }
-                return Response(response_dict, status=500)
+                return self._handle_task_error(
+                    e, token.task, "while submiting task",
+                    return_response=True)
 
         if not valid:
             return Response({"errors": ["Actions invalid"]}, status=400)

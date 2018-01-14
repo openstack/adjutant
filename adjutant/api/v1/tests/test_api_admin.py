@@ -1511,3 +1511,53 @@ class AdminAPITests(APITestCase):
             response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
         self.assertEqual(0, Token.objects.count())
+
+    @mock.patch('adjutant.common.tests.fake_clients.FakeManager.find_project')
+    def test_apiview_error_handler(self, mocked_find):
+        """
+        Ensure the _handle_task_error function works as expected for APIViews.
+        """
+
+        setup_identity_cache()
+
+        url = "/v1/actions/CreateProject"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(
+            response.status_code, status.HTTP_200_OK)
+
+        mocked_find.side_effect = KeyError("Forced key error.")
+
+        new_task = Task.objects.all()[0]
+        url = "/v1/tasks/" + new_task.uuid
+        data = {
+            'project_name': "test_project", 'email': "test@example.com",
+            'region': 'test'
+        }
+        headers = {
+            'project_name': "test_project",
+            'project_id': "test_project_id",
+            'roles': "admin,_member_",
+            'username': "test@example.com",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        response = self.client.put(url, data, format='json', headers=headers)
+        self.assertEqual(
+            response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        self.assertEqual(
+            response.json()['errors'],
+            ["Error: Something went wrong on the server. " +
+             "It will be looked into shortly."])
+
+        new_task = Task.objects.all()[0]
+        new_notification = Notification.objects.all()[1]
+
+        self.assertTrue(new_notification.error)
+        self.assertEqual(
+            new_notification.notes,
+            {'errors': [
+                "Error: KeyError('Forced key error.') while updating task. " +
+                "See task itself for details."]})
+        self.assertEqual(new_notification.task, new_task)
