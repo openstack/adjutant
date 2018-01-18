@@ -135,6 +135,7 @@ options are available, overriding the default actions or adding in additional
 actions. These will run in the order specified.
 
 .. code-block:: yaml
+
     TASK_SETTINGS:
         signup:
             default_actions:
@@ -151,6 +152,7 @@ You can also here at the task settings layer ensure that the task is never auto
 approved by it's underlying actions.
 
 .. code-block:: yaml
+
     TASK_SETTINGS:
         update_quota:
             allow_auto_approve: False
