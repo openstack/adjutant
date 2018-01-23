@@ -179,16 +179,19 @@ class TaskView(APIViewWithLogger):
         task.save()
 
         # Instantiate actions with serializers
+        action_instances = []
         for i, action in enumerate(action_serializer_list):
             data = action['serializer'].validated_data
 
             # construct the action class
-            action_instance = action['action'](
+            action_instances.append(action['action'](
                 data=data,
                 task=task,
                 order=i
-            )
+            ))
 
+        # We run pre_approve on the actions once we've setup all of them.
+        for action_instance in action_instances:
             try:
                 action_instance.pre_approve()
             except Exception as e:
