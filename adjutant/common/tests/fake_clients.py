@@ -357,7 +357,34 @@ class FakeManager(object):
     def get_project(self, project_id, subtree_as_ids=False,
                     parents_as_ids=False):
         global identity_cache
-        return identity_cache['projects'].get(project_id, None)
+        project = identity_cache['projects'].get(project_id, None)
+
+        if subtree_as_ids:
+            subtree_list = []
+            prev_layer = [project.id, ]
+            current_layer = True
+            while current_layer:
+                current_layer = [s_project.id for s_project in
+                                 identity_cache['projects'].values()
+                                 if project.parent_id in prev_layer]
+                prev_layer = current_layer
+                subtree_list.append(current_layer)
+
+            project.subtree_ids = subtree_list
+
+        if parents_as_ids:
+            parent_list = []
+            parent_id = project.parent_id
+            parent_list.append(parent_id)
+            while identity_cache['projects'].get(parent_id, None):
+                parent_id = identity_cache['projects'].get(parent_id, None)
+                parent_list.append(parent_id)
+
+            project.parent_ids = parent_list
+            project.root = parent_id
+            project.depth = len(parent_list)
+
+        return project
 
     def create_project(self, project_name, created_on, parent=None,
                        domain='default', description=""):

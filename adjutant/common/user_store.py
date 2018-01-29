@@ -273,6 +273,7 @@ class IdentityManager(object):  # pragma: no cover
                     value = value.values()[0]
                 project.root = last_root
                 project.depth = depth
+                project.parent_ids = subtree_ids_list(project.parents)
             if subtree_as_ids:
                 project.subtree_ids = subtree_ids_list(project.subtree)
             return project
