@@ -458,7 +458,7 @@ class ProjectSetupActionTests(TestCase):
         self.assertFalse('RegionThree' in nova_cache)
         r2_cinderquota = cinder_cache['RegionThree'][
             'test_project_id']['quota']
-        self.assertEqual(r2_cinderquota['gigabytes'], 50000)
+        self.assertEqual(r2_cinderquota['gigabytes'], 50001)
         self.assertEqual(r2_cinderquota['snapshots'], 600)
         self.assertEqual(r2_cinderquota['volumes'], 200)
 
