@@ -136,7 +136,7 @@ class TaskView(APIViewWithLogger):
         Will ensure the request data contains the required data
         based on the action serializer, and if present will create
         a Task and the linked actions, attaching notes
-        based on running of the the pre_approve validation
+        based on running of the pre_approve validation
         function on all the actions.
 
         If during the pre_approve step at least one of the actions
