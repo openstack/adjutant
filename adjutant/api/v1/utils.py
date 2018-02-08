@@ -170,15 +170,18 @@ def create_notification(task, notes, error=False, engines=True):
     class_conf = settings.TASK_SETTINGS.get(
         task.task_type, settings.DEFAULT_TASK_SETTINGS)
 
-    for note_engine, conf in (class_conf.get('notifications', {})).items():
-        if error:
-            conf = conf.get('error', {})
-        else:
-            conf = conf.get('standard', {})
-        if not conf:
-            continue
-        engine = settings.NOTIFICATION_ENGINES[note_engine](conf)
-        engine.notify(task, notification)
+    notification_conf = class_conf.get('notifications', {})
+
+    if notification_conf:
+        for note_engine, conf in notification_conf.items():
+            if error:
+                conf = conf.get('error', {})
+            else:
+                conf = conf.get('standard', {})
+            if not conf:
+                continue
+            engine = settings.NOTIFICATION_ENGINES[note_engine](conf)
+            engine.notify(task, notification)
 
     return notification
 

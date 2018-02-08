@@ -115,7 +115,7 @@ class EmailNotification(NotificationEngine):
 
             email.send(fail_silently=False)
             if not notification.error:
-                notification.acknowledge = True
+                notification.acknowledged = True
                 notification.save()
         except SMTPException as e:
             notes = {
