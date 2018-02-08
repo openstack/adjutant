@@ -450,6 +450,10 @@ class AdminAPITests(APITestCase):
         self.assertEqual(response.json(),
                          {"errors": ["No notification with this id."]})
 
+    @modify_dict_settings(TASK_SETTINGS={
+        'key_list': ['create_project', 'notifications'],
+        'operation': 'delete',
+    })
     def test_notification_acknowledge(self):
         """
         Test that you can acknowledge a notification.
@@ -519,6 +523,10 @@ class AdminAPITests(APITestCase):
                          {'errors':
                          ['No notification with this id.']})
 
+    @modify_dict_settings(TASK_SETTINGS={
+        'key_list': ['create_project', 'notifications'],
+        'operation': 'delete',
+    })
     def test_notification_re_acknowledge(self):
         """
         Test that you cant reacknowledge a notification.
@@ -552,6 +560,10 @@ class AdminAPITests(APITestCase):
         self.assertEqual(response.json(),
                          {'notes': ['Notification already acknowledged.']})
 
+    @modify_dict_settings(TASK_SETTINGS={
+        'key_list': ['create_project', 'notifications'],
+        'operation': 'delete',
+    })
     def test_notification_acknowledge_no_data(self):
         """
         Test that you have to include 'acknowledged': True to the request.
