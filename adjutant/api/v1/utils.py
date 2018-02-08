@@ -74,7 +74,7 @@ def send_stage_email(task, email_conf, token=None):
     if len(emails) > 1:
         notes = {
             'errors':
-            (("Error: Unable to send token, More than one email for" +
+            (("Error: Unable to send update, more than one email for" +
               " task: %s") % task.uuid)
         }
         create_notification(task, notes, error=True)
@@ -136,7 +136,7 @@ def send_stage_email(task, email_conf, token=None):
     except SMTPException as e:
         notes = {
             'errors':
-                ("Error: '%s' while emailing token for task: %s" %
+                ("Error: '%s' while emailing update for task: %s" %
                     (e, task.uuid))
         }
 
