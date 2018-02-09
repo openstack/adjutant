@@ -384,7 +384,7 @@ PROJECT_QUOTA_SIZES = {
 
 QUOTA_SIZES_ASC = ['small', 'medium', 'large']
 
-QUOTA_SERVICES = ['neutron', 'nova', 'cinder']
+QUOTA_SERVICES = {'*': ['cinder', 'neutron', 'nova']}
 
 SHOW_ACTION_ENDPOINTS = True
 

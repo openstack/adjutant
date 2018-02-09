@@ -192,8 +192,10 @@ ACTIVE_TASKVIEWS = CONFIG.get(
     ])
 
 # Default services for which to check and update quotas for
-QUOTA_SERVICES = CONFIG.get('QUOTA_SERVICES',
-                            ['cinder', 'neutron', 'nova'])
+QUOTA_SERVICES = CONFIG.get(
+    'QUOTA_SERVICES',
+    {'*': ['cinder', 'neutron', 'nova']})
+
 
 # Dict of TaskViews and their url_paths.
 # - This is populated by registering taskviews.

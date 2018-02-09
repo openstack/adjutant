@@ -133,15 +133,22 @@ class QuotaManager(object):
         # TODO(amelia): Try to find out which endpoints are available and get
         # the non enabled ones out of the list
 
-        # Check configured removal of quota updaters
-        self.helpers = dict(self._quota_updaters)
+        self.default_helpers = dict(self._quota_updaters)
+        self.helpers = {}
 
-        # Configurable services
         if settings.QUOTA_SERVICES:
-            self.helpers = {}
-            for name in settings.QUOTA_SERVICES:
-                if name in self._quota_updaters:
-                    self.helpers[name] = self._quota_updaters[name]
+            all_regions = settings.QUOTA_SERVICES.pop('*', None)
+            if all_regions:
+                self.default_helpers = {}
+                for service in all_regions:
+                    if service in self._quota_updaters:
+                        self.default_helpers[service] = \
+                            self._quota_updaters[service]
+
+            for region in settings.QUOTA_SERVICES:
+                for service in region:
+                    if service in self._quota_updaters:
+                        self.helpers[service] = self._quota_updaters[service]
 
         self.project_id = project_id
         self.size_diff_threshold = (size_difference_threshold or
@@ -149,7 +156,9 @@ class QuotaManager(object):
 
     def get_current_region_quota(self, region_id):
         current_quota = {}
-        for name, service in self.helpers.items():
+
+        region_helpers = self.helpers.get(region_id, self.default_helpers)
+        for name, service in region_helpers.items():
             helper = service(region_id, self.project_id)
             current_quota[name] = helper.get_quota()
 
@@ -217,7 +226,8 @@ class QuotaManager(object):
     def get_current_usage(self, region_id):
         current_usage = {}
 
-        for name, service in self.helpers.items():
+        region_helpers = self.helpers.get(region_id, self.default_helpers)
+        for name, service in region_helpers.items():
             try:
                 helper = service(region_id, self.project_id)
                 current_usage[name] = helper.get_usage()
@@ -228,7 +238,8 @@ class QuotaManager(object):
     def set_region_quota(self, region_id, quota_dict):
         notes = []
         for service_name, values in quota_dict.items():
-            updater_class = self.helpers.get(service_name)
+            updater_class = self.helpers.get(
+                region_id, self.default_helpers).get(service_name)
             if not updater_class:
                 notes.append("No quota updater found for %s. Ignoring" %
                              service_name)
