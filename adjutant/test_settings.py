@@ -374,7 +374,7 @@ PROJECT_QUOTA_SIZES = {
     },
     "large_cinder_only": {
         "cinder": {
-            "gigabytes": 50000,
+            "gigabytes": 50001,
             "volumes": 200,
             "snapshots": 600
         },

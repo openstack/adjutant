@@ -1195,3 +1195,50 @@ class QuotaAPITests(APITestCase):
         self.check_quota_cache('RegionOne', 'test_project_id', 'small')
 
         self.check_quota_cache('RegionTwo', 'test_project_id', 'small')
+
+    def test_view_correct_sizes(self):
+        """
+        Calculates the best 'fit' quota size from a custom quota.
+        """
+
+        project = fake_clients.FakeProject(
+            name="test_project", id='test_project_id')
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
+
+        setup_identity_cache(projects=[project], users=[user])
+
+        admin_headers = {
+            'project_name': "test_project",
+            'project_id': project.id,
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': user.id,
+            'authenticated': True
+        }
+        url = "/v1/openstack/quotas/?regions=RegionOne"
+
+        response = self.client.get(url, headers=admin_headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data['regions'][0]['current_quota_size'], 'small')
+        self.assertEqual(
+            response.data['regions'][0]['quota_change_options'], ['medium'])
+
+        cinder_cache['RegionOne'][project.id][
+            'quota'] = settings.PROJECT_QUOTA_SIZES['large']['cinder']
+
+        nova_cache['RegionOne'][project.id][
+            'quota'] = settings.PROJECT_QUOTA_SIZES['large']['nova']
+
+        neutron_cache['RegionOne'][project.id][
+            'quota'] = settings.PROJECT_QUOTA_SIZES['large']['neutron']
+
+        response = self.client.get(url, headers=admin_headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data['regions'][0]['current_quota_size'], 'large')
+        self.assertEqual(
+            response.data['regions'][0]['quota_change_options'],
+            ['small', 'medium'])

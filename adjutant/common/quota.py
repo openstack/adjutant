@@ -207,9 +207,8 @@ class QuotaManager(object):
         except ValueError:
             return []
 
-        quota_change_list = []
-        if list_position - 1 >= 0:
-            quota_change_list.append(quota_list[list_position - 1])
+        quota_change_list = quota_list[:list_position]
+
         if list_position + 1 < len(quota_list):
             quota_change_list.append(quota_list[list_position + 1])
 
