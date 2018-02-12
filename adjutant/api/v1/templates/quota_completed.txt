@@ -1,4 +1,4 @@
-This email is to confirm that the quota for your openstack project {{ task.cache.project_id }} has been changed to {{ task.cache.size }}.
+This email is to confirm that the quota for your openstack project {{ task.keystone_user.project_name }} has been changed to {{ task.cache.size }}.
 
 If you did not do this yourself, please get in touch with your systems administrator to report suspicious activity and secure your account.
 
