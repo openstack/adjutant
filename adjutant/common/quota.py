@@ -137,7 +137,9 @@ class QuotaManager(object):
         self.helpers = {}
 
         if settings.QUOTA_SERVICES:
-            all_regions = settings.QUOTA_SERVICES.pop('*', None)
+            quota_services = dict(settings.QUOTA_SERVICES)
+
+            all_regions = quota_services.pop('*', None)
             if all_regions:
                 self.default_helpers = {}
                 for service in all_regions:
@@ -145,7 +147,7 @@ class QuotaManager(object):
                         self.default_helpers[service] = \
                             self._quota_updaters[service]
 
-            for region in settings.QUOTA_SERVICES:
+            for region in quota_services:
                 for service in region:
                     if service in self._quota_updaters:
                         self.helpers[service] = self._quota_updaters[service]
