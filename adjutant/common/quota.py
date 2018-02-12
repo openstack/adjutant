@@ -241,11 +241,8 @@ class QuotaManager(object):
 
         region_helpers = self.helpers.get(region_id, self.default_helpers)
         for name, service in region_helpers.items():
-            try:
-                helper = service(region_id, self.project_id)
-                current_usage[name] = helper.get_usage()
-            except Exception:
-                pass
+            helper = service(region_id, self.project_id)
+            current_usage[name] = helper.get_usage()
         return current_usage
 
     def set_region_quota(self, region_id, quota_dict):
@@ -258,15 +255,7 @@ class QuotaManager(object):
                              service_name)
                 continue
 
-            try:
-                service_helper = updater_class(region_id, self.project_id)
-            except Exception:
-                # NOTE(amelia): We will assume if there are issues connecting
-                #               to a service that it will be due to the
-                #               service not existing in this region.
-                notes.append("Couldn't access %s client, region %s" %
-                             (service_name, region_id))
-                continue
+            service_helper = updater_class(region_id, self.project_id)
 
             service_helper.set_quota(values)
         return notes
