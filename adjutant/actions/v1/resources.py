@@ -288,6 +288,7 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
             cancelled__exact=False,
             project_id__exact=self.project_id)
 
+        changed_in_period = False
         # Check to see if there have been any updates in the relavent regions
         # recently
         for task in task_list:
@@ -295,10 +296,7 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
                 intersect = set(action.action_data[
                     'regions']).intersection(self.regions)
                 if intersect:
-                    self.add_note(
-                        "Quota has already been updated within the auto "
-                        "approve time limit.")
-                    return False
+                    changed_in_period = True
 
         region_sizes = []
 
@@ -315,17 +313,33 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
 
         # Check for preapproved_quotas
         preapproved_quotas = []
+        smaller_quotas = []
 
         # If all region sizes are the same
         if region_sizes.count(region_sizes[0]) == len(region_sizes):
             preapproved_quotas = quota_manager.get_quota_change_options(
                 region_sizes[0])
+            smaller_quotas = quota_manager.get_smaller_quota_options(
+                region_sizes[0])
+
+        if self.size in smaller_quotas:
+            self.add_note(
+                "Quota size '%s' is in list of smaller quotas: %s" %
+                (self.size, smaller_quotas))
+            return True
+
+        if changed_in_period:
+            self.add_note(
+                "Quota has already been updated within the auto "
+                "approve time limit.")
+            return False
 
         if self.size not in preapproved_quotas:
             self.add_note(
                 "Quota size '%s' not in preapproved list: %s" %
                 (self.size, preapproved_quotas))
             return False
+
         self.add_note(
             "Quota size '%s' in preapproved list: %s" %
             (self.size, preapproved_quotas))

@@ -214,6 +214,16 @@ class QuotaManager(object):
 
         return quota_change_list
 
+    def get_smaller_quota_options(self, quota_size):
+        """ Get the quota sizes smaller than the current size."""
+        quota_list = settings.QUOTA_SIZES_ASC
+        try:
+            list_position = quota_list.index(quota_size)
+        except ValueError:
+            return []
+
+        return quota_list[:list_position]
+
     def get_region_quota_data(self, region_id):
         current_quota = self.get_current_region_quota(region_id)
         current_quota_size = self.get_quota_size(current_quota)

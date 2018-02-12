@@ -533,7 +533,7 @@ class QuotaAPITests(APITestCase):
         # Then check to see the quotas have changed
         self.check_quota_cache('RegionOne', project.id, 'medium')
 
-        data = {'size': 'small',
+        data = {'size': 'large',
                 'regions': ['RegionOne']}
         response = self.client.post(url, data,
                                     headers=admin_headers, format='json')
@@ -564,7 +564,51 @@ class QuotaAPITests(APITestCase):
             {'notes': ['Task completed successfully.']}
         )
 
-        # Quotas should have changed to small
+        # Quotas should have changed to large
+        self.check_quota_cache('RegionOne', project.id, 'large')
+
+    def test_update_quota_history_smaller(self):
+        """
+        Update quota to a smaller quota right after a change to a larger
+        quota. Should auto approve to smaller quotas regardless of history.
+        """
+        project = fake_clients.FakeProject(
+            name="test_project", id='test_project_id')
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com")
+
+        setup_identity_cache(projects=[project], users=[user])
+
+        admin_headers = {
+            'project_name': "test_project",
+            'project_id': project.id,
+            'roles': "project_admin,_member_,project_mod",
+            'username': "test@example.com",
+            'user_id': "user_id",
+            'authenticated': True
+        }
+
+        url = "/v1/openstack/quotas/"
+
+        data = {'size': 'medium',
+                'regions': ['RegionOne']}
+        response = self.client.post(url, data,
+                                    headers=admin_headers, format='json')
+        # First check we can actually access the page correctly
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Then check to see the quotas have changed
+        self.check_quota_cache('RegionOne', project.id, 'medium')
+
+        data = {'size': 'small',
+                'regions': ['RegionOne']}
+        response = self.client.post(url, data,
+                                    headers=admin_headers, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Then check to see the quotas have changed
         self.check_quota_cache('RegionOne', project.id, 'small')
 
     def test_update_quota_old_history(self):
@@ -953,7 +997,7 @@ class QuotaAPITests(APITestCase):
 
         self.check_quota_cache('RegionTwo', project.id, 'medium')
 
-        data = {'size': 'small'}
+        data = {'size': 'large'}
         response = self.client.post(url, data, headers=headers, format='json')
 
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
@@ -983,9 +1027,9 @@ class QuotaAPITests(APITestCase):
             {'notes': ['Task completed successfully.']}
         )
 
-        self.check_quota_cache('RegionOne', project.id, 'small')
+        self.check_quota_cache('RegionOne', project.id, 'large')
 
-        self.check_quota_cache('RegionTwo', project.id, 'small')
+        self.check_quota_cache('RegionTwo', project.id, 'large')
 
     def test_set_multi_quota_single_history(self):
         """
