@@ -147,10 +147,12 @@ class QuotaManager(object):
                         self.default_helpers[service] = \
                             self._quota_updaters[service]
 
-            for region in quota_services:
-                for service in region:
+            for region, services in quota_services.items():
+                self.helpers[region] = {}
+                for service in services:
                     if service in self._quota_updaters:
-                        self.helpers[service] = self._quota_updaters[service]
+                        self.helpers[region][service] = \
+                            self._quota_updaters[service]
 
         self.project_id = project_id
         self.size_diff_threshold = (size_difference_threshold or
