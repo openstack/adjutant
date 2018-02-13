@@ -25,9 +25,11 @@ Notification details:
 uuid: {{ notification.uuid }}
 notes:
 {{ notification.notes|safe }}
-
 {% if task_url %}
 Task link:
-{{ task_url }}{{ task.uuid }}
-
+{{ task_url }}
+{% endif %}
+{% if notification.error and notification_url %}
+Notification link:
+{{ notification_url }}
 {% endif %}
