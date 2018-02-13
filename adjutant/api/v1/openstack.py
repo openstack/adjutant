@@ -390,20 +390,6 @@ class UpdateProjectQuotas(tasks.TaskView):
 
     _number_of_returned_tasks = 5
 
-    def get_region_quota_data(self, region_id):
-        quota_manager = QuotaManager(self.project_id)
-        current_quota = quota_manager.get_current_region_quota(region_id)
-        current_quota_size = quota_manager.get_quota_size(current_quota)
-        change_options = quota_manager.get_quota_change_options(
-            current_quota_size)
-        current_usage = quota_manager.get_current_usage(region_id)
-        return {"region": region_id,
-                "current_quota": current_quota,
-                "current_quota_size": current_quota_size,
-                "quota_change_options": change_options,
-                "current_usage": current_usage
-                }
-
     def get_active_quota_tasks(self):
         # Get the 5 last quota tasks.
         task_list = models.Task.objects.filter(
@@ -456,6 +442,7 @@ class UpdateProjectQuotas(tasks.TaskView):
 
         self.project_id = request.keystone_user['project_id']
         regions = request.query_params.get('regions', None)
+        include_usage = request.query_params.get('include_usage', True)
 
         if regions:
             regions = regions.split(",")
@@ -471,7 +458,7 @@ class UpdateProjectQuotas(tasks.TaskView):
         for region in regions:
             if self.check_region_exists(region):
                 region_quotas.append(quota_manager.get_region_quota_data(
-                    region))
+                    region, include_usage))
             else:
                 return Response(
                     {"ERROR": ['Region: %s is not valid' % region]}, 400)

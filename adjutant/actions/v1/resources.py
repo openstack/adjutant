@@ -305,7 +305,7 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
 
         for region in self.regions:
             current_size = quota_manager.get_region_quota_data(
-                region)['current_quota_size']
+                region, include_usage=False)['current_quota_size']
             region_sizes.append(current_size)
             self.add_note(
                 "Project has size '%s' in region: '%s'" %

@@ -275,17 +275,22 @@ class QuotaManager(object):
 
         return quota_list[:list_position]
 
-    def get_region_quota_data(self, region_id):
+    def get_region_quota_data(self, region_id, include_usage=True):
         current_quota = self.get_current_region_quota(region_id)
         current_quota_size = self.get_quota_size(current_quota)
         change_options = self.get_quota_change_options(current_quota_size)
-        current_usage = self.get_current_usage(region_id)
-        return {'region': region_id,
-                "current_quota": current_quota,
-                "current_quota_size": current_quota_size,
-                "quota_change_options": change_options,
-                "current_usage": current_usage
-                }
+
+        region_data = {
+            'region': region_id,
+            "current_quota": current_quota,
+            "current_quota_size": current_quota_size,
+            "quota_change_options": change_options,
+        }
+
+        if include_usage:
+            region_data['current_usage'] = self.get_current_usage(region_id)
+
+        return region_data
 
     def get_current_usage(self, region_id):
         current_usage = {}
