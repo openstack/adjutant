@@ -21,7 +21,7 @@ the underlying OpenStack services and resources. The reason why it didn't end
 up quite so complex and so big is because OpenStack itself, and many of the
 services (and the future roadmap) had planned solutions to many of the things
 we wanted, and our business requirements changed to storing our customer
-information in an eternal ERP system (Odoo/OpenERP at the time) rather than a
+information in an external ERP system (Odoo/OpenERP at the time) rather than a
 standalone service.
 
 So instead of something so grand, we tried smaller, a service that handles our
