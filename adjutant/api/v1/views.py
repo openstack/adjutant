@@ -785,13 +785,13 @@ class TokenDetail(APIViewWithLogger):
                 }
                 return Response(response_dict, status=500)
 
+        if not valid:
+            return Response({"errors": ["Actions invalid"]}, status=400)
+
         token.task.completed = True
         token.task.completed_on = timezone.now()
         token.task.save()
         token.delete()
-
-        if not valid:
-            return Response({"errors": ["Actions invalid"]}, status=400)
 
         # Sending confirmation email:
         class_conf = settings.TASK_SETTINGS.get(
