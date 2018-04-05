@@ -24,7 +24,6 @@ https://docs.djangoproject.com/en/1.8/howto/deployment/wsgi/
 import os
 from django.core.wsgi import get_wsgi_application
 from django.conf import settings
-from six.moves.urllib.parse import urlparse
 from keystonemiddleware.auth_token import AuthProtocol
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "adjutant.settings")
@@ -34,7 +33,6 @@ application = get_wsgi_application()
 
 # Here we replace the default application with one wrapped by
 # the Keystone Auth Middleware.
-identity_url = urlparse(settings.KEYSTONE['auth_url'])
 conf = {
     "auth_plugin": "password",
     'username': settings.KEYSTONE['username'],
