@@ -19,6 +19,7 @@ from django.utils import timezone
 
 from adjutant.common.quota import QuotaManager
 from adjutant.common import user_store
+from adjutant.common.utils import str_datetime
 from adjutant.actions.models import Action
 
 
@@ -331,7 +332,7 @@ class UserMixin(ResourceMixin):
             user = id_manager.create_user(
                 name=self.username, password=password,
                 email=self.email, domain=self.domain_id,
-                created_on=str(timezone.now()))
+                created_on=str_datetime(timezone.now()))
         except Exception as e:
             # TODO: Narrow the Exceptions caught to a relevant set.
             self.add_note(
@@ -410,7 +411,7 @@ class ProjectMixin(ResourceMixin):
         description = getattr(self, "description", "")
         try:
             project = id_manager.create_project(
-                self.project_name, created_on=str(timezone.now()),
+                self.project_name, created_on=str_datetime(timezone.now()),
                 parent=self.parent_id, domain=self.domain_id,
                 description=description)
         except Exception as e:

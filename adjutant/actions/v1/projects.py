@@ -17,6 +17,7 @@ from uuid import uuid4
 from django.utils import timezone
 
 from adjutant.common import user_store
+from adjutant.common.utils import str_datetime
 from adjutant.actions.v1.base import (
     BaseAction, UserNameAction, UserMixin, ProjectMixin)
 
@@ -261,7 +262,7 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
                     user = id_manager.create_user(
                         name=self.username, password=password,
                         email=self.email, domain=self.domain_id,
-                        created_on=str(timezone.now()))
+                        created_on=str_datetime(timezone.now()))
                     self.set_cache('user_id', user.id)
                 else:
                     user = id_manager.get_user(user_id)
