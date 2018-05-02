@@ -220,13 +220,14 @@ class QuotaManager(object):
         for size, setting in settings.PROJECT_QUOTA_SIZES.items():
             match_percentages = []
             for service_name, values in setting.items():
+                if service_name not in current_quota:
+                    continue
                 for name, value in values.items():
+                    if name not in current_quota[service_name]:
+                        continue
                     if value > 0:
-                        try:
-                            current = current_quota[service_name][name]
-                            match_percentages.append(float(current) / value)
-                        except KeyError:
-                            pass
+                        current = current_quota[service_name][name]
+                        match_percentages.append(float(current) / value)
                     elif value < 0:
                         # NOTE(amelia): Sub-zero quota means unlimited
                         if current_quota[service_name][name] < 0:
