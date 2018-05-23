@@ -8,7 +8,7 @@ of Adjutant is to provide a variety of common tasks and actions that can
 be easily extended or changed based upon the needs of your OpenStack.
 
 The default Adjutant configuration is found in conf/conf.yaml, and but will
-be overriden if a file is placed at ``/etc/adjutant/conf.yaml``.
+be overridden if a file is placed at ``/etc/adjutant/conf.yaml``.
 
 The first part of the configuration file contains standard Django settings.
 
