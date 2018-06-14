@@ -18,6 +18,7 @@ from django.db import models
 from adjutant.common import user_store
 from adjutant.actions.v1.base import (
     UserNameAction, UserIdAction, UserMixin, ProjectMixin)
+from adjutant.actions.utils import validate_steps
 
 
 class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
@@ -91,13 +92,13 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
         return True
 
     def _validate(self):
-        self.action.valid = (
-            self._validate_role_permissions() and
-            self._validate_keystone_user() and
-            self._validate_domain_id() and
-            self._validate_project_id() and
-            self._validate_target_user()
-        )
+        self.action.valid = validate_steps([
+            self._validate_role_permissions,
+            self._validate_keystone_user,
+            self._validate_domain_id,
+            self._validate_project_id,
+            self._validate_target_user,
+        ])
         self.action.save()
 
     def _pre_approve(self):
@@ -203,11 +204,11 @@ class ResetUserPasswordAction(UserNameAction, UserMixin):
     def _validate(self):
         # Here, the order of validation matters
         # as each one adds new class variables
-        self.action.valid = all([
-            self._validate_domain_name(),
-            self._validate_username_exists(),
-            self._validate_user_roles(),
-            self._validate_user_email(),
+        self.action.valid = validate_steps([
+            self._validate_domain_name,
+            self._validate_username_exists,
+            self._validate_user_roles,
+            self._validate_user_email,
         ])
         self.action.save()
 
@@ -311,14 +312,14 @@ class EditUserRolesAction(UserIdAction, ProjectMixin, UserMixin):
         return new_roles_manageable and current_roles_manageable
 
     def _validate(self):
-        self.action.valid = (
-            self._validate_keystone_user() and
-            self._validate_role_permissions() and
-            self._validate_domain_id() and
-            self._validate_project_id() and
-            self._validate_target_user() and
-            self._validate_user_roles()
-        )
+        self.action.valid = validate_steps([
+            self._validate_keystone_user,
+            self._validate_role_permissions,
+            self._validate_domain_id,
+            self._validate_project_id,
+            self._validate_target_user,
+            self._validate_user_roles,
+        ])
         self.action.save()
 
     def _pre_approve(self):
@@ -384,8 +385,10 @@ class UpdateUserEmailAction(UserIdAction, UserMixin):
         return self.new_email
 
     def _validate(self):
-        self.action.valid = (self._validate_user() and
-                             self._validate_email_not_in_use())
+        self.action.valid = validate_steps([
+            self._validate_user,
+            self._validate_email_not_in_use,
+        ])
         self.action.save()
 
     def _validate_user(self):

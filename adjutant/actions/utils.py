@@ -8,6 +8,25 @@ from django.template import loader
 from django.conf import settings
 
 
+def validate_steps(validation_steps):
+    """Helper function for validation in actions
+
+    Takes a list of validation functions or validation function results.
+    If function, will call it first, otherwise checks if valid. Will break
+    and return False on first validation failure, or return True if all valid.
+
+    It is best to pass in the functions and let this call them so that it
+    doesn't keep validating after the first invalid result.
+    """
+    for step in validation_steps:
+        if callable(step):
+            if not step():
+                return False
+        if not step:
+            return False
+    return True
+
+
 def send_email(to_addresses, context, conf, task):
     """
     Function for sending emails from actions

@@ -13,6 +13,7 @@
 #    under the License.
 
 from adjutant.actions.v1.base import BaseAction, ProjectMixin, QuotaMixin
+from adjutant.actions.utils import validate_steps
 from adjutant.common import openstack_clients, user_store
 from adjutant.api import models
 from adjutant.common.quota import QuotaManager
@@ -70,12 +71,12 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
         return True
 
     def _validate(self):
-        self.action.valid = (
-            self._validate_region() and
-            self._validate_project_id() and
-            self._validate_defaults() and
-            self._validate_keystone_user()
-        )
+        self.action.valid = validate_steps([
+            self._validate_region,
+            self._validate_project_id,
+            self._validate_defaults,
+            self._validate_keystone_user,
+        ])
         self.action.save()
 
     def _create_network(self):
@@ -199,18 +200,18 @@ class NewProjectDefaultNetworkAction(NewDefaultNetworkAction):
 
     def _pre_validate(self):
         # Note: Don't check project here as it doesn't exist yet.
-        self.action.valid = (
-            self._validate_region() and
-            self._validate_defaults()
-        )
+        self.action.valid = validate_steps([
+            self._validate_region,
+            self._validate_defaults,
+        ])
         self.action.save()
 
     def _validate(self):
-        self.action.valid = (
-            self._validate_region() and
-            self._validate_project_id() and
-            self._validate_defaults()
-        )
+        self.action.valid = validate_steps([
+            self._validate_region,
+            self._validate_project_id,
+            self._validate_defaults,
+        ])
         self.action.save()
 
     def _pre_approve(self):
@@ -347,12 +348,12 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
 
     def _validate(self):
         # Make sure the project id is valid and can be used
-        self.action.valid = (
-            self._validate_project_id() and
-            self._validate_quota_size_exists() and
-            self._validate_regions_exist() and
-            self._validate_usage_lower_than_quota()
-        )
+        self.action.valid = validate_steps([
+            self._validate_project_id,
+            self._validate_quota_size_exists,
+            self._validate_regions_exist,
+            self._validate_usage_lower_than_quota,
+        ])
         self.action.save()
 
     def _pre_approve(self):
@@ -393,9 +394,9 @@ class SetProjectQuotaAction(UpdateProjectQuotasAction):
 
     def _validate(self):
         # Make sure the project id is valid and can be used
-        self.action.valid = (
-            self._validate_project_id()
-        )
+        self.action.valid = validate_steps([
+            self._validate_project_id,
+        ])
         self.action.save()
 
     def _pre_approve(self):

@@ -18,6 +18,7 @@ from django.utils import timezone
 
 from adjutant.common import user_store
 from adjutant.common.utils import str_datetime
+from adjutant.actions.utils import validate_steps
 from adjutant.actions.v1.base import (
     BaseAction, UserNameAction, UserMixin, ProjectMixin)
 
@@ -40,10 +41,11 @@ class NewProjectAction(BaseAction, ProjectMixin, UserMixin):
         super(NewProjectAction, self).__init__(*args, **kwargs)
 
     def _validate(self):
-        self.action.valid = (
-            self._validate_domain_id() and
-            self._validate_parent_project() and
-            self._validate_project_absent())
+        self.action.valid = validate_steps([
+            self._validate_domain_id,
+            self._validate_parent_project,
+            self._validate_project_absent,
+        ])
         self.action.save()
 
     def _validate_domain_id(self):
@@ -137,11 +139,12 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
         super(NewProjectWithUserAction, self).__init__(*args, **kwargs)
 
     def _validate(self):
-        self.action.valid = (
-            self._validate_domain_id() and
-            self._validate_parent_project() and
-            self._validate_project_absent() and
-            self._validate_user())
+        self.action.valid = validate_steps([
+            self._validate_domain_id,
+            self._validate_parent_project,
+            self._validate_project_absent,
+            self._validate_user,
+        ])
         self.action.save()
 
     def _validate_user(self):
@@ -420,14 +423,16 @@ class AddDefaultUsersToProjectAction(BaseAction, ProjectMixin, UserMixin):
         return all_found
 
     def _pre_validate(self):
-        self.action.valid = self._validate_users()
+        self.action.valid = validate_steps([
+            self._validate_users,
+        ])
         self.action.save()
 
     def _validate(self):
-        self.action.valid = (
-            self._validate_users() and
-            self._validate_project_id()
-        )
+        self.action.valid = validate_steps([
+            self._validate_users,
+            self._validate_project_id,
+        ])
         self.action.save()
 
     def _pre_approve(self):
