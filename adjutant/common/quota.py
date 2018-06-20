@@ -214,7 +214,7 @@ class QuotaManager(object):
 
         return current_quota
 
-    def get_quota_size(self, current_quota, difference_threshold=None):
+    def get_quota_differences(self, current_quota):
         """ Gets the closest matching quota size for a given quota """
         quota_differences = {}
         for size, setting in settings.PROJECT_QUOTA_SIZES.items():
@@ -227,7 +227,9 @@ class QuotaManager(object):
                         continue
                     if value > 0:
                         current = current_quota[service_name][name]
-                        match_percentages.append(float(current) / value)
+                        dividend = float(min(current, value))
+                        divisor = float(max(current, value))
+                        match_percentages.append(dividend / divisor)
                     elif value < 0:
                         # NOTE(amelia): Sub-zero quota means unlimited
                         if current_quota[service_name][name] < 0:
@@ -242,11 +244,24 @@ class QuotaManager(object):
             difference = abs(
                 (sum(match_percentages) / float(len(match_percentages))) - 1)
 
-            if (difference <= self.size_diff_threshold):
-                quota_differences[size] = difference
+            quota_differences[size] = difference
 
-        if len(quota_differences) > 0:
-            return min(quota_differences, key=quota_differences.get)
+        return quota_differences
+
+    def get_quota_size(self, current_quota, difference_threshold=None):
+        """ Gets the closest matching quota size for a given quota """
+        quota_differences = self.get_quota_differences(current_quota)
+
+        diff_threshold = difference_threshold or self.size_diff_threshold
+
+        quota_differences_pruned = {}
+        for size, difference in quota_differences.items():
+            if (difference <= diff_threshold):
+                quota_differences_pruned[size] = difference
+
+        if len(quota_differences_pruned) > 0:
+            return min(
+                quota_differences_pruned, key=quota_differences_pruned.get)
         # If we don't get a match return custom which means the project will
         # need admin approval for any change
         return 'custom'
