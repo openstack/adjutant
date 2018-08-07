@@ -1,4 +1,5 @@
 [gerrit]
 host=review.openstack.org
 port=29418
-project=openstack/adjuntant.git
+project=openstack/adjutant.git
+defaultbranch=stable/pike
