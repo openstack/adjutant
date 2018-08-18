@@ -112,7 +112,7 @@ DEFAULT_TASK_SETTINGS:
                 # html_template: completed.txt
 
 # Default Action settings:
-# These can be overriden at a per task level below in the
+# These can be overridden at a per task level below in the
 # task settings so that multiple tasks can use the same actions
 # slightly differently.
 #

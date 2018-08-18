@@ -33,7 +33,7 @@ class ModifySettingsTests(AdjutantAPITestCase):
     Tests designed to test the modify_dict_settings decorator.
     This is a bit weird to test because it's hard to directly test
     a lot of this stuff (especially in cases where dicts are updated rather
-    than overriden).
+    than overridden).
     """
 
     # NOTE(amelia): Assumes the default settings for ResetUserPasswordAction
