@@ -33,7 +33,7 @@ it are defined.
 
 The base use case is three stages:
 
-* Recieve Request
+* Receive Request
     * Validate request data against action serializers.
     * If valid, setup Task to represent the request, and the Actions specified
       for that TaskView.
