@@ -12,6 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from datetime import datetime
+import time
+import sys
+
 from decorator import decorator
 
 from rest_framework.response import Response
@@ -75,3 +79,21 @@ def authenticated(func, *args, **kwargs):
                         401)
 
     return func(*args, **kwargs)
+
+
+@decorator
+def minimal_duration(func, min_time=1, *args, **kwargs):
+    """
+    Make a function (or API call) take at least some time.
+    """
+    # doesn't apply during tests
+    if 'test' in sys.argv:
+        return func(*args, **kwargs)
+
+    start = datetime.utcnow()
+    return_val = func(*args, **kwargs)
+    end = datetime.utcnow()
+    duration = end - start
+    if duration.total_seconds() < min_time:
+        time.sleep(min_time - duration.total_seconds())
+    return return_val

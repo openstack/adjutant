@@ -395,6 +395,7 @@ class ResetPassword(TaskView):
 
     default_actions = ['ResetUserPasswordAction', ]
 
+    @utils.minimal_duration(min_time=3)
     def post(self, request, format=None):
         """
         Unauthenticated endpoint bound to the password reset action.
