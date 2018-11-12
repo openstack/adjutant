@@ -6,7 +6,7 @@ features in OpenStack. CatalystCloud is public cloud provider based in New
 Zealand with a strong focus on opensource, with a team of operators and
 developers who are all contributors to OpenStack itself.
 
-Early prototyping for Adjutant began at the end of of 2015 to fill some of the
+Early prototyping for Adjutant began at the end of 2015 to fill some of the
 missing pieces we needed as a public cloud provider. It was initially something
 we had started designing as far back as early 2014, with the scope and design
 changing many times until initial prototyping and implementation was started in
