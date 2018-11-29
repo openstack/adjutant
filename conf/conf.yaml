@@ -178,19 +178,19 @@ DEFAULT_ACTION_SETTINGS:
         days_between_autoapprove: 30
     SendAdditionalEmailAction:
       initial:
-          email_current_user: false
+          email_current_user: False
           reply: no-reply@example.com
           from: bounce+%(task_uuid)s@example.com
           subject: "Openstack Email Notification"
           template: null
       token:
-          email_current_user: false
+          email_current_user: False
           reply: no-reply@example.com
           from: bounce+%(task_uuid)s@example.com
           subject: "Openstack Email Notification"
           template: null
       completed:
-          email_current_user: false
+          email_current_user: False
           reply: no-reply@example.com
           from: bounce+%(task_uuid)s@example.com
           subject: "Openstack Email Notification"
@@ -200,7 +200,7 @@ DEFAULT_ACTION_SETTINGS:
           # email_roles:
           #   - project_admin
           # Or sends to an email set in the task cache
-          # email_task_cache: true
+          # email_task_cache: True
           # Or sends to an arbitrary admin email
           # email_additional_addresses:
           #   - admin@example.org

@@ -233,9 +233,9 @@ for it's related task view.
 
 The additional email action can also send to a subset of people.
 
-The user who made the request can be emailed with ::
+The user who made the request can be emailed with::
 
-    email_current_user: true
+    email_current_user: True
 
 Or the email can be sent to everyone who has a certain role on the project.
 (Multiple roles can also be specified)
@@ -248,7 +248,7 @@ Or the email can be sent to everyone who has a certain role on the project.
 Or an email can be sent to a specified address in the task cache
 (key: ``additional_emails``) ::
 
-    email_in_task_cache: true
+    email_in_task_cache: True
 
 Or sent to an arbitrary administrative email address(es)::
 
