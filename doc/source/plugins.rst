@@ -149,7 +149,7 @@ Notification Engines can also be added through a plugin::
     settings.NOTIFICATION_ENGINES.update(
       {'NewNotificationEngine': NewNotificationEngine})
 
-They should be then refered to in conf.yaml::
+They should then be referred to in conf.yaml::
 
     TASK_SETTINGS:
         signup:
