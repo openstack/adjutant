@@ -52,8 +52,8 @@ class TaskView(APIViewWithLogger):
             self.task_type, settings.DEFAULT_TASK_SETTINGS)
 
         actions = (
-            class_conf.get('default_actions', []) or
-            self.default_actions[:])
+            class_conf.get('default_actions', [])
+            or self.default_actions[:])
 
         actions += class_conf.get('additional_actions', [])
 
@@ -72,8 +72,8 @@ class TaskView(APIViewWithLogger):
         action_serializer_list = []
 
         action_names = (
-            class_conf.get('default_actions', []) or
-            self.default_actions[:])
+            class_conf.get('default_actions', [])
+            or self.default_actions[:])
         action_names += class_conf.get('additional_actions', [])
 
         # instantiate all action serializers and check validity
@@ -369,8 +369,8 @@ class InviteUser(TaskView):
         self.logger.info("(%s) - New AttachUser request." % timezone.now())
 
         # Default project_id to the keystone user's project
-        if ('project_id' not in request.data or
-                request.data['project_id'] is None):
+        if ('project_id' not in request.data
+                or request.data['project_id'] is None):
             request.data['project_id'] = request.keystone_user['project_id']
 
         processed, status = self.process_actions(request)
@@ -454,8 +454,8 @@ class EditUser(TaskView):
             self.task_type, settings.DEFAULT_TASK_SETTINGS)
 
         action_names = (
-            class_conf.get('default_actions', []) or
-            self.default_actions[:])
+            class_conf.get('default_actions', [])
+            or self.default_actions[:])
 
         action_names += class_conf.get('additional_actions', [])
         role_blacklist = class_conf.get('role_blacklist', [])

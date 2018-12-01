@@ -186,8 +186,8 @@ class FakeManager(object):
         domain = self._domain_from_id(domain)
         global identity_cache
         for user in identity_cache['users'].values():
-            if (user.name.lower() == name.lower() and
-                    user.domain_id == domain.id):
+            if (user.name.lower() == name.lower()
+                    and user.domain_id == domain.id):
                 return user
         return None
 
@@ -291,8 +291,8 @@ class FakeManager(object):
         roles = []
 
         for assignment in identity_cache['role_assignments']:
-            if (assignment.user['id'] == user.id and
-                    assignment.scope['project']['id'] == project.id):
+            if (assignment.user['id'] == user.id
+                    and assignment.scope['project']['id'] == project.id):
 
                 if (assignment.scope.get('OS-INHERIT:inherited_to') and not
                         inherited) or (
@@ -364,8 +364,8 @@ class FakeManager(object):
         domain = self._domain_from_id(domain)
         global identity_cache
         for project in identity_cache['projects'].values():
-            if (project.name.lower() == project_name.lower() and
-                    project.domain_id == domain.id):
+            if (project.name.lower() == project_name.lower()
+                    and project.domain_id == domain.id):
                 return project
         return None
 

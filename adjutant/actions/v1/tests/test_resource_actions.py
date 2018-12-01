@@ -31,8 +31,7 @@ from adjutant.common.tests.fake_clients import (
 @mock.patch('adjutant.common.user_store.IdentityManager',
             FakeManager)
 @mock.patch(
-    'adjutant.actions.v1.resources.' +
-    'openstack_clients.get_neutronclient',
+    'adjutant.actions.v1.resources.openstack_clients.get_neutronclient',
     get_fake_neutron)
 @mock.patch(
     'adjutant.common.openstack_clients.get_neutronclient',

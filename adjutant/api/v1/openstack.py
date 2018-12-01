@@ -200,7 +200,7 @@ class UserDetail(tasks.TaskView):
         if user:
             return Response(
                 {'errors': [
-                    'Revoking keystone users not implemented. ' +
+                    'Revoking keystone users not implemented. '
                     'Try removing all roles instead.']},
                 status=501)
         project_tasks = models.Task.objects.filter(

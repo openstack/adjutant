@@ -109,10 +109,9 @@ class NewProjectAction(BaseAction, ProjectMixin, UserMixin):
             # put user_id into action cache:
             self.action.task.cache['user_id'] = user.id
             self.set_cache('user_id', user.id)
-            self.add_note(("Existing user '%s' attached to project %s" +
-                          " with roles: %s")
-                          % (user.name, project_id,
-                             default_roles))
+            self.add_note(
+                "Existing user '%s' attached to project %s with roles: %s"
+                % (user.name, project_id, default_roles))
 
     def _submit(self, token_data):
         """
@@ -221,9 +220,9 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
             self.add_note("Project already created.")
         else:
             self.action.valid = (
-                self._validate_domain_id() and
-                self._validate_parent_project() and
-                self._validate_project_absent())
+                self._validate_domain_id()
+                and self._validate_parent_project()
+                and self._validate_project_absent())
             self.action.save()
 
             if not self.valid:
@@ -302,10 +301,9 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
                 raise
 
             self.set_cache('roles_granted', True)
-            self.add_note(("Existing user '%s' setup on project %s" +
-                          " with roles: %s")
-                          % (self.username, project_id,
-                             default_roles))
+            self.add_note(
+                "Existing user '%s' setup on project %s  with roles: %s"
+                % (self.username, project_id, default_roles))
         elif self.action.state == "disabled":
             user_id = self.get_cache('user_id')
             if not user_id:
@@ -349,10 +347,9 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
                     raise
                 self.set_cache('roles_granted', True)
 
-            self.add_note(("Existing user '%s' setup on project %s" +
-                          " with roles: %s")
-                          % (self.username, project_id,
-                             default_roles))
+            self.add_note(
+                "Existing user '%s' setup on project %s with roles: %s"
+                % (self.username, project_id, default_roles))
 
     def _submit(self, token_data):
         """

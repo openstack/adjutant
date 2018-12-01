@@ -201,8 +201,8 @@ class QuotaManager(object):
                             self._quota_updaters[service]
 
         self.project_id = project_id
-        self.size_diff_threshold = (size_difference_threshold or
-                                    self.default_size_diff_threshold)
+        self.size_diff_threshold = (size_difference_threshold
+                                    or self.default_size_diff_threshold)
 
     def get_current_region_quota(self, region_id):
         current_quota = {}

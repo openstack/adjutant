@@ -1548,7 +1548,7 @@ class AdminAPITests(APITestCase):
 
         self.assertEqual(
             response.json()['errors'],
-            ["Error: Something went wrong on the server. " +
+            ["Error: Something went wrong on the server. "
              "It will be looked into shortly."])
 
         new_task = Task.objects.all()[0]
@@ -1558,6 +1558,6 @@ class AdminAPITests(APITestCase):
         self.assertEqual(
             new_notification.notes,
             {'errors': [
-                "Error: KeyError('Forced key error.') while updating task. " +
+                "Error: KeyError('Forced key error.') while updating task. "
                 "See task itself for details."]})
         self.assertEqual(new_notification.task, new_task)

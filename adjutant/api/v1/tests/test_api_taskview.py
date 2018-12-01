@@ -352,7 +352,7 @@ class TaskViewTests(AdjutantAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.json(),
-            {'errors': ['Cannot approve an invalid task. ' +
+            {'errors': ['Cannot approve an invalid task. '
                         'Update data and rerun pre_approve.']})
 
     def test_new_project_existing_user(self):
@@ -1394,8 +1394,8 @@ class TaskViewTests(AdjutantAPITestCase):
         class_conf = settings.TASK_SETTINGS.get(
             CreateProject.task_type, settings.DEFAULT_TASK_SETTINGS)
         expected_action_names = (
-            class_conf.get('default_actions', []) or
-            CreateProject.default_actions[:])
+            class_conf.get('default_actions', [])
+            or CreateProject.default_actions[:])
         expected_action_names += class_conf.get('additional_actions', [])
 
         actions = new_task.actions
@@ -1420,7 +1420,7 @@ class TaskViewTests(AdjutantAPITestCase):
 
         self.assertEqual(
             response.json(),
-            {'errors': ["Error: Something went wrong on the server. " +
+            {'errors': ["Error: Something went wrong on the server. "
                         "It will be looked into shortly."]})
 
         new_task = Task.objects.all()[0]
@@ -1430,6 +1430,6 @@ class TaskViewTests(AdjutantAPITestCase):
         self.assertEqual(
             new_notification.notes,
             {'errors': [
-                "Error: KeyError('Forced key error.') while setting up " +
+                "Error: KeyError('Forced key error.') while setting up "
                 "task. See task itself for details."]})
         self.assertEqual(new_notification.task, new_task)

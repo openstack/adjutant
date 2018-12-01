@@ -54,7 +54,7 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
             return True
         if user.email != self.email:
             self.add_note(
-                'Found matching username, but email did not match.' +
+                'Found matching username, but email did not match. '
                 'Reporting as invalid.')
             return False
 

@@ -74,8 +74,8 @@ def send_stage_email(task, email_conf, token=None):
     if len(emails) > 1:
         notes = {
             'errors':
-            (("Error: Unable to send update, more than one email for" +
-              " task: %s") % task.uuid)
+            ("Error: Unable to send update, more than one email for task: %s"
+             % task.uuid)
         }
         create_notification(task, notes, error=True)
         return
@@ -231,8 +231,8 @@ def parse_filters(func, *args, **kwargs):
     except (ValueError, AttributeError):
         return Response(
             {'errors': [
-                ("Filters incorrectly formatted. Required format: " +
-                 "{'filters': {'fieldname': { 'operation': 'value'}}")
+                "Filters incorrectly formatted. Required format: "
+                "{'filters': {'fieldname': { 'operation': 'value'}}"
             ]},
             status=400
         )

@@ -50,15 +50,15 @@ class APIViewWithLogger(APIView):
                 timezone.now(), e, trace))
         notes = {
             'errors':
-                [("Error: %s(%s) %s. See task " +
-                  "itself for details.") % (type(e).__name__, e, error_text)]
+                ["Error: %s(%s) %s. See task itself for details."
+                 % (type(e).__name__, e, error_text)]
         }
         create_notification(task, notes, error=True)
 
         response_dict = {
             'errors':
-                ["Error: Something went wrong on the " +
-                 "server. It will be looked into shortly."]
+                ["Error: Something went wrong on the server. "
+                 "It will be looked into shortly."]
         }
         if return_response:
             return Response(response_dict, status=500)
@@ -396,7 +396,7 @@ class TaskDetail(APIViewWithLogger):
         if not valid:
             return Response(
                 {'errors':
-                    ['Cannot approve an invalid task. ' +
+                    ['Cannot approve an invalid task. '
                      'Update data and rerun pre_approve.']},
                 status=400)
 
@@ -689,8 +689,8 @@ class TokenDetail(APIViewWithLogger):
             except KeyError:
                 errors[field] = ["This field is required.", ]
             except TypeError:
-                errors = ["Improperly formated json. " +
-                          "Should be a key-value object.", ]
+                errors = ["Improperly formated json. "
+                          "Should be a key-value object."]
                 break
 
         if errors:
