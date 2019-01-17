@@ -1433,3 +1433,102 @@ class TaskViewTests(AdjutantAPITestCase):
                 "Error: KeyError('Forced key error.') while setting up "
                 "task. See task itself for details."]})
         self.assertEqual(new_notification.task, new_task)
+
+    @override_settings(KEYSTONE={'can_edit_users': False})
+    def test_user_invite_cant_edit_users(self):
+        """
+        When can_edit_users is false, and a new user is invited,
+        the task should be marked as invalid if the user doesn't
+        already exist.
+        """
+        project = fake_clients.FakeProject(name="test_project")
+
+        setup_identity_cache(projects=[project])
+
+        url = "/v1/actions/InviteUser"
+        headers = {
+            'project_name': "test_project",
+            'project_id': project.id,
+            'roles': "project_admin,_member_,project_mod",
+            'username': "user",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        data = {'username': 'new_user', 'email': "new@example.com",
+                'roles': ["_member_"], 'project_id': project.id}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.json(), {'errors': ['actions invalid']})
+
+    @override_settings(KEYSTONE={'can_edit_users': False})
+    def test_user_invite_cant_edit_users_existing_user(self):
+        """
+        When can_edit_users is false, and a new user is invited,
+        the task should be marked as valid if the user exists.
+        """
+        project = fake_clients.FakeProject(name="test_project")
+
+        user = fake_clients.FakeUser(name="test@example.com")
+
+        setup_identity_cache(projects=[project], users=[user])
+
+        url = "/v1/actions/InviteUser"
+        headers = {
+            'project_name': "test_project",
+            'project_id': project.id,
+            'roles': "project_admin,_member_,project_mod",
+            'username': "user",
+            'user_id': "test_user_id",
+            'authenticated': True
+        }
+        data = {'username': 'new_user', 'email': "test@example.com",
+                'roles': ["_member_"], 'project_id': project.id}
+        response = self.client.post(url, data, format='json', headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'notes': ['created token']})
+
+    @override_settings(KEYSTONE={'can_edit_users': False})
+    def test_project_create_cant_edit_users(self):
+        """
+        When can_edit_users is false, and a new signup comes in,
+        the task should be marked as invalid if it needs to
+        create a new user.
+
+        Will return OK (as task doesn't auto_approve), but task will
+        actually be invalid.
+        """
+        setup_identity_cache()
+
+        url = "/v1/actions/CreateProject"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'notes': ['task created']})
+        task = Task.objects.all()[0]
+        action_models = task.actions
+        actions = [act.get_action() for act in action_models]
+        self.assertFalse(all([act.valid for act in actions]))
+
+    @override_settings(KEYSTONE={'can_edit_users': False})
+    def test_project_create_cant_edit_users_existing_user(self):
+        """
+        When can_edit_users is false, and a new signup comes in,
+        the task should be marked as valid if the user already
+        exists.
+
+        Will return OK (as task doesn't auto_approve), but task will
+        actually be valid.
+        """
+        user = fake_clients.FakeUser(name="test@example.com")
+
+        setup_identity_cache(users=[user])
+
+        url = "/v1/actions/CreateProject"
+        data = {'project_name': "test_project", 'email': "test@example.com"}
+        response = self.client.post(url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json(), {'notes': ['task created']})
+        task = Task.objects.all()[0]
+        action_models = task.actions
+        actions = [act.get_action() for act in action_models]
+        self.assertTrue(all([act.valid for act in actions]))

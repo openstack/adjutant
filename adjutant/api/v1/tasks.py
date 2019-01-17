@@ -321,6 +321,10 @@ class CreateProject(TaskView):
         # we need to set the region the resources will be created in:
         request.data['region'] = class_conf.get('default_region')
 
+        # domain
+        request.data['domain_id'] = class_conf.get(
+            'default_domain_id', 'default')
+
         # parent_id for new project, if null defaults to domain:
         request.data['parent_id'] = class_conf.get('default_parent_id')
 
@@ -371,6 +375,12 @@ class InviteUser(TaskView):
         if ('project_id' not in request.data
                 or request.data['project_id'] is None):
             request.data['project_id'] = request.keystone_user['project_id']
+
+        # Default domain_id to the keystone user's project
+        if ('domain_id' not in request.data
+                or request.data['domain_id'] is None):
+            request.data['domain_id'] = \
+                request.keystone_user['project_domain_id']
 
         processed, status = self.process_actions(request)
 

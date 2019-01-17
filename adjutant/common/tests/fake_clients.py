@@ -46,7 +46,7 @@ class FakeProject(object):
 
 class FakeUser(object):
 
-    def __init__(self, name, password, domain_id='default',
+    def __init__(self, name, password="123", domain_id='default',
                  enabled=True, default_project_id=None,
                  **kwargs):
         self.id = uuid4().hex
@@ -157,6 +157,11 @@ def setup_identity_cache(projects=None, users=None, role_assignments=None,
 
 
 class FakeManager(object):
+
+    def __init__(self):
+        # TODO(adriant): decide if we want to have some function calls
+        # throw errors if this is false.
+        self.can_edit_users = settings.KEYSTONE.get('can_edit_users', True)
 
     def _project_from_id(self, project):
         if isinstance(project, FakeProject):

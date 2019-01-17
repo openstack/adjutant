@@ -47,7 +47,7 @@ EMAIL_SETTINGS:
 # to have different values.
 USERNAME_IS_EMAIL: True
 
-# Keystone admin credentials:
+# Keystone config
 KEYSTONE:
     username: admin
     password: openstack
@@ -55,6 +55,7 @@ KEYSTONE:
     # MUST BE V3 API:
     auth_url: http://localhost/identity/v3
     domain_id: default
+    can_edit_users: True
 
 HORIZON_URL: http://localhost:8080/
 

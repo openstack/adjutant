@@ -45,28 +45,41 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
         # this may mean we need a token.
         user = self._get_target_user()
         if not user:
+            self.add_note(
+                "No user present with username '%s'. "
+                "Need to create new user." % self.username)
+            if not id_manager.can_edit_users:
+                self.add_note(
+                    'Identity backend does not support user editing, '
+                    'cannot create new user.')
+                return False
             self.action.need_token = True
             # add to cache to use in template
             self.action.task.cache['user_state'] = "default"
             self.set_token_fields(["password"])
-            self.add_note(
-                'No user present with username. Need to create new user.')
             return True
-        if user.email != self.email:
+        if (not settings.USERNAME_IS_EMAIL
+                and getattr(user, 'email', None) != self.email):
             self.add_note(
                 'Found matching username, but email did not match. '
                 'Reporting as invalid.')
             return False
 
         if not user.enabled:
+            self.add_note(
+                "Existing disabled user '%s' with matching email." %
+                self.email)
+            if not id_manager.can_edit_users:
+                self.add_note(
+                    'Identity backend does not support user editing, '
+                    'cannot renable user.')
+                return False
             self.action.need_token = True
             self.action.state = "disabled"
             # add to cache to use in template
             self.action.task.cache['user_state'] = "disabled"
             # as they are disabled we'll reset their password
             self.set_token_fields(["password"])
-            self.add_note(
-                'Existing disabled user with matching email.')
             return True
 
         # role_validation
@@ -192,7 +205,9 @@ class ResetUserPasswordAction(UserNameAction, UserMixin):
         # NOTE(adriant): We only need to check the USERNAME_IS_EMAIL=False
         # case since '_validate_username_exists' will ensure the True case
         if not settings.USERNAME_IS_EMAIL:
-            if self.user and self.user.email.lower() != self.email.lower():
+            if (self.user and (
+                    getattr(self.user, 'email', None).lower()
+                    != self.email.lower())):
                 self.add_note('Existing user with non-matching email.')
                 return False
 

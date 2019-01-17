@@ -119,6 +119,10 @@ class UserList(tasks.InviteUser):
                 if notification.error:
                     status = "Failed"
 
+            for action in task.actions:
+                if not action.valid:
+                    status = "Invalid"
+
             task_data = {}
             for action in task.actions:
                 task_data.update(action.action_data)

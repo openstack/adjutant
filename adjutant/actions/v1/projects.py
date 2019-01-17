@@ -14,6 +14,7 @@
 
 from uuid import uuid4
 
+from django.conf import settings
 from django.utils import timezone
 
 from adjutant.common import user_store
@@ -43,7 +44,7 @@ class NewProjectAction(BaseAction, ProjectMixin, UserMixin):
     def _validate(self):
         self.action.valid = validate_steps([
             self._validate_domain_id,
-            self._validate_parent_project,
+            self._validate_keystone_user_parent_project,
             self._validate_project_absent,
         ])
         self.action.save()
@@ -57,7 +58,7 @@ class NewProjectAction(BaseAction, ProjectMixin, UserMixin):
 
         return super(NewProjectAction, self)._validate_domain_id()
 
-    def _validate_parent_project(self):
+    def _validate_keystone_user_parent_project(self):
         if self.parent_id:
             keystone_user = self.action.task.keystone_user
 
@@ -65,7 +66,7 @@ class NewProjectAction(BaseAction, ProjectMixin, UserMixin):
                 self.add_note(
                     'Parent id does not match keystone user project.')
                 return False
-            return super(NewProjectAction, self)._validate_parent_project()
+            return self._validate_parent_project()
         return True
 
     def _pre_approve(self):
@@ -151,29 +152,41 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
         user = id_manager.find_user(self.username, self.domain_id)
 
         if not user:
+            self.add_note(
+                "No user present with username '%s'. "
+                "Need to create new user." % self.username)
+            if not id_manager.can_edit_users:
+                self.add_note(
+                    'Identity backend does not support user editing, '
+                    'cannot create new user.')
+                return False
             # add to cache to use in template
             self.action.task.cache['user_state'] = "default"
             self.action.need_token = True
             self.set_token_fields(["password"])
-            self.add_note("No user present with username '%s'." %
-                          self.username)
             return True
 
-        if user.email != self.email:
+        if (not settings.USERNAME_IS_EMAIL
+                and getattr(user, 'email', None) != self.email):
             self.add_note("Existing user '%s' with non-matching email." %
                           self.username)
             return False
 
         if not user.enabled:
+            self.add_note(
+                "Existing disabled user '%s' with matching email." %
+                self.email)
+            if not id_manager.can_edit_users:
+                self.add_note(
+                    'Identity backend does not support user editing, '
+                    'cannot renable user.')
+                return False
             self.action.state = "disabled"
             # add to cache to use in template
             self.action.task.cache['user_state'] = "disabled"
             self.action.need_token = True
             # as they are disabled we'll reset their password
             self.set_token_fields(["password"])
-            self.add_note(
-                "Existing disabled user '%s' with matching email." %
-                self.email)
             return True
         else:
             self.action.state = "existing"
