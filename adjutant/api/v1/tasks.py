@@ -195,8 +195,7 @@ class TaskView(APIViewWithLogger):
         email_conf = class_conf.get('emails', {}).get('initial', None)
         send_stage_email(task, email_conf)
 
-        action_models = task.actions
-        approve_list = [act.get_action().auto_approve for act in action_models]
+        approve_list = [act.auto_approve for act in action_instances]
 
         # TODO(amelia): It would be nice to explicitly test this, however
         #               currently we don't have the right combinations of
@@ -241,6 +240,13 @@ class TaskView(APIViewWithLogger):
         Will create a token if required, otherwise will run the
         submit steps.
         """
+        # cannot approve an invalid task
+        action_models = task.actions
+        actions = [act.get_action() for act in action_models]
+        valid = all([act.valid for act in actions])
+        if not valid:
+            return {'errors': ['actions invalid']}, 400
+            # TODO(amelia): get action invalidation reasons
 
         # We approve the task before running actions,
         # that way if something goes wrong we know if it was approved,
@@ -250,14 +256,7 @@ class TaskView(APIViewWithLogger):
         task.approved_by = request.keystone_user
         task.save()
 
-        action_models = task.actions
-        actions = [act.get_action() for act in action_models]
         need_token = False
-
-        valid = all([act.valid for act in actions])
-        if not valid:
-            return {'errors': ['actions invalid']}, 400
-            # TODO(amelia): get action invalidation reasons
 
         # post_approve all actions
         for action in actions:
