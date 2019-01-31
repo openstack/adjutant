@@ -200,7 +200,7 @@ def create_task_hash(task_type, action_list):
                 hashable_list.append(
                     action['serializer'].validated_data[field])
             except KeyError:
-                if field is "username" and settings.USERNAME_IS_EMAIL:
+                if field == "username" and settings.USERNAME_IS_EMAIL:
                     continue
                 else:
                     raise
@@ -244,7 +244,7 @@ def parse_filters(func, *args, **kwargs):
         args[2] = cleaned_filters
         return func(*args, **kwargs)
     except FieldError as e:
-            return Response({'errors': [str(e)]}, status=400)
+        return Response({'errors': [str(e)]}, status=400)
 
 
 def add_task_id_for_roles(request, processed, response_dict, req_roles):
