@@ -107,7 +107,8 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
     def _validate(self):
         self.action.valid = validate_steps([
             self._validate_role_permissions,
-            self._validate_keystone_user,
+            self._validate_keystone_user_domain_id,
+            self._validate_keystone_user_project_id,
             self._validate_domain_id,
             self._validate_project_id,
             self._validate_target_user,
@@ -250,7 +251,6 @@ class EditUserRolesAction(UserIdAction, ProjectMixin, UserMixin):
     """
 
     required = [
-        'domain_id',
         'project_id',
         'user_id',
         'roles',
@@ -328,9 +328,8 @@ class EditUserRolesAction(UserIdAction, ProjectMixin, UserMixin):
 
     def _validate(self):
         self.action.valid = validate_steps([
-            self._validate_keystone_user,
+            self._validate_keystone_user_project_id,
             self._validate_role_permissions,
-            self._validate_domain_id,
             self._validate_project_id,
             self._validate_target_user,
             self._validate_user_roles,

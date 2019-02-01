@@ -179,15 +179,19 @@ class BaseAction(object):
 class ResourceMixin(object):
     """Base Mixin class for dealing with Openstack resources."""
 
-    def _validate_keystone_user(self):
+    def _validate_keystone_user_project_id(self):
+        keystone_user = self.action.task.keystone_user
+
+        if keystone_user['project_id'] != self.project_id:
+            self.add_note('Project id does not match keystone user project.')
+            return False
+        return True
+
+    def _validate_keystone_user_domain_id(self):
         keystone_user = self.action.task.keystone_user
 
         if keystone_user['project_domain_id'] != self.domain_id:
             self.add_note('Domain id does not match keystone user domain.')
-            return False
-
-        if keystone_user['project_id'] != self.project_id:
-            self.add_note('Project id does not match keystone user project.')
             return False
         return True
 

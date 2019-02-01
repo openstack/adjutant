@@ -63,19 +63,12 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
             return False
         return True
 
-    def _validate_keystone_user(self):
-        keystone_user = self.action.task.keystone_user
-        if keystone_user.get('project_id') != self.project_id:
-            self.add_note('Project id does not match keystone user project.')
-            return False
-        return True
-
     def _validate(self):
         self.action.valid = validate_steps([
             self._validate_region,
             self._validate_project_id,
             self._validate_defaults,
-            self._validate_keystone_user,
+            self._validate_keystone_user_project_id,
         ])
         self.action.save()
 

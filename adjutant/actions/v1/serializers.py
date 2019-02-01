@@ -87,7 +87,6 @@ class EditUserRolesSerializer(BaseUserIdSerializer):
         choices=role_options, default=set)
     remove = serializers.BooleanField(default=False)
     project_id = serializers.CharField(max_length=64)
-    domain_id = serializers.CharField(max_length=64, default='default')
 
     def validate(self, data):
         if not data['roles'] and not data['inherited_roles']:
