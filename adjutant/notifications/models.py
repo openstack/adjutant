@@ -12,10 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from logging import getLogger
+from smtplib import SMTPException
+
 from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template import loader
-from smtplib import SMTPException
+from django.utils import timezone
+
 from adjutant.api.models import Notification
 
 
@@ -24,6 +28,7 @@ class NotificationEngine(object):
 
     def __init__(self, conf):
         self.conf = conf
+        self.logger = getLogger('adjutant')
 
     def notify(self, task, notification):
         return self._notify(task, notification)
@@ -58,6 +63,16 @@ class EmailNotification(NotificationEngine):
     """
 
     def _notify(self, task, notification):
+        if not self.conf or not self.conf['emails']:
+            # Log that we did this!!
+            note = (
+                "Skipped sending notification for task: %s "
+                "as notification engine conf is None, or no emails "
+                "were configured." % task.uuid
+            )
+            self.logger.info("(%s) - %s" % (timezone.now(), note))
+            return
+
         template = loader.get_template(
             self.conf['template'],
             using='include_etc_templates')
