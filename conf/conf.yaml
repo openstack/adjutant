@@ -422,8 +422,9 @@ QUOTA_SIZES_ASC:
 
 # Services to check through the quotas for
 QUOTA_SERVICES:
-    - nova
-    - neutron
-    - cinder
-    # Additonal Quota Service
-    # - octavia
+    "*":
+        - nova
+        - neutron
+        - cinder
+        # Additonal Quota Service
+        # - octavia
