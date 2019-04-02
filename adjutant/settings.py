@@ -105,7 +105,7 @@ else:
               config_file)
         config_file = "conf/conf.yaml"
     with open(config_file) as f:
-        CONFIG = yaml.load(f)
+        CONFIG = yaml.load(f, Loader=yaml.FullLoader)
 
 SECRET_KEY = CONFIG['SECRET_KEY']
 
