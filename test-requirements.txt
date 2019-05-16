@@ -1,8 +1,8 @@
-mock==1.2.0
-flake8>=3.0.4
-coverage>=4.4.1
-sphinx!=1.6.1,>=1.5.1
-os-api-ref>=1.0.0 # Apache-2.0
-sphinx-catalystcloud-theme>=0.0.1 # MIT
-sphinx-rtd-theme>=0.2.4
-doc8
+coverage>=4.5.3
+doc8>=0.8.0
+flake8>=3.7.7
+mock>=3.0.5
+os-api-ref>=1.6.1 # Apache-2.0
+sphinx-rtd-theme>=0.4.3
+sphinx<1.9;python_version=="2.7"
+sphinx>=1.8.5;python_version>"3.6"
