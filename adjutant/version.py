@@ -12,9 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from setuptools import setup
+import pbr.version
 
-setup(
-    setup_requires=['pbr'],
-    pbr=True,
-)
+version_info = pbr.version.VersionInfo("python-adjutant")
+version_string = version_info.version_string()

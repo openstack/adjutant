@@ -9,3 +9,5 @@ build/
 .tox/*
 env/*
 cover/*
+.vscode/
+venv/
