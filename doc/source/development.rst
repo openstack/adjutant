@@ -72,7 +72,7 @@ page.
 
 
 What is an Action?
-====================
+==================
 
 Actions are a generic database model which knows what 'type' of action it is.
 On pulling the actions related to a Task from the database we wrap it into the
@@ -87,14 +87,14 @@ Each action class has the functions "pre_approve", "post_approve", and
 can be executed in those functions.
 
 What is a Task?
-================
+===============
 A task is a top level model representation of the request. It wraps the
 request metadata, and based on the TaskView, will have actions associated with
 it.
 
 
 What is a Token?
-==================
+================
 
 A token is a unique identifier linking to a task, so that anyone submitting
 the token will submit to the actions related to the task.

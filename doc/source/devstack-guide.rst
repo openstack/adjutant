@@ -88,9 +88,9 @@ Migrating between the two states hasn't yet been handled entirely, so once you
 pick a value for `USERNAME_IS_EMAIL` stick with it, or clear the database
 inbetween.
 
-******************
+****************
 Running Adjutant
-******************
+****************
 
 Still in the Adjutant repo directory, you will now need to run the migrations
 to build a basic database. By default this will use sqlite3.::
