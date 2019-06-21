@@ -76,7 +76,7 @@ Response Example
               "ip_address": "127.0.0.1",
               "keystone_user": {},
               "project_id": null,
-              "task_type": "reset_password",
+              "task_type": "reset_user_password",
               "uuid": "d5c7901cfecd45ec9a87871035c9f662"
           },
           {
@@ -120,7 +120,7 @@ Response Example
           "ip_address": "127.0.0.1",
           "keystone_user": {},
           "project_id": null,
-          "task_type": "signup",
+          "task_type": "create_project_and_user",
           "uuid": "370d952c63ba410c8704abc12cfd97b7"
       }
   }
@@ -178,7 +178,7 @@ Response Example
       "ip_address": "127.0.0.1",
       "keystone_user": {},
       "project_id": null,
-      "task_type": "reset_password",
+      "task_type": "reset_user_password",
       "uuid": "d5c7901cfecd45ec9a87871035c9f662"
   }
 
@@ -362,7 +362,7 @@ Response Example
     "required_fields": [
         "password"
     ],
-    "task_type": "signup"
+    "task_type": "create_project_and_user"
   }
 
 

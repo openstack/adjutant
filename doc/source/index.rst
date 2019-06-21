@@ -65,7 +65,7 @@ To run just action unit tests::
 
 To run a single api test::
 
-    tox adjutant.api.v1.tests.test_api_taskview.TaskViewTests.test_duplicate_tasks_new_user
+    tox adjutant.api.v1.tests.test_delegate_api.DelegateAPITests.test_duplicate_tasks_new_user
 
 Tox will run the tests in Python 2.7, Python 3.5 and produce a coverage report.
 

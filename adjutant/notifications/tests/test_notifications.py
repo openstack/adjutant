@@ -55,10 +55,10 @@ class NotificationTests(AdjutantAPITestCase):
 
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         headers = {
             'project_name': "test_project",

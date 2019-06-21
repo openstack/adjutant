@@ -12,150 +12,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import hashlib
 import json
-
-from datetime import timedelta
-from smtplib import SMTPException
-from uuid import uuid4
 
 from decorator import decorator
 
 from django.conf import settings
 from django.core.exceptions import FieldError
-from django.core.mail import EmailMultiAlternatives
-from django.template import loader
-from django.utils import timezone
 
 from rest_framework.response import Response
 
-from adjutant.api.models import Notification, Token
+from adjutant.api.models import Notification
 
 
-def create_token(task):
-    expire = timezone.now() + timedelta(hours=settings.TOKEN_EXPIRE_TIME)
-
-    uuid = uuid4().hex
-    token = Token.objects.create(
-        task=task,
-        token=uuid,
-        expires=expire
-    )
-    token.save()
-    return token
-
-
-def send_stage_email(task, email_conf, token=None):
-    if not email_conf:
-        return
-
-    text_template = loader.get_template(
-        email_conf['template'],
-        using='include_etc_templates')
-    html_template = email_conf.get('html_template', None)
-    if html_template:
-        html_template = loader.get_template(
-            html_template,
-            using='include_etc_templates')
-
-    emails = set()
-    actions = {}
-    # find our set of emails and actions that require email
-    for action in task.actions:
-        act = action.get_action()
-        email = act.get_email()
-        if email:
-            emails.add(email)
-            actions[str(act)] = act
-
-    if not emails:
-        return
-
-    if len(emails) > 1:
-        notes = {
-            'errors':
-            ("Error: Unable to send update, more than one email for task: %s"
-             % task.uuid)
-        }
-        create_notification(task, notes, error=True)
-        return
-
-    context = {
-        'task': task,
-        'actions': actions
-    }
-    if token:
-        if settings.HORIZON_URL:
-            tokenurl = settings.HORIZON_URL
-            if not tokenurl.endswith('/'):
-                tokenurl += '/'
-            tokenurl += 'token/'
-        else:
-            tokenurl = settings.TOKEN_SUBMISSION_URL
-            if not tokenurl.endswith('/'):
-                tokenurl += '/'
-        context.update({
-            'tokenurl': tokenurl,
-            'token': token.token
-        })
-
-    try:
-        message = text_template.render(context)
-
-        # from_email is the return-path and is distinct from the
-        # message headers
-        from_email = email_conf.get('from')
-        if not from_email:
-            from_email = email_conf['reply']
-        elif "%(task_uuid)s" in from_email:
-            from_email = from_email % {'task_uuid': task.uuid}
-
-        # these are the message headers which will be visible to
-        # the email client.
-        headers = {
-            'X-Adjutant-Task-UUID': task.uuid,
-            # From needs to be set to be disctinct from return-path
-            'From': email_conf['reply'],
-            'Reply-To': email_conf['reply'],
-        }
-
-        email = EmailMultiAlternatives(
-            email_conf['subject'],
-            message,
-            from_email,
-            [emails.pop()],
-            headers=headers,
-        )
-
-        if html_template:
-            email.attach_alternative(
-                html_template.render(context), "text/html")
-
-        email.send(fail_silently=False)
-
-    except SMTPException as e:
-        notes = {
-            'errors':
-                ("Error: '%s' while emailing update for task: %s" %
-                    (e, task.uuid))
-        }
-
-        errors_conf = settings.TASK_SETTINGS.get(
-            task.task_type, settings.DEFAULT_TASK_SETTINGS).get(
-                'errors', {}).get("SMTPException", {})
-
-        if errors_conf:
-            notification = create_notification(
-                task, notes, error=True,
-                engines=errors_conf.get('engines', True))
-
-            if errors_conf.get('notification') == "acknowledge":
-                notification.acknowledged = True
-                notification.save()
-        else:
-            create_notification(task, notes, error=True)
-
-
+# TODO(adriant): move this to 'adjutant.notifications.utils'
 def create_notification(task, notes, error=False, engines=True):
     notification = Notification.objects.create(
         task=task,
@@ -184,28 +53,6 @@ def create_notification(task, notes, error=False, engines=True):
             engine.notify(task, notification)
 
     return notification
-
-
-def create_task_hash(task_type, action_list):
-    hashable_list = [task_type, ]
-
-    for action in action_list:
-        hashable_list.append(action['name'])
-        if not action['serializer']:
-            continue
-        # iterate like this to maintain consistent order for hash
-        fields = sorted(action['serializer'].validated_data.keys())
-        for field in fields:
-            try:
-                hashable_list.append(
-                    action['serializer'].validated_data[field])
-            except KeyError:
-                if field == "username" and settings.USERNAME_IS_EMAIL:
-                    continue
-                else:
-                    raise
-
-    return hashlib.sha256(str(hashable_list).encode('utf-8')).hexdigest()
 
 
 # "{'filters': {'fieldname': { 'operation': 'value'}}

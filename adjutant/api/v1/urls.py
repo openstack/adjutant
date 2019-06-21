@@ -28,9 +28,9 @@ urlpatterns = [
     url(r'^notifications/?$', views.NotificationList.as_view()),
 ]
 
-for active_view in settings.ACTIVE_TASKVIEWS:
-    taskview = settings.TASKVIEW_CLASSES[active_view]
+for active_view in settings.ACTIVE_DELEGATE_APIS:
+    delegate_api = settings.DELEGATE_API_CLASSES[active_view]
 
     urlpatterns.append(
-        url(taskview['url'], taskview['class'].as_view())
+        url(delegate_api['url'], delegate_api['class'].as_view())
     )

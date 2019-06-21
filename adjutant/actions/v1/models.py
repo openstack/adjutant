@@ -14,7 +14,10 @@
 
 from django.conf import settings
 
+from rest_framework import serializers as drf_serializers
+
 from adjutant.actions.v1 import serializers
+from adjutant.actions.v1.base import BaseAction
 from adjutant.actions.v1.projects import (
     NewProjectWithUserAction, NewProjectAction,
     AddDefaultUsersToProjectAction)
@@ -25,11 +28,23 @@ from adjutant.actions.v1.resources import (
     NewDefaultNetworkAction, NewProjectDefaultNetworkAction,
     SetProjectQuotaAction, UpdateProjectQuotasAction)
 from adjutant.actions.v1.misc import SendAdditionalEmailAction
+from adjutant import exceptions
 
 
 # Update settings dict with tuples in the format:
 #   (<ActionClass>, <ActionSerializer>)
 def register_action_class(action_class, serializer_class):
+    if not issubclass(action_class, BaseAction):
+        raise exceptions.InvalidActionClass(
+            "'%s' is not a built off the BaseAction class."
+            % action_class.__name__
+        )
+    if serializer_class and not issubclass(
+            serializer_class, drf_serializers.Serializer):
+        raise exceptions.InvalidActionSerializer(
+            "serializer for '%s' is not a valid DRF serializer."
+            % action_class.__name__
+        )
     data = {}
     data[action_class.__name__] = (action_class, serializer_class)
     settings.ACTION_CLASSES.update(data)

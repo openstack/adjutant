@@ -17,6 +17,7 @@ SECRET_KEY = '+er!4olta#17a=n%uotcazg2ncpl==yjog%1*o-(cr%zys-)!'
 ADDITIONAL_APPS = [
     'adjutant.api.v1',
     'adjutant.actions.v1',
+    'adjutant.tasks.v1',
 ]
 
 DATABASES = {
@@ -75,14 +76,13 @@ HORIZON_URL = 'http://localhost:8080/'
 
 TOKEN_EXPIRE_TIME = 24
 
-ACTIVE_TASKVIEWS = [
+ACTIVE_DELEGATE_APIS = [
     'UserRoles',
     'UserDetail',
     'UserResetPassword',
-    'UserSetPassword',
     'UserList',
     'RoleList',
-    'CreateProject',
+    'CreateProjectAndUser',
     'InviteUser',
     'ResetPassword',
     'EditUser',
@@ -188,31 +188,31 @@ DEFAULT_ACTION_SETTINGS = {
 }
 
 TASK_SETTINGS = {
-    'invite_user': {
+    'invite_user_to_project': {
         'emails': {
             'initial': None,
             'token': {
-                'template': 'invite_user_token.txt',
-                'subject': 'invite_user'
+                'template': 'invite_user_to_project_token.txt',
+                'subject': 'invite_user_to_project'
             },
             'completed': {
-                'template': 'invite_user_completed.txt',
-                'subject': 'invite_user'
+                'template': 'invite_user_to_project_completed.txt',
+                'subject': 'invite_user_to_project'
             }
         }
     },
-    'create_project': {
+    'create_project_and_user': {
         'emails': {
             'initial': {
-                'template': 'signup_initial.txt',
+                'template': 'create_project_and_user_initial.txt',
                 'subject': 'signup received'
             },
             'token': {
-                'template': 'signup_token.txt',
+                'template': 'create_project_and_user_token.txt',
                 'subject': 'signup approved'
             },
             'completed': {
-                'template': 'signup_completed.txt',
+                'template': 'create_project_and_user_completed.txt',
                 'subject': 'signup completed'
             }
         },
@@ -223,47 +223,34 @@ TASK_SETTINGS = {
         'default_region': 'RegionOne',
         'default_parent_id': None,
     },
-    'reset_password': {
+    'reset_user_password': {
         'duplicate_policy': 'cancel',
         'emails': {
             'initial': None,
             'token': {
-                'template': 'password_reset_token.txt',
+                'template': 'reset_user_password_token.txt',
                 'subject': 'Password Reset for OpenStack'
             },
             'completed': {
-                'template': 'password_reset_completed.txt',
+                'template': 'reset_user_password_completed.txt',
                 'subject': 'Password Reset for OpenStack'
             }
         }
     },
-    'force_password': {
-        'duplicate_policy': 'cancel',
-        'emails': {
-            'token': {
-                'template': 'initial_password_token.txt',
-                'subject': 'Setup Your OpenStack Password'
-            },
-            'completed': {
-                'template': 'initial_password_completed.txt',
-                'subject': 'Setup Your OpenStack Password'
-            }
-        }
-    },
-    'update_email': {
+    'update_user_email': {
         'emails': {
             'initial': None,
             'token': {
-                'subject': 'email_update_token',
-                'template': 'email_update_token.txt'
+                'subject': 'update_user_email_token',
+                'template': 'update_user_email_token.txt'
             },
             'completed': {
                 'subject': 'Email Update Complete',
-                'template': 'email_update_completed.txt'
+                'template': 'update_user_email_completed.txt'
             }
         },
     },
-    'edit_user': {
+    'edit_user_roles': {
         'role_blacklist': ['admin']
     },
     'update_quota': {
@@ -420,7 +407,7 @@ conf_dict = {
     "EMAIL_SETTINGS": EMAIL_SETTINGS,
     "USERNAME_IS_EMAIL": USERNAME_IS_EMAIL,
     "KEYSTONE": KEYSTONE,
-    "ACTIVE_TASKVIEWS": ACTIVE_TASKVIEWS,
+    "ACTIVE_DELEGATE_APIS": ACTIVE_DELEGATE_APIS,
     "DEFAULT_TASK_SETTINGS": DEFAULT_TASK_SETTINGS,
     "TASK_SETTINGS": TASK_SETTINGS,
     "DEFAULT_ACTION_SETTINGS": DEFAULT_ACTION_SETTINGS,

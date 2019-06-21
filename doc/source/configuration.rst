@@ -21,6 +21,7 @@ The first part of the configuration file contains standard Django settings.
 
   ADDITIONAL_APPS:
       - adjutant.api.v1
+      - adjutant.tasks.v1
       - adjutant.actions.v1
 
   DATABASES:
@@ -29,6 +30,7 @@ The first part of the configuration file contains standard Django settings.
           NAME: db.sqlite3
 
   LOGGING:
+      ...
 
   EMAIL_SETTINGS:
       EMAIL_BACKEND: django.core.mail.backends.console.EmailBackend
@@ -37,8 +39,11 @@ The first part of the configuration file contains standard Django settings.
 If you have any plugins, ensure that they are also added to
 **ADDITIONAL_APPS**.
 
-The next part of the confirguration file contains a number of settings for all
-taskviews.
+API Settings
+------------
+
+The next part of the confirguration file contains a number of settings
+for all APIs.
 
 .. code-block:: yaml
 
@@ -51,9 +56,9 @@ taskviews.
       auth_url: http://localhost:5000/v3
       domain_id: default
 
-  TOKEN_SUBMISSION_URL: http://192.168.122.160:8080/token/
+  HORIZON_URL: http://192.168.122.160:8080/token/
 
-  # time for the token to expire in hours
+  # default time for the token to expire in hours
   TOKEN_EXPIRE_TIME: 24
 
   ROLES_MAPPING:
@@ -70,6 +75,15 @@ taskviews.
           - heat_stack_owner
           - _member_
 
+  ACTIVE_DELEGATE_APIS:
+      - UserRoles
+      - UserDetail
+      - UserResetPassword
+      - UserList
+      - RoleList
+      - SignUp
+      - UserUpdateEmail
+
 **USERNAME_IS_EMAIL** impacts account creation, and email modification actions.
 In the case that it is true, any task passing a username and email pair, the
 username will be ignored. This also impacts where emails are sent to.
@@ -84,25 +98,16 @@ should point to that.
 configuration a user who has the role project_mod will not be able to
 modify any of the roles for a user with the project_admin role.
 
+**ACTIVE_DELEGATE_APIS** defines all in use DelegateAPIs, including those that
+are from plugins must be included in this list. If a task is removed from this
+list its endpoint will not be accessable however users who have started tasks
+will still be able submit them.
 
 Standard Task Settings
 ----------------------
 
-.. code-block:: yaml
-
-    ACTIVE_TASKVIEWS:
-        - UserRoles
-        - UserDetail
-        - UserResetPassword
-        - UserSetPassword
-        - UserList
-        - RoleList
-        - SignUp
-        - UserUpdateEmail
-
-All in use taskviews, including those that are from plugins must be included
-in this list. If a task is removed from this list its endpoint will not be
-accessable however users who have started tasks will still be able submit them.
+The DelegateAPIs are built around the task layer, and the tasks themselves
+have their own configuration.
 
 .. code-block:: yaml
 
@@ -129,18 +134,19 @@ accessable however users who have started tasks will still be able submit them.
                     # html_template: completed.txt
                 error:
 
-The default settings can be overridden for individual tasks in the
-TASK_SETTINGS configuration, these are cascading overrides. Two additional
-options are available, overriding the default actions or adding in additional
+**DEFAULT_TASK_SETTINGS** Represents the default settings for all task
+unless otherwise overridden for individual tasks in the TASK_SETTINGS
+configuration, these are cascading overrides. Two additional options
+are available, overriding the default actions or adding in additional
 actions. These will run in the order specified.
 
 .. code-block:: yaml
 
     TASK_SETTINGS:
-        signup:
+        create_project_and_user:
             default_actions:
                  - NewProjectAction
-        invite_user:
+        invite_user_to_project:
             additional_actions:
                 - SendAdditionalEmailAction
 
@@ -218,7 +224,7 @@ the task and actions available. By default the template is null and the email
 will not send.
 
 The settings for this action should be defined within the action_settings
-for it's related task view.
+for its related task.
 
 .. code-block:: yaml
 
@@ -228,7 +234,7 @@ for it's related task view.
         SendAdditionalEmailAction:
             initial:
                 subject: OpenStack Email Update Requested
-                template: email_update_started.txt
+                template: update_user_email_started.txt
                 email_current_user: True
 
 The additional email action can also send to a subset of people.

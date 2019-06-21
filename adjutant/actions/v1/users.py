@@ -115,11 +115,11 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
         ])
         self.action.save()
 
-    def _pre_approve(self):
+    def _prepare(self):
         self._validate()
         self.set_auto_approve()
 
-    def _post_approve(self):
+    def _approve(self):
         self._validate()
 
     def _submit(self, token_data):
@@ -228,10 +228,11 @@ class ResetUserPasswordAction(UserNameAction, UserMixin):
         ])
         self.action.save()
 
-    def _pre_approve(self):
+    def _prepare(self):
         self._validate()
+        self.set_auto_approve()
 
-    def _post_approve(self):
+    def _approve(self):
         self._validate()
 
     def _submit(self, token_data):
@@ -336,11 +337,11 @@ class EditUserRolesAction(UserIdAction, ProjectMixin, UserMixin):
         ])
         self.action.save()
 
-    def _pre_approve(self):
+    def _prepare(self):
         self._validate()
         self.set_auto_approve()
 
-    def _post_approve(self):
+    def _approve(self):
         self._validate()
 
     def _submit(self, token_data):
@@ -425,11 +426,11 @@ class UpdateUserEmailAction(UserIdAction, UserMixin):
             self.add_note("No user with same username")
         return True
 
-    def _pre_approve(self):
+    def _prepare(self):
         self._validate()
         self.set_auto_approve(True)
 
-    def _post_approve(self):
+    def _approve(self):
         self._validate()
         self.action.need_token = True
         self.set_token_fields(["confirm"])

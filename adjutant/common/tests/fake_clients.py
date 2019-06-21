@@ -99,7 +99,10 @@ class FakeRoleAssignment(object):
 
 
 def setup_identity_cache(projects=None, users=None, role_assignments=None,
-                         credentials=None, extra_roles=[]):
+                         credentials=None, extra_roles=None):
+    if extra_roles is None:
+        extra_roles = []
+
     if not projects:
         projects = []
     if not users:

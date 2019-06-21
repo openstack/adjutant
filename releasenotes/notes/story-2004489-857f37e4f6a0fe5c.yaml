@@ -1,0 +1,33 @@
+---
+features:
+  - |
+    Adjutant now introduces two new concepts for handling the configurable
+    APIs and workflow layer. DelegateAPIs are now the APIs which can be
+    customised and enabled in Adjutant, and Tasks are now their own layer
+    which can be called from the DelegateAPIs.
+upgrade:
+  - |
+    * Major changes internal classes. Many plugins likely to need reworking
+      before using this release to match new internal changes.
+    * The Task database model has been renamed and moved, this will require
+      downtime for the migration to run, but should be fairly quick.
+deprecations:
+  - |
+    * TaskViews are gone, and replaced with DelegateAPIs, with much of their old
+      logic now in the TaskManager and BaseTask.
+    * tasks config cannot override default_actions anymore
+    * standardized task API response codes on 202 unless task is completed from 200
+    * Action stages renamed to 'prepare', 'approve', 'submit'.
+    * TaskView logic and task defition moved to new task.v1 layer
+    * UserSetPassword API has been removed because it was a duplicate of
+      UserResetPassword.
+    * Removed redundant ip_address value on Task model
+    * multiple task_types have been renamed
+      * signup to create_project_and_user
+      * invite_user to invite_user_to_project
+      * reset_password to reset_user_password
+      * edit_user to edit_user_roles
+      * update_email to update_user_email
+fixes:
+  - |
+    Reissuing task token now deletes old task tokens properly.

@@ -27,7 +27,7 @@ import os
 import sys
 import yaml
 from adjutant.utils import setup_task_settings
-from adjutant.exceptions import ConfirmationException
+from adjutant.exceptions import ConfigurationException
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 # Application definition
@@ -44,6 +44,7 @@ INSTALLED_APPS = (
     'adjutant.actions',
     'adjutant.api',
     'adjutant.notifications',
+    'adjutant.tasks',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -94,6 +95,17 @@ TEMPLATES = [
     },
 ]
 
+REST_FRAMEWORK = {
+    'EXCEPTION_HANDLER': 'adjutant.api.exception_handler.exception_handler',
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [],
+}
+
 # Setup of local settings data
 if 'test' in sys.argv:
     from adjutant import test_settings
@@ -112,12 +124,9 @@ SECRET_KEY = CONFIG['SECRET_KEY']
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = CONFIG.get('DEBUG', False)
 
-if not DEBUG:
-    REST_FRAMEWORK = {
-        'DEFAULT_RENDERER_CLASSES': (
-            'rest_framework.renderers.JSONRenderer',
-        )
-    }
+if DEBUG:
+    REST_FRAMEWORK['DEFAULT_RENDERER_CLASSES'].append(
+        'rest_framework.renderers.BrowsableAPIRenderer')
 
 ALLOWED_HOSTS = CONFIG.get('ALLOWED_HOSTS', [])
 
@@ -158,7 +167,7 @@ if TOKEN_SUBMISSION_URL:
 HORIZON_URL = CONFIG.get('HORIZON_URL')
 
 if not HORIZON_URL and not TOKEN_SUBMISSION_URL:
-    raise ConfirmationException("Must supply 'HORIZON_URL'")
+    raise ConfigurationException("Must supply 'HORIZON_URL'")
 
 TOKEN_EXPIRE_TIME = CONFIG['TOKEN_EXPIRE_TIME']
 
@@ -181,14 +190,12 @@ PROJECT_QUOTA_SIZES = CONFIG.get('PROJECT_QUOTA_SIZES')
 
 QUOTA_SIZES_ASC = CONFIG.get('QUOTA_SIZES_ASC', [])
 
-# Defaults for backwards compatibility.
-ACTIVE_TASKVIEWS = CONFIG.get(
-    'ACTIVE_TASKVIEWS',
+ACTIVE_DELEGATE_APIS = CONFIG.get(
+    'ACTIVE_DELEGATE_APIS',
     [
         'UserRoles',
         'UserDetail',
         'UserResetPassword',
-        'UserSetPassword',
         'UserList',
         'RoleList'
     ])
@@ -199,12 +206,14 @@ QUOTA_SERVICES = CONFIG.get(
     {'*': ['cinder', 'neutron', 'nova']})
 
 
-# Dict of TaskViews and their url_paths.
-# - This is populated by registering taskviews.
-TASKVIEW_CLASSES = {}
+# Dict of DelegateAPIs and their url_paths.
+# - This is populated by registering DelegateAPIs.
+DELEGATE_API_CLASSES = {}
 
 # Dict of actions and their serializers.
 # - This is populated from the various model modules at startup:
 ACTION_CLASSES = {}
+
+TASK_CLASSES = {}
 
 NOTIFICATION_ENGINES = {}

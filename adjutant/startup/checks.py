@@ -1,33 +1,29 @@
 from django.apps import AppConfig
 from django.conf import settings
 
-from adjutant.exceptions import ActionNotFound, TaskViewNotFound
+from adjutant.exceptions import ActionNotRegistered, DelegateAPINotRegistered
 
 
-def check_expected_taskviews():
-    expected_taskviews = settings.ACTIVE_TASKVIEWS
+def check_expected_delegate_apis():
+    missing_delegate_apis = list(
+        set(settings.ACTIVE_DELEGATE_APIS)
+        - set(settings.DELEGATE_API_CLASSES.keys()))
 
-    missing_taskviews = list(
-        set(expected_taskviews) - set(settings.TASKVIEW_CLASSES.keys()))
-
-    if missing_taskviews:
-        raise TaskViewNotFound(
+    if missing_delegate_apis:
+        raise DelegateAPINotRegistered(
             message=(
-                "Expected taskviews are unregistered: %s" % missing_taskviews))
+                "Expected DelegateAPIs are unregistered: %s"
+                % missing_delegate_apis))
 
 
 def check_configured_actions():
     """Check that all the expected actions have been registered."""
     configured_actions = []
 
-    for taskview in settings.ACTIVE_TASKVIEWS:
-        task_class = settings.TASKVIEW_CLASSES.get(taskview)['class']
+    for task in settings.TASK_CLASSES:
+        task_class = settings.TASK_CLASSES.get(task)
 
-        try:
-            configured_actions += settings.TASK_SETTINGS.get(
-                task_class.task_type, {})['default_actions']
-        except KeyError:
-            configured_actions += task_class.default_actions
+        configured_actions += task_class.default_actions
         configured_actions += settings.TASK_SETTINGS.get(
             task_class.task_type, {}).get('additional_actions', [])
 
@@ -35,7 +31,7 @@ def check_configured_actions():
         set(configured_actions) - set(settings.ACTION_CLASSES.keys()))
 
     if missing_actions:
-        raise ActionNotFound(
+        raise ActionNotRegistered(
             "Configured actions are unregistered: %s" % missing_actions)
 
 
@@ -51,8 +47,8 @@ class StartUpConfig(AppConfig):
         Useful for any start up checks.
         """
 
-        # First check that all expect taskviews are present
-        check_expected_taskviews()
+        # First check that all expect DelegateAPIs are present
+        check_expected_delegate_apis()
 
         # Now check if all the actions those views expecte are present.
         check_configured_actions()

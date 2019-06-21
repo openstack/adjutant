@@ -8,6 +8,7 @@ ALLOWED_HOSTS:
 
 ADDITIONAL_APPS:
     - adjutant.api.v1
+    - adjutant.tasks.v1
     - adjutant.actions.v1
 
 DATABASES:
@@ -62,11 +63,10 @@ HORIZON_URL: http://localhost:8080/
 # time for the token to expire in hours
 TOKEN_EXPIRE_TIME: 24
 
-ACTIVE_TASKVIEWS:
+ACTIVE_DELEGATE_APIS:
     - UserRoles
     - UserDetail
     - UserResetPassword
-    - UserSetPassword
     - UserList
     - RoleList
     - SignUp
@@ -208,14 +208,8 @@ DEFAULT_ACTION_SETTINGS:
 
 # These are cascading overrides for the default settings:
 TASK_SETTINGS:
-    signup:
-        # You can override 'default_actions' if needed for given taskviews
-        # The order of the actions is order of execution.
-        #
-        # default_actions:
-        #     - NewProjectAction
-        #
-        # Additional actions for views
+    create_project_and_user:
+        # Additional actions for task
         # These will run after the default actions, in the given order.
         additional_actions:
             - NewProjectDefaultNetworkAction
@@ -223,13 +217,13 @@ TASK_SETTINGS:
         emails:
             initial:
                 subject: Your OpenStack signup has been received
-                template: signup_initial.txt
+                template: create_project_and_user_initial.txt
             token:
                 subject: Your OpenStack signup has been approved
-                template: signup_token.txt
+                template: create_project_and_user_token.txt
             completed:
                 subject: Your OpenStack signup has been completed
-                template: signup_completed.txt
+                template: create_project_and_user_completed.txt
         notifications:
             EmailNotification:
                 standard:
@@ -242,42 +236,32 @@ TASK_SETTINGS:
         # If 'None' (null in yaml) will default to domain as parent.
         # If domain isn't set explicity will service user domain (see KEYSTONE).
         default_parent_id: null
-    invite_user:
+    invite_user_to_project:
         duplicate_policy: cancel
         emails:
             # To not send this email set the value to null
             initial: null
             token:
                 subject: Invitation to an OpenStack project
-                template: invite_user_token.txt
+                template: invite_user_to_project_token.txt
             completed:
                 subject: Invitation Completed
-                template: invite_user_completed.txt
+                template: invite_user_to_project_completed.txt
         errors:
             SMTPException:
                 notification: acknowledge
                 engines: False
-    reset_password:
+    reset_user_password:
         duplicate_policy: cancel
         emails:
             initial: null
             token:
                 subject: Password Reset for OpenStack
-                template: password_reset_token.txt
+                template: reset_user_password_token.txt
             completed:
                 subject: Password Reset Completed
-                template: password_reset_completed.txt
-    force_password:
-        duplicate_policy: cancel
-        emails:
-            initial: null
-            token:
-                subject: Set your OpenStack password
-                template: initial_password_token.txt
-            completed:
-                subject: Welcome to OpenStack!
-                template: initial_password_completed.txt
-    edit_user:
+                template: reset_user_password_completed.txt
+    edit_user_roles:
         duplicate_policy: cancel
         emails:
             initial: null
@@ -289,7 +273,7 @@ TASK_SETTINGS:
         emails:
             initial: null
             token: null
-    update_email:
+    update_user_email:
         duplicate_policy: cancel
         additional_actions:
             - SendAdditionalEmailAction
@@ -297,15 +281,15 @@ TASK_SETTINGS:
             initial: null
             token:
                 subject: Confirm OpenStack Email Update
-                template: email_update_token.txt
+                template: update_user_email_token.txt
             completed:
                 subject: OpenStack Email Updated
-                template: email_update_completed.txt
+                template: update_user_email_completed.txt
         action_settings:
             SendAdditionalEmailAction:
                 initial:
                     subject: OpenStack Email Update Requested
-                    template: email_update_started.txt
+                    template: update_user_email_started.txt
                     email_current_user: True
     update_quota:
         duplicate_policy: cancel
@@ -315,7 +299,7 @@ TASK_SETTINGS:
             token: null
             completed:
                 subject: Openstack Quota updated
-                template: quota_completed.txt
+                template: update_quota_completed.txt
 
 # mapping between roles and managable roles
 ROLES_MAPPING:

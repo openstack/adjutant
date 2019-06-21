@@ -6,7 +6,6 @@ There is a task that needs some attention.
 
 Related Task:
 uuid: {{ task.uuid }}
-ip_address: {{ task.ip_address }}
 keystone_user: {{ task.keystone_user|safe }}
 project_id: {{ task.project_id }}
 task_type: {{ task.task_type }}

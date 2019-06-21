@@ -29,7 +29,7 @@ class Action(models.Model):
     state = models.CharField(max_length=200, default="default")
     valid = models.BooleanField(default=False)
     need_token = models.BooleanField(default=False)
-    task = models.ForeignKey('api.Task')
+    task = models.ForeignKey('tasks.Task')
     # NOTE(amelia): Auto approve is technically a ternary operator
     #               If all in a task are None it will not auto approve
     #               However if at least one action has it set to True it

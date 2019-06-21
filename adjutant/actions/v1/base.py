@@ -37,22 +37,22 @@ class BaseAction(object):
 
     The Action can do anything it needs at one of the three functions
     called by the views:
-    - 'pre_approve'
-    - 'post_approve'
+    - 'prepare'
+    - 'approve'
     - 'submit'
 
     All logic and validation should be handled within the action itself,
-    and any other actions it is linked to. The way in which pre_approve,
-    post_approve, and submit are called should rarely change. Actions
-    should be built with those steps in mind, thinking about what they mean,
+    and any other actions it is linked to. The way in which prepare,
+    approve, and submit are called should rarely change. Actions should
+    be built with those steps in mind, thinking about what they mean,
     and when they execute.
 
     By using 'get_cache' and 'set_cache' they can pass data along which
     may be needed by the action later. This cache is backed to the database.
 
     Passing data along to other actions is done via the task and
-    it's cache, but this is in memory only, so it is only useful during the
-    same action stage ('post_approve', etc.).
+    its cache, but this is in memory only, so it is only useful during the
+    same action stage ('prepare', 'approve', etc.).
 
     Other than the task cache, actions should not be altering database
     models other than themselves. This is not enforced, just a guideline.
@@ -121,22 +121,17 @@ class BaseAction(object):
         return self.action.auto_approve
 
     def set_auto_approve(self, can_approve=True):
-        task_conf = settings.TASK_SETTINGS.get(self.action.task.task_type, {})
-        if task_conf.get('allow_auto_approve', True):
-            self.add_note("Auto approve set to %s." % can_approve)
-            self.action.auto_approve = can_approve
-            self.action.save()
-        else:
-            self.add_note("Task disallows action auto approve.")
-            self.action.auto_approve = False
-            self.action.save()
+        self.add_note("Auto approve set to %s." % can_approve)
+        self.action.auto_approve = can_approve
+        self.action.save()
 
     def add_note(self, note):
         """
         Logs the note, and also adds it to the task action notes.
         """
-        self.logger.info("(%s) - %s" % (timezone.now(), note))
-        note = "%s - (%s)" % (note, timezone.now())
+        now = timezone.now()
+        self.logger.info("(%s) - %s" % (now, note))
+        note = "%s - (%s)" % (note, now)
         self.action.task.add_action_note(
             str(self), note)
 
@@ -154,19 +149,31 @@ class BaseAction(object):
             return settings.DEFAULT_ACTION_SETTINGS.get(
                 self.__class__.__name__, {})
 
-    def pre_approve(self):
-        return self._pre_approve()
+    def prepare(self):
+        try:
+            return self._prepare()
+        except NotImplementedError:
+            self.logger.warning(
+                "DEPRECATED: Action '_pre_approve' stage has been renamed "
+                "to 'prepare'.")
+            return self._pre_approve()
 
-    def post_approve(self):
-        return self._post_approve()
+    def approve(self):
+        try:
+            return self._approve()
+        except NotImplementedError:
+            self.logger.warning(
+                "DEPRECATED: Action '_post_approve' stage has been renamed "
+                "to 'prepare'.")
+            return self._post_approve()
 
     def submit(self, token_data):
         return self._submit(token_data)
 
-    def _pre_approve(self):
+    def _prepare(self):
         raise NotImplementedError
 
-    def _post_approve(self):
+    def _approve(self):
         raise NotImplementedError
 
     def _submit(self, token_data):
@@ -265,7 +272,12 @@ class UserMixin(ResourceMixin):
             return False
         return True
 
-    def are_roles_managable(self, user_roles=[], requested_roles=[]):
+    def are_roles_managable(self, user_roles=None, requested_roles=None):
+        if user_roles is None:
+            user_roles = []
+        if requested_roles is None:
+            requested_roles = []
+
         requested_roles = set(requested_roles)
         # blacklist checks
         blacklist_roles = set(['admin'])

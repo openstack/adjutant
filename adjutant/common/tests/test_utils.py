@@ -78,33 +78,33 @@ class ModifySettingsTests(AdjutantAPITestCase):
         admin_data = {'email': 'admin@example.com'}
 
         override = {
-            'key_list': ['reset_password', 'action_settings',
+            'key_list': ['reset_user_password', 'action_settings',
                          'ResetUserPasswordAction', 'blacklisted_roles'],
             'operation': 'override',
             'value': ['test_role']}
 
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(1, Token.objects.count())
 
         # NOTE(amelia): This next bit relies on the default settings being
         # that admins can't reset their own password
         with self.modify_dict_settings(TASK_SETTINGS=override):
             response = self.client.post(url, data, format='json')
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            self.assertEqual(1, Token.objects.count())
+            self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+            self.assertEqual(0, Token.objects.count())
 
             response2 = self.client.post(url, admin_data, format='json')
-            self.assertEqual(response2.status_code, status.HTTP_200_OK)
-            self.assertEqual(2, Token.objects.count())
+            self.assertEqual(response2.status_code, status.HTTP_202_ACCEPTED)
+            self.assertEqual(1, Token.objects.count())
 
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(3, Token.objects.count())
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(2, Token.objects.count())
 
         response = self.client.post(url, admin_data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(3, Token.objects.count())
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(1, Token.objects.count())
 
     def test_modify_settings_remove_password(self):
         """
@@ -130,26 +130,26 @@ class ModifySettingsTests(AdjutantAPITestCase):
         data = {'email': 'admin@example.com'}
 
         override = {
-            'key_list': ['reset_password', 'action_settings',
+            'key_list': ['reset_user_password', 'action_settings',
                          'ResetUserPasswordAction', 'blacklisted_roles'],
             'operation': 'remove',
             'value': ['admin']}
 
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(0, Token.objects.count())
 
         with self.modify_dict_settings(TASK_SETTINGS=override):
             response = self.client.post(url, data, format='json')
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
             self.assertEqual(1, Token.objects.count())
 
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(1, Token.objects.count())
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(0, Token.objects.count())
 
     @modify_dict_settings(TASK_SETTINGS={
-        'key_list': ['reset_password', 'action_settings',
+        'key_list': ['reset_user_password', 'action_settings',
                      'ResetUserPasswordAction', 'blacklisted_roles'],
         'operation': 'append',
         'value': ['test_role']})
@@ -191,12 +191,12 @@ class ModifySettingsTests(AdjutantAPITestCase):
         data = {'email': "test@example.com"}
 
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(0, Token.objects.count())
 
         admin_data = {'email': 'admin@example.com'}
         response2 = self.client.post(url, admin_data, format='json')
-        self.assertEqual(response2.status_code, status.HTTP_200_OK)
+        self.assertEqual(response2.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(0, Token.objects.count())
 
     def test_modify_settings_update_email(self):
@@ -232,16 +232,16 @@ class ModifySettingsTests(AdjutantAPITestCase):
         }
 
         override = [
-            {'key_list': ['update_email', 'emails', 'token'],
+            {'key_list': ['update_user_email', 'emails', 'token'],
              'operation': 'update',
              'value': {
                 'subject': 'modified_token_email',
-                'template': 'email_update_token.txt'}
+                'template': 'update_user_email_token.txt'}
              }
         ]
 
         response = self.client.post(url, data, headers=headers, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(len(mail.outbox), 1)
         self.assertNotEqual(mail.outbox[0].subject, 'modified_token_email')
 
@@ -250,14 +250,14 @@ class ModifySettingsTests(AdjutantAPITestCase):
 
             response = self.client.post(url, data,
                                         headers=headers, format='json')
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
             self.assertEqual(len(mail.outbox), 2)
             self.assertEqual(mail.outbox[1].subject, 'modified_token_email')
 
         data = {'new_email': "test3@example.com"}
 
         response = self.client.post(url, data, headers=headers, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         self.assertEqual(len(mail.outbox), 3)
         self.assertNotEqual(mail.outbox[2].subject, 'modified_token_email')

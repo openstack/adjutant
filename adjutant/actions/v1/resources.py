@@ -165,12 +165,12 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
             self.add_note(
                 "Interface added to router for project %s" % self.project_id)
 
-    def _pre_approve(self):
+    def _prepare(self):
         # Note: Do we need to get this from cache? it is a required setting
         # self.project_id = self.action.task.cache.get('project_id', None)
         self._validate()
 
-    def _post_approve(self):
+    def _approve(self):
         self._validate()
 
         if self.setup_network and self.valid:
@@ -183,7 +183,7 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
 class NewProjectDefaultNetworkAction(NewDefaultNetworkAction):
     """
     A variant of NewDefaultNetwork that expects the project
-    to not be created until after post_approve.
+    to not be created until after approve.
     """
 
     required = [
@@ -207,10 +207,10 @@ class NewProjectDefaultNetworkAction(NewDefaultNetworkAction):
         ])
         self.action.save()
 
-    def _pre_approve(self):
+    def _prepare(self):
         self._pre_validate()
 
-    def _post_approve(self):
+    def _approve(self):
         self.project_id = self.action.task.cache.get('project_id', None)
         self._validate()
 
@@ -349,12 +349,12 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
         ])
         self.action.save()
 
-    def _pre_approve(self):
+    def _prepare(self):
         self._validate()
         # Set auto-approval
         self.set_auto_approve(self._can_auto_approve())
 
-    def _post_approve(self):
+    def _approve(self):
         self._validate()
 
         if not self.valid or self.action.state == "completed":
@@ -373,7 +373,7 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
 
     def _submit(self, token_data):
         """
-        Nothing to do here. Everything is done at post_approve.
+        Nothing to do here. Everything is done at approve.
         """
         pass
 
@@ -392,12 +392,12 @@ class SetProjectQuotaAction(UpdateProjectQuotasAction):
         ])
         self.action.save()
 
-    def _pre_approve(self):
+    def _prepare(self):
         # Nothing to validate yet
         self.action.valid = True
         self.action.save()
 
-    def _post_approve(self):
+    def _approve(self):
         # Assumption: another action has placed the project_id into the cache.
         self.project_id = self.action.task.cache.get('project_id', None)
         self._validate()

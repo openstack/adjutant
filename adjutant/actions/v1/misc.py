@@ -68,10 +68,10 @@ class SendAdditionalEmailAction(BaseAction):
         self.action.valid = True
         self.action.save()
 
-    def _pre_approve(self):
+    def _prepare(self):
         self.perform_action('initial')
 
-    def _post_approve(self):
+    def _approve(self):
         self.perform_action('token')
 
     def _submit(self, data):

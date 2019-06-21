@@ -22,7 +22,7 @@ from adjutant.common import user_store
 from adjutant.api import models
 from adjutant.api import utils
 from adjutant.api.v1 import tasks
-from adjutant.api.v1.utils import add_task_id_for_roles, create_notification
+from adjutant.api.v1.base import BaseDelegateAPI
 from adjutant.common.quota import QuotaManager
 
 
@@ -32,7 +32,7 @@ class UserList(tasks.InviteUser):
     def get(self, request):
         """Get a list of all users who have been added to a project"""
         class_conf = settings.TASK_SETTINGS.get(
-            'edit_user', settings.DEFAULT_TASK_SETTINGS)
+            'edit_user_roles', settings.DEFAULT_TASK_SETTINGS)
         role_blacklist = class_conf.get('role_blacklist', [])
         user_list = []
         id_manager = user_store.IdentityManager()
@@ -63,7 +63,7 @@ class UserList(tasks.InviteUser):
                 continue
 
             email = getattr(user, 'email', '')
-            enabled = getattr(user, 'enabled')
+            enabled = user.enabled
             user_status = 'Active' if enabled else 'Account Disabled'
             active_emails.add(email)
             user_list.append({
@@ -89,7 +89,7 @@ class UserList(tasks.InviteUser):
                 continue
 
             email = getattr(user, 'email', '')
-            enabled = getattr(user, 'enabled')
+            enabled = user.enabled
             user_status = 'Active' if enabled else 'Account Disabled'
             user_list.append({'id': user.id,
                               'name': user.name,
@@ -104,7 +104,7 @@ class UserList(tasks.InviteUser):
         # Get my active tasks for this project:
         project_tasks = models.Task.objects.filter(
             project_id=project_id,
-            task_type="invite_user",
+            task_type="invite_user_to_project",
             completed=0,
             cancelled=0)
 
@@ -153,8 +153,8 @@ class UserList(tasks.InviteUser):
         return Response({'users': user_list})
 
 
-class UserDetail(tasks.TaskView):
-    task_type = 'edit_user'
+class UserDetail(BaseDelegateAPI):
+    task_type = 'edit_user_roles'
 
     @utils.mod_or_admin
     def get(self, request, user_id):
@@ -209,22 +209,19 @@ class UserDetail(tasks.TaskView):
                 status=501)
         project_tasks = models.Task.objects.filter(
             project_id=project_id,
-            task_type="invite_user",
+            task_type="invite_user_to_project",
             completed=0,
             cancelled=0)
         for task in project_tasks:
             if task.uuid == user_id:
-                task.add_action_note(self.__class__.__name__, 'Cancelled.')
-                task.cancelled = True
-                task.save()
+                self.task_manager.cancel(task)
                 return Response('Cancelled pending invite task!', status=200)
         return Response('Not found.', status=404)
 
 
-class UserRoles(tasks.TaskView):
+class UserRoles(BaseDelegateAPI):
 
-    default_actions = ['EditUserRolesAction', ]
-    task_type = 'edit_roles'
+    task_type = 'edit_user_roles'
 
     @utils.mod_or_admin
     def get(self, request, user_id):
@@ -279,23 +276,13 @@ class UserRoles(tasks.TaskView):
 
         self.logger.info("(%s) - New EditUser %s request." % (
             timezone.now(), request.method))
-        processed, status = self.process_actions(request)
 
-        errors = processed.get('errors', None)
-        if errors:
-            self.logger.info("(%s) - Validation errors with registration." %
-                             timezone.now())
-            return Response({'errors': errors}, status=status)
+        self.task_manager.create_from_request(self.task_type, request)
 
-        response_dict = {'notes': processed.get('notes')}
-
-        add_task_id_for_roles(request, processed, response_dict, ['admin'])
-
-        return Response(response_dict, status=status)
+        return Response({'notes': ['task created']}, status=202)
 
 
-class RoleList(tasks.TaskView):
-    task_type = 'edit_roles'
+class RoleList(BaseDelegateAPI):
 
     @utils.mod_or_admin
     def get(self, request):
@@ -323,32 +310,7 @@ class UserResetPassword(tasks.ResetPassword):
     ---
     """
 
-    def get(self, request):
-        """
-        The ResetPassword endpoint does not support GET.
-        This returns a 404.
-        """
-        return Response(status=404)
-
-
-class UserSetPassword(tasks.ResetPassword):
-    """
-    The openstack endpoint to force a password reset.
-    ---
-    """
-
-    task_type = "force_password"
-
-    def get(self, request):
-        """
-        The ForcePassword endpoint does not support GET.
-        This returns a 404.
-        """
-        return Response(status=404)
-
-    @utils.admin
-    def post(self, request, format=None):
-        return super(UserSetPassword, self).post(request)
+    pass
 
 
 class UserUpdateEmail(tasks.UpdateEmail):
@@ -357,40 +319,24 @@ class UserUpdateEmail(tasks.UpdateEmail):
     ---
     """
 
-    def get(self, request):
-        """
-        The EmailUpdate endpoint does not support GET.
-        This returns a 404.
-        """
-        return Response(status=404)
+    pass
 
 
-class SignUp(tasks.CreateProject):
+class SignUp(tasks.CreateProjectAndUser):
     """
     The openstack endpoint for signups.
     """
 
-    task_type = "signup"
-
-    def get(self, request):
-        """
-        The SignUp endpoint does not support GET.
-        This returns a 404.
-        """
-        return Response(status=404)
-
-    def post(self, request, format=None):
-        return super(SignUp, self).post(request)
+    pass
 
 
-class UpdateProjectQuotas(tasks.TaskView):
+class UpdateProjectQuotas(BaseDelegateAPI):
     """
     The OpenStack endpoint to update the quota of a project in
     one or more regions
     """
 
     task_type = "update_quota"
-    default_actions = ["UpdateProjectQuotasAction", ]
 
     _number_of_returned_tasks = 5
 
@@ -490,36 +436,6 @@ class UpdateProjectQuotas(tasks.TaskView):
         self.logger.info("(%s) - New UpdateProjectQuotas request."
                          % timezone.now())
 
-        processed, status = self.process_actions(request)
+        self.task_manager.create_from_request(self.task_type, request)
 
-        # check the status
-        errors = processed.get('errors', None)
-        if errors:
-            self.logger.info("(%s) - Validation errors with task." %
-                             timezone.now())
-            return Response({'errors': errors}, status=status)
-
-        if processed.get('auto_approved', False):
-            response_dict = {'notes': processed['notes']}
-            return Response(response_dict, status=status)
-
-        task = processed['task']
-        action_models = task.actions
-        valid = all([act.valid for act in action_models])
-        if not valid:
-            return Response({'errors': ['Actions invalid. You may have usage '
-                                        'above the new quota level.']}, 400)
-
-        # Action needs to be manually approved
-        notes = {
-            'notes':
-                ['New task for UpdateProjectQuotas.']
-        }
-
-        create_notification(processed['task'], notes)
-        self.logger.info("(%s) - Task processed. Awaiting Aprroval"
-                         % timezone.now())
-
-        response_dict = {'notes': ['Task processed. Awaiting Aprroval.']}
-
-        return Response(response_dict, status=202)
+        return Response({'notes': ['task created']}, status=202)

@@ -16,38 +16,44 @@ from django.conf import settings
 
 from adjutant.api.v1 import tasks
 from adjutant.api.v1 import openstack
+from adjutant.api.v1.base import BaseDelegateAPI
+from adjutant import exceptions
 
 
-def register_taskview_class(url, taskview_class):
+def register_delegate_api_class(url, API_class):
+    if not issubclass(API_class, BaseDelegateAPI):
+        raise exceptions.InvalidAPIClass(
+            "'%s' is not a built off the BaseDelegateAPI class."
+            % API_class.__name__
+        )
     data = {}
-    data[taskview_class.__name__] = {
-        'class': taskview_class,
+    data[API_class.__name__] = {
+        'class': API_class,
         'url': url}
-    settings.TASKVIEW_CLASSES.update(data)
+    settings.DELEGATE_API_CLASSES.update(data)
 
 
-register_taskview_class(r'^actions/CreateProject/?$', tasks.CreateProject)
-register_taskview_class(r'^actions/InviteUser/?$', tasks.InviteUser)
-register_taskview_class(r'^actions/ResetPassword/?$', tasks.ResetPassword)
-register_taskview_class(r'^actions/EditUser/?$', tasks.EditUser)
-register_taskview_class(r'^actions/UpdateEmail/?$', tasks.UpdateEmail)
+register_delegate_api_class(
+    r'^actions/CreateProjectAndUser/?$', tasks.CreateProjectAndUser)
+register_delegate_api_class(r'^actions/InviteUser/?$', tasks.InviteUser)
+register_delegate_api_class(r'^actions/ResetPassword/?$', tasks.ResetPassword)
+register_delegate_api_class(r'^actions/EditUser/?$', tasks.EditUser)
+register_delegate_api_class(r'^actions/UpdateEmail/?$', tasks.UpdateEmail)
 
 
-register_taskview_class(
+register_delegate_api_class(
     r'^openstack/users/?$', openstack.UserList)
-register_taskview_class(
+register_delegate_api_class(
     r'^openstack/users/(?P<user_id>\w+)/?$', openstack.UserDetail)
-register_taskview_class(
+register_delegate_api_class(
     r'^openstack/users/(?P<user_id>\w+)/roles/?$', openstack.UserRoles)
-register_taskview_class(
+register_delegate_api_class(
     r'^openstack/roles/?$', openstack.RoleList)
-register_taskview_class(
+register_delegate_api_class(
     r'^openstack/users/password-reset/?$', openstack.UserResetPassword)
-register_taskview_class(
-    r'^openstack/users/password-set/?$', openstack.UserSetPassword)
-register_taskview_class(
+register_delegate_api_class(
     r'^openstack/users/email-update/?$', openstack.UserUpdateEmail)
-register_taskview_class(
+register_delegate_api_class(
     r'^openstack/sign-up/?$', openstack.SignUp)
-register_taskview_class(
+register_delegate_api_class(
     r'^openstack/quotas/?$', openstack.UpdateProjectQuotas)

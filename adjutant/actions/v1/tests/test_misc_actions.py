@@ -46,7 +46,6 @@ class MiscActionTests(AdjutantTestCase):
         to_address = "test@example.com"
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={}
         )
 
@@ -66,7 +65,6 @@ class MiscActionTests(AdjutantTestCase):
         to_address = []
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={}
         )
 
@@ -100,7 +98,6 @@ class MiscActionTests(AdjutantTestCase):
         """
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={},
             task_type='edit_roles',
         )
@@ -108,13 +105,13 @@ class MiscActionTests(AdjutantTestCase):
         # setup settings
         action = SendAdditionalEmailAction({}, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
         task.cache["additional_emails"] = ["thisguy@righthere.com",
                                            "nope@example.com"]
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         self.assertEqual(len(mail.outbox), 0)
@@ -141,20 +138,19 @@ class MiscActionTests(AdjutantTestCase):
         """
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={}
         )
 
         # setup settings
         action = SendAdditionalEmailAction({}, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
         task.cache["additional_emails"] = ["thisguy@righthere.com",
                                            "nope@example.com"]
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         self.assertEqual(len(mail.outbox), 1)
@@ -181,17 +177,16 @@ class MiscActionTests(AdjutantTestCase):
         """
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={}
         )
 
         # setup settings
         action = SendAdditionalEmailAction({}, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         self.assertEqual(len(mail.outbox), 0)
@@ -215,17 +210,16 @@ class MiscActionTests(AdjutantTestCase):
         """
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={}
         )
 
         # setup settings
         action = SendAdditionalEmailAction({}, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         self.assertEqual(len(mail.outbox), 1)

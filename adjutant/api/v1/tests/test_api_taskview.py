@@ -20,8 +20,9 @@ from django.core import mail
 
 from rest_framework import status
 
-from adjutant.api.models import Task, Token, Notification
-from adjutant.api.v1.tasks import CreateProject
+from adjutant.api.models import Token, Notification
+from adjutant.tasks.models import Task
+from adjutant.tasks.v1.projects import CreateProjectAndUser
 from adjutant.common.tests.fake_clients import (
     FakeManager, setup_identity_cache)
 from adjutant.common.tests import fake_clients
@@ -31,10 +32,10 @@ from adjutant.common.tests.utils import (AdjutantAPITestCase,
 
 @mock.patch('adjutant.common.user_store.IdentityManager',
             FakeManager)
-class TaskViewTests(AdjutantAPITestCase):
+class DelegateAPITests(AdjutantAPITestCase):
     """
     Tests to ensure the approval/token workflow does what is
-    expected with the given TaskViews. These test don't check
+    expected with the given DelegateAPIs. These test don't check
     final results for actions, simply that the tasks, action,
     and tokens are created/updated.
     """
@@ -96,11 +97,11 @@ class TaskViewTests(AdjutantAPITestCase):
         data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), {'notes': ['task created']})
 
         self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[0].subject, 'invite_user')
+        self.assertEqual(mail.outbox[0].subject, 'invite_user_to_project')
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -195,8 +196,8 @@ class TaskViewTests(AdjutantAPITestCase):
         data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), {'notes': ['task created']})
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -237,10 +238,14 @@ class TaskViewTests(AdjutantAPITestCase):
         data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(
             response.json(),
-            {'notes': ['Task completed successfully.']})
+            {'notes': ['task created']})
+
+        tasks = Task.objects.all()
+        self.assertEqual(1, len(tasks))
+        self.assertTrue(tasks[0].completed)
 
     def test_new_project(self):
         """
@@ -249,10 +254,10 @@ class TaskViewTests(AdjutantAPITestCase):
 
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         headers = {
             'project_name': "test_project",
@@ -266,7 +271,7 @@ class TaskViewTests(AdjutantAPITestCase):
         url = "/v1/tasks/" + new_task.uuid
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(
             response.json(),
             {'notes': ['created token']}
@@ -289,10 +294,10 @@ class TaskViewTests(AdjutantAPITestCase):
 
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         headers = {
             'project_name': "test_project",
@@ -306,7 +311,7 @@ class TaskViewTests(AdjutantAPITestCase):
         url = "/v1/tasks/" + new_task.uuid
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(
             response.data,
             {'notes': ['created token']}
@@ -332,10 +337,10 @@ class TaskViewTests(AdjutantAPITestCase):
 
         setup_identity_cache(projects=[project])
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         headers = {
             'project_name': "test_project",
@@ -352,8 +357,7 @@ class TaskViewTests(AdjutantAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(
             response.json(),
-            {'errors': ['Cannot approve an invalid task. '
-                        'Update data and rerun pre_approve.']})
+            {'errors': ['actions invalid']})
 
     def test_new_project_existing_user(self):
         """
@@ -367,10 +371,10 @@ class TaskViewTests(AdjutantAPITestCase):
         setup_identity_cache(users=[user])
 
         # unauthenticated sign up as existing user
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': user.email}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         # approve the sign-up as admin
         headers = {
@@ -398,15 +402,15 @@ class TaskViewTests(AdjutantAPITestCase):
         setup_identity_cache()
 
         # create signup#1 - project1 with user 1
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         # Create signup#2 - project1 with user 2
         data = {'project_name': "test_project", 'email': "test2@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         headers = {
             'project_name': "admin_project",
@@ -421,7 +425,7 @@ class TaskViewTests(AdjutantAPITestCase):
         url = "/v1/tasks/" + new_task1.uuid
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(
             response.json(),
             {'notes': ['created token']}
@@ -452,7 +456,7 @@ class TaskViewTests(AdjutantAPITestCase):
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(
             response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
@@ -480,28 +484,26 @@ class TaskViewTests(AdjutantAPITestCase):
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            response.json()['notes'],
-            ['If user with email exists, reset token will be issued.'])
-
-        # Submit password reset again
-        response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(
             response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
 
         # Verify the first token doesn't work
         first_token = Token.objects.all()[0]
-        url = "/v1/tokens/" + first_token.token
-        data = {'password': 'new_test_password1'}
+
+        # Submit password reset again
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(user.password, '123')
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(
+            response.json()['notes'],
+            ['If user with email exists, reset token will be issued.'])
+
+        # confirm the old toke has been cleared:
+        second_token = Token.objects.all()[0]
+        self.assertNotEqual(first_token.token, second_token.token)
 
         # Now reset with the second token
-        second_token = Token.objects.all()[1]
         url = "/v1/tokens/" + second_token.token
         data = {'password': 'new_test_password2'}
         response = self.client.post(url, data, format='json')
@@ -518,22 +520,24 @@ class TaskViewTests(AdjutantAPITestCase):
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@exampleinvalid.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(
             response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
 
-    def test_notification_createproject(self):
+        self.assertFalse(len(Token.objects.all()))
+
+    def test_notification_CreateProjectAndUser(self):
         """
-        CreateProject should create a notification.
+        CreateProjectAndUser should create a notification.
         We should be able to grab it.
         """
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         new_task = Task.objects.all()[0]
 
@@ -560,16 +564,16 @@ class TaskViewTests(AdjutantAPITestCase):
 
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
         data = {'project_name': "test_project_2", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
     def test_duplicate_tasks_new_user(self):
         """
@@ -591,78 +595,18 @@ class TaskViewTests(AdjutantAPITestCase):
         data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), {'notes': ['task created']})
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
         data = {'email': "test2@example.com", 'roles': ["_member_"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), {'notes': ['task created']})
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-
-    def test_return_task_id_if_admin(self):
-        """
-        Confirm that the task id is returned when admin.
-        """
-
-        user = fake_clients.FakeUser(
-            name="test@example.com", password="123", email="test@example.com")
-
-        setup_identity_cache(users=[user])
-
-        headers = {
-            'project_name': "test_project",
-            'project_id': "test_project_id",
-            'roles': "admin,_member_",
-            'username': "test@example.com",
-            'user_id': "test_user_id",
-            'authenticated': True
-        }
-        url = "/v1/actions/ResetPassword"
-        data = {'email': "test@example.com"}
-        response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        # make sure the task is actually valid
-        new_task = Task.objects.all()[0]
-        self.assertTrue(all([a.valid for a in new_task.actions]))
-
-        self.assertEqual(
-            response.json()['task'],
-            new_task.uuid)
-
-    def test_return_task_id_if_admin_fail(self):
-        """
-        Confirm that the task id is not returned unless admin.
-        """
-
-        user = fake_clients.FakeUser(
-            name="test@example.com", password="123", email="test@example.com")
-
-        setup_identity_cache(users=[user])
-
-        headers = {
-            'project_name': "test_project",
-            'project_id': "test_project_id",
-            'roles': "_member_",
-            'username': "test@example.com",
-            'user_id': "test_user_id",
-            'authenticated': True
-        }
-        url = "/v1/actions/ResetPassword"
-        data = {'email': "test@example.com"}
-        response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        # make sure the task is actually valid
-        new_task = Task.objects.all()[0]
-        self.assertTrue(all([a.valid for a in new_task.actions]))
-
-        self.assertFalse(response.json().get('task'))
 
     def test_update_email_task(self):
         """
@@ -688,8 +632,8 @@ class TaskViewTests(AdjutantAPITestCase):
         data = {'new_email': "new_test@example.com"}
         response = self.client.post(url, data, format='json', headers=headers)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), {'notes': ['task created']})
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -700,15 +644,15 @@ class TaskViewTests(AdjutantAPITestCase):
         self.assertEqual(user.name, 'new_test@example.com')
 
     @modify_dict_settings(TASK_SETTINGS=[
-        {'key_list': ['update_email', 'additional_actions'],
+        {'key_list': ['update_user_email', 'additional_actions'],
          'operation': 'append',
          'value': ['SendAdditionalEmailAction']},
-        {'key_list': ['update_email', 'action_settings',
+        {'key_list': ['update_user_email', 'action_settings',
                       'SendAdditionalEmailAction', 'initial'],
          'operation': 'update',
          'value': {
-            'subject': 'email_update_additional',
-            'template': 'email_update_started.txt',
+            'subject': 'update_user_email_additional',
+            'template': 'update_user_email_started.txt',
             'email_roles': [],
             'email_current_user': True,
         }
@@ -738,15 +682,16 @@ class TaskViewTests(AdjutantAPITestCase):
         data = {'new_email': "new_test@example.com"}
         response = self.client.post(url, data, format='json', headers=headers)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.data, {'notes': ['task created']})
 
         self.assertEqual(len(mail.outbox), 2)
         self.assertEqual(mail.outbox[0].to, ['test@example.com'])
-        self.assertEqual(mail.outbox[0].subject, 'email_update_additional')
+        self.assertEqual(
+            mail.outbox[0].subject, 'update_user_email_additional')
 
         self.assertEqual(mail.outbox[1].to, ['new_test@example.com'])
-        self.assertEqual(mail.outbox[1].subject, 'email_update_token')
+        self.assertEqual(mail.outbox[1].subject, 'update_user_email_token')
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -759,15 +704,15 @@ class TaskViewTests(AdjutantAPITestCase):
         self.assertEqual(len(mail.outbox), 3)
 
     @modify_dict_settings(TASK_SETTINGS=[
-        {'key_list': ['update_email', 'additional_actions'],
+        {'key_list': ['update_user_email', 'additional_actions'],
          'operation': 'append',
          'value': ['SendAdditionalEmailAction']},
-        {'key_list': ['update_email', 'action_settings',
+        {'key_list': ['update_user_email', 'action_settings',
                       'SendAdditionalEmailAction', 'initial'],
          'operation': 'update',
          'value': {
-            'subject': 'email_update_additional',
-            'template': 'email_update_started.txt',
+            'subject': 'update_user_email_additional',
+            'template': 'update_user_email_started.txt',
             'email_roles': [],
             'email_current_user': True}
          }
@@ -799,15 +744,16 @@ class TaskViewTests(AdjutantAPITestCase):
         data = {'new_email': "new_test@example.com"}
         response = self.client.post(url, data, format='json', headers=headers)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.data, {'notes': ['task created']})
 
         self.assertEqual(len(mail.outbox), 2)
         self.assertEqual(mail.outbox[0].to, ['test@example.com'])
-        self.assertEqual(mail.outbox[0].subject, 'email_update_additional')
+        self.assertEqual(
+            mail.outbox[0].subject, 'update_user_email_additional')
 
         self.assertEqual(mail.outbox[1].to, ['new_test@example.com'])
-        self.assertEqual(mail.outbox[1].subject, 'email_update_token')
+        self.assertEqual(mail.outbox[1].subject, 'update_user_email_token')
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -900,8 +846,8 @@ class TaskViewTests(AdjutantAPITestCase):
         data = {'new_email': "new_test@example.com"}
         response = self.client.post(url, data, format='json', headers=headers)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), {'notes': ['task created']})
 
         self.assertEqual(len(mail.outbox), 1)
 
@@ -953,8 +899,8 @@ class TaskViewTests(AdjutantAPITestCase):
         data = {'new_email': "new_test@example.com"}
         response = self.client.post(url, data, format='json', headers=headers)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), {'notes': ['task created']})
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -967,7 +913,7 @@ class TaskViewTests(AdjutantAPITestCase):
 
     # Tests for USERNAME_IS_EMAIL=False
     @override_settings(USERNAME_IS_EMAIL=False)
-    def test_invite_user_email_not_username(self):
+    def test_invite_user_to_project_email_not_username(self):
         """
         Invites a user where the email is different to the username.
         """
@@ -987,11 +933,11 @@ class TaskViewTests(AdjutantAPITestCase):
         data = {'username': 'new_user', 'email': "new@example.com",
                 'roles': ["_member_"], 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), {'notes': ['task created']})
 
         self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[0].subject, 'invite_user')
+        self.assertEqual(mail.outbox[0].subject, 'invite_user_to_project')
         self.assertEqual(mail.outbox[0].to[0], 'new@example.com')
 
         new_token = Token.objects.all()[0]
@@ -1028,7 +974,7 @@ class TaskViewTests(AdjutantAPITestCase):
         #               horizon
         data = {'email': "test@example.com", 'username': 'test_user'}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(
             response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
@@ -1049,16 +995,16 @@ class TaskViewTests(AdjutantAPITestCase):
     def test_new_project_username_not_email(self):
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com",
                 'username': 'test'}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         data = {'email': "new_test@example.com", 'username': "new",
                 'project_name': 'new_project'}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(response.json(), {'notes': ['task created']})
 
         new_task = Task.objects.all()[0]
@@ -1075,7 +1021,7 @@ class TaskViewTests(AdjutantAPITestCase):
         }
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -1086,15 +1032,15 @@ class TaskViewTests(AdjutantAPITestCase):
 
     @modify_dict_settings(
         TASK_SETTINGS=[
-            {'key_list': ['invite_user', 'additional_actions'],
+            {'key_list': ['invite_user_to_project', 'additional_actions'],
              'operation': 'append',
              'value': ['SendAdditionalEmailAction']},
-            {'key_list': ['invite_user', 'action_settings',
+            {'key_list': ['invite_user_to_project', 'action_settings',
                           'SendAdditionalEmailAction', 'initial'],
              'operation': 'update',
              'value': {
-                'subject': 'email_update_additional',
-                'template': 'email_update_started.txt',
+                'subject': 'update_user_email_additional',
+                'template': 'update_user_email_started.txt',
                 'email_roles': ['project_admin'],
                 'email_current_user': False,
             }
@@ -1173,15 +1119,16 @@ class TaskViewTests(AdjutantAPITestCase):
         data = {'email': "new_test@example.com",
                 'roles': ['_member_'], 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), {'notes': ['task created']})
 
         self.assertEqual(len(mail.outbox), 2)
 
         self.assertEqual(len(mail.outbox[0].to), 2)
         self.assertEqual(set(mail.outbox[0].to),
                          set([user.email, user2.email]))
-        self.assertEqual(mail.outbox[0].subject, 'email_update_additional')
+        self.assertEqual(
+            mail.outbox[0].subject, 'update_user_email_additional')
 
         # Test that the token email gets sent to the other addresses
         self.assertEqual(mail.outbox[1].to[0], 'new_test@example.com')
@@ -1195,15 +1142,15 @@ class TaskViewTests(AdjutantAPITestCase):
 
     @modify_dict_settings(
         TASK_SETTINGS=[
-            {'key_list': ['invite_user', 'additional_actions'],
+            {'key_list': ['invite_user_to_project', 'additional_actions'],
              'operation': 'append',
              'value': ['SendAdditionalEmailAction']},
-            {'key_list': ['invite_user', 'action_settings',
+            {'key_list': ['invite_user_to_project', 'action_settings',
                           'SendAdditionalEmailAction', 'initial'],
              'operation': 'update',
              'value': {
-                'subject': 'email_update_additional',
-                'template': 'email_update_started.txt',
+                'subject': 'update_user_email_additional',
+                'template': 'update_user_email_started.txt',
                 'email_roles': ['project_admin'],
                 'email_current_user': False,
             }
@@ -1242,8 +1189,8 @@ class TaskViewTests(AdjutantAPITestCase):
         data = {'email': "new_test@example.com",
                 'roles': ['_member_']}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.data, {'notes': ['task created']})
 
         self.assertEqual(len(mail.outbox), 1)
 
@@ -1259,15 +1206,15 @@ class TaskViewTests(AdjutantAPITestCase):
 
     @modify_dict_settings(
         TASK_SETTINGS=[
-            {'key_list': ['invite_user', 'additional_actions'],
+            {'key_list': ['invite_user_to_project', 'additional_actions'],
              'operation': 'override',
              'value': ['SendAdditionalEmailAction']},
-            {'key_list': ['invite_user', 'action_settings',
+            {'key_list': ['invite_user_to_project', 'action_settings',
                           'SendAdditionalEmailAction', 'initial'],
              'operation': 'update',
              'value':{
-                'subject': 'invite_user_additional',
-                'template': 'email_update_started.txt',
+                'subject': 'invite_user_to_project_additional',
+                'template': 'update_user_email_started.txt',
                 'email_additional_addresses': ['admin@example.com'],
                 'email_current_user': False,
             }
@@ -1312,14 +1259,15 @@ class TaskViewTests(AdjutantAPITestCase):
         data = {'email': "new_test@example.com", 'roles': ['_member_']}
         response = self.client.post(url, data, format='json', headers=headers)
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), {'notes': ['task created']})
 
         self.assertEqual(len(mail.outbox), 2)
 
         self.assertEqual(set(mail.outbox[0].to),
                          set(['admin@example.com']))
-        self.assertEqual(mail.outbox[0].subject, 'invite_user_additional')
+        self.assertEqual(
+            mail.outbox[0].subject, 'invite_user_to_project_additional')
 
         # Test that the token email gets sent to the other addresses
         self.assertEqual(mail.outbox[1].to[0], 'new_test@example.com')
@@ -1332,15 +1280,15 @@ class TaskViewTests(AdjutantAPITestCase):
 
     @modify_dict_settings(
         TASK_SETTINGS=[
-            {'key_list': ['invite_user', 'additional_actions'],
+            {'key_list': ['invite_user_to_project', 'additional_actions'],
              'operation': 'override',
              'value': ['SendAdditionalEmailAction']},
-            {'key_list': ['invite_user', 'action_settings',
+            {'key_list': ['invite_user_to_project', 'action_settings',
                           'SendAdditionalEmailAction', 'initial'],
              'operation': 'update',
              'value':{
-                'subject': 'invite_user_additional',
-                'template': 'email_update_started.txt',
+                'subject': 'invite_user_to_project_additional',
+                'template': 'update_user_email_started.txt',
                 'email_additional_addresses': ['admin@example.com'],
                 'email_current_user': False,
             }
@@ -1373,29 +1321,29 @@ class TaskViewTests(AdjutantAPITestCase):
     @mock.patch('adjutant.common.tests.fake_clients.FakeManager.find_project')
     def test_all_actions_setup(self, mocked_find):
         """
-        Ensures that all actions have been setup before pre_approve is
-        run on any actions, even if we have a pre_approve failure.
+        Ensures that all actions have been setup before prepare is
+        run on any actions, even if we have a prepare failure.
 
         Deals with: bug/1745053
         """
 
         setup_identity_cache()
 
-        mocked_find.side_effect = KeyError()
+        mocked_find.side_effect = KeyError("Error forced for testing")
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(
-            response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+            response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
 
         new_task = Task.objects.all()[0]
 
         class_conf = settings.TASK_SETTINGS.get(
-            CreateProject.task_type, settings.DEFAULT_TASK_SETTINGS)
+            CreateProjectAndUser.task_type, settings.DEFAULT_TASK_SETTINGS)
         expected_action_names = (
             class_conf.get('default_actions', [])
-            or CreateProject.default_actions[:])
+            or CreateProjectAndUser.default_actions[:])
         expected_action_names += class_conf.get('additional_actions', [])
 
         actions = new_task.actions
@@ -1410,18 +1358,17 @@ class TaskViewTests(AdjutantAPITestCase):
 
         setup_identity_cache()
 
-        mocked_find.side_effect = KeyError("Forced key error.")
+        mocked_find.side_effect = KeyError("Error forced for testing")
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(
-            response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+            response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
 
         self.assertEqual(
             response.json(),
-            {'errors': ["Error: Something went wrong on the server. "
-                        "It will be looked into shortly."]})
+            {'errors': ['Service temporarily unavailable, try again later.']})
 
         new_task = Task.objects.all()[0]
         new_notification = Notification.objects.all()[0]
@@ -1430,7 +1377,7 @@ class TaskViewTests(AdjutantAPITestCase):
         self.assertEqual(
             new_notification.notes,
             {'errors': [
-                "Error: KeyError('Forced key error.') while setting up "
+                "Error: KeyError('Error forced for testing') while setting up "
                 "task. See task itself for details."]})
         self.assertEqual(new_notification.task, new_task)
 
@@ -1484,8 +1431,8 @@ class TaskViewTests(AdjutantAPITestCase):
         data = {'username': 'new_user', 'email': "test@example.com",
                 'roles': ["_member_"], 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), {'notes': ['task created']})
 
     @override_settings(KEYSTONE={'can_edit_users': False})
     def test_project_create_cant_edit_users(self):
@@ -1499,10 +1446,10 @@ class TaskViewTests(AdjutantAPITestCase):
         """
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(response.json(), {'notes': ['task created']})
         task = Task.objects.all()[0]
         action_models = task.actions
@@ -1523,10 +1470,10 @@ class TaskViewTests(AdjutantAPITestCase):
 
         setup_identity_cache(users=[user])
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(response.json(), {'notes': ['task created']})
         task = Task.objects.all()[0]
         action_models = task.actions

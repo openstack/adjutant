@@ -39,7 +39,6 @@ class UserActionTests(AdjutantTestCase):
         setup_identity_cache(projects=[project])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
                 'project_id': project.id,
@@ -56,10 +55,10 @@ class UserActionTests(AdjutantTestCase):
 
         action = NewUserAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         token_data = {'password': '123456'}
@@ -90,7 +89,6 @@ class UserActionTests(AdjutantTestCase):
         setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
                 'project_id': project.id,
@@ -107,10 +105,10 @@ class UserActionTests(AdjutantTestCase):
 
         action = NewUserAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         token_data = {}
@@ -136,7 +134,6 @@ class UserActionTests(AdjutantTestCase):
         setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
                 'project_id': project.id,
@@ -153,10 +150,10 @@ class UserActionTests(AdjutantTestCase):
 
         action = NewUserAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         token_data = {'password': '123456'}
@@ -198,7 +195,6 @@ class UserActionTests(AdjutantTestCase):
             projects=[project], users=[user], role_assignments=[assignment])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
                 'project_id': project.id,
@@ -215,10 +211,10 @@ class UserActionTests(AdjutantTestCase):
 
         action = NewUserAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
         self.assertEqual(action.action.state, 'complete')
 
@@ -239,7 +235,6 @@ class UserActionTests(AdjutantTestCase):
         setup_identity_cache()
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
                 'project_id': 'test_project_id',
@@ -256,10 +251,10 @@ class UserActionTests(AdjutantTestCase):
 
         action = NewUserAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, False)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, False)
 
         token_data = {}
@@ -281,7 +276,6 @@ class UserActionTests(AdjutantTestCase):
         setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['project_mod'],
                 'project_id': 'test_project_id',
@@ -298,7 +292,7 @@ class UserActionTests(AdjutantTestCase):
 
         action = NewUserAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, False)
 
     def test_new_user_only_member(self):
@@ -316,7 +310,6 @@ class UserActionTests(AdjutantTestCase):
         setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['_member_'],
                 'project_id': project.id,
@@ -333,7 +326,7 @@ class UserActionTests(AdjutantTestCase):
 
         action = NewUserAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertFalse(action.valid)
 
     def test_new_user_wrong_domain(self):
@@ -358,7 +351,6 @@ class UserActionTests(AdjutantTestCase):
             projects=[project], users=[user], role_assignments=[assignment])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['project_admin'],
                 'project_id': project.id,
@@ -375,7 +367,7 @@ class UserActionTests(AdjutantTestCase):
 
         action = NewUserAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertFalse(action.valid)
 
     def test_reset_user_password(self):
@@ -390,7 +382,6 @@ class UserActionTests(AdjutantTestCase):
         setup_identity_cache(users=[user])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
                 'project_id': 'test_project_id',
@@ -404,10 +395,10 @@ class UserActionTests(AdjutantTestCase):
 
         action = ResetUserPasswordAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         token_data = {'password': '123456'}
@@ -432,7 +423,6 @@ class UserActionTests(AdjutantTestCase):
         setup_identity_cache(users=[user])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
                 'project_id': 'test_project_id',
@@ -446,10 +436,10 @@ class UserActionTests(AdjutantTestCase):
 
         action = ResetUserPasswordAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         token_data = {'password': '123456'}
@@ -468,7 +458,6 @@ class UserActionTests(AdjutantTestCase):
         setup_identity_cache()
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
                 'project_id': 'test_project_id',
@@ -482,10 +471,10 @@ class UserActionTests(AdjutantTestCase):
 
         action = ResetUserPasswordAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, False)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, False)
 
         token_data = {}
@@ -505,7 +494,6 @@ class UserActionTests(AdjutantTestCase):
             projects=[project], users=[user])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
                 'project_id': project.id,
@@ -523,10 +511,10 @@ class UserActionTests(AdjutantTestCase):
 
         action = EditUserRolesAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         token_data = {}
@@ -564,7 +552,6 @@ class UserActionTests(AdjutantTestCase):
             projects=[project], users=[user], role_assignments=assignments)
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
                 'project_id': project.id,
@@ -582,11 +569,11 @@ class UserActionTests(AdjutantTestCase):
 
         action = EditUserRolesAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
         self.assertEqual(action.action.state, "complete")
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         token_data = {}
@@ -625,7 +612,6 @@ class UserActionTests(AdjutantTestCase):
             projects=[project], users=[user], role_assignments=assignments)
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
                 'project_id': project.id,
@@ -643,10 +629,10 @@ class UserActionTests(AdjutantTestCase):
 
         action = EditUserRolesAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         token_data = {}
@@ -678,7 +664,6 @@ class UserActionTests(AdjutantTestCase):
             projects=[project], users=[user], role_assignments=[assignment])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
                 'project_id': project.id,
@@ -696,11 +681,11 @@ class UserActionTests(AdjutantTestCase):
 
         action = EditUserRolesAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
         self.assertEqual(action.action.state, "complete")
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         token_data = {}
@@ -739,7 +724,6 @@ class UserActionTests(AdjutantTestCase):
             projects=[project], users=[user], role_assignments=assignments)
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['project_mod'],
                 'project_id': project.id,
@@ -757,7 +741,7 @@ class UserActionTests(AdjutantTestCase):
 
         action = EditUserRolesAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, False)
 
         fake_client = fake_clients.FakeManager()
@@ -785,7 +769,6 @@ class UserActionTests(AdjutantTestCase):
             projects=[project], users=[user], role_assignments=[assignment])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['project_mod'],
                 'project_id': project.id,
@@ -803,7 +786,7 @@ class UserActionTests(AdjutantTestCase):
 
         action = EditUserRolesAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
         # Change settings
@@ -811,7 +794,7 @@ class UserActionTests(AdjutantTestCase):
                 'key_list': ['project_mod'],
                 'operation': "remove",
                 'value': 'heat_stack_owner'}):
-            action.post_approve()
+            action.approve()
             self.assertEqual(action.valid, False)
 
             token_data = {}
@@ -819,7 +802,7 @@ class UserActionTests(AdjutantTestCase):
             self.assertEqual(action.valid, False)
 
         # After Settings Reset
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         token_data = {}
@@ -857,7 +840,6 @@ class UserActionTests(AdjutantTestCase):
         fake_clients.identity_cache['roles'][new_role.id] = new_role
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['project_mod'],
                 'project_id': project.id,
@@ -875,10 +857,10 @@ class UserActionTests(AdjutantTestCase):
 
         action = EditUserRolesAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         token_data = {}
@@ -903,7 +885,6 @@ class UserActionTests(AdjutantTestCase):
         setup_identity_cache(projects=[project])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
                 'project_id': project.id,
@@ -921,10 +902,10 @@ class UserActionTests(AdjutantTestCase):
 
         action = NewUserAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         token_data = {'password': '123456'}
@@ -956,7 +937,6 @@ class UserActionTests(AdjutantTestCase):
         setup_identity_cache(users=[user])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['project_mod'],
                 'project_id': 'test_project_id',
@@ -971,10 +951,10 @@ class UserActionTests(AdjutantTestCase):
 
         action = ResetUserPasswordAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         token_data = {'password': '123456'}
@@ -1002,7 +982,6 @@ class UserActionTests(AdjutantTestCase):
         setup_identity_cache(users=[user])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
                 'project_id': 'test_project_id',
@@ -1017,10 +996,10 @@ class UserActionTests(AdjutantTestCase):
 
         action = ResetUserPasswordAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         token_data = {'password': '123456'}
@@ -1043,7 +1022,6 @@ class UserActionTests(AdjutantTestCase):
         setup_identity_cache(users=[user])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['project_mod'],
                 'project_id': 'test_project_id',
@@ -1057,10 +1035,10 @@ class UserActionTests(AdjutantTestCase):
 
         action = UpdateUserEmailAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         token_data = {'confirm': True}
@@ -1084,7 +1062,6 @@ class UserActionTests(AdjutantTestCase):
         setup_identity_cache()
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['project_mod'],
                 'project_id': 'test_project_id',
@@ -1098,10 +1075,10 @@ class UserActionTests(AdjutantTestCase):
 
         action = UpdateUserEmailAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, False)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, False)
 
         token_data = {'confirm': True}
@@ -1121,7 +1098,6 @@ class UserActionTests(AdjutantTestCase):
         setup_identity_cache(users=[user])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['project_mod'],
                 'project_id': 'test_project_id',
@@ -1135,10 +1111,10 @@ class UserActionTests(AdjutantTestCase):
 
         action = UpdateUserEmailAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         action.submit({'confirm': True})

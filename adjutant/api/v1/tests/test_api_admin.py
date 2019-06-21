@@ -69,10 +69,10 @@ class AdminAPITests(APITestCase):
         """
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         headers = {
             'project_name': "test_project",
@@ -118,10 +118,14 @@ class AdminAPITests(APITestCase):
             'authenticated': True
         }
         url = "/v1/tasks/e8b3f57f5da64bf3a6bf4f9bbd3a40b5"
-        response = self.client.post(url, format='json', headers=headers)
+        response = self.client.post(
+            url, {'approved': True}, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(
-            response.json(), {'errors': ['No task with this id.']})
+            response.json(),
+            {'errors': [
+                "Task not found with uuid of: "
+                "'e8b3f57f5da64bf3a6bf4f9bbd3a40b5'"]})
 
     def test_token_expired_post(self):
         """
@@ -136,7 +140,7 @@ class AdminAPITests(APITestCase):
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(
             response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
@@ -166,7 +170,7 @@ class AdminAPITests(APITestCase):
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(
             response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
@@ -195,7 +199,7 @@ class AdminAPITests(APITestCase):
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(
             response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
@@ -208,7 +212,7 @@ class AdminAPITests(APITestCase):
             response.json(),
             {u'actions': [u'ResetUserPasswordAction'],
              u'required_fields': [u'password'],
-             u'task_type': 'reset_password'})
+             u'task_type': 'reset_user_password'})
         self.assertEqual(1, Token.objects.count())
 
     def test_token_list_get(self):
@@ -227,11 +231,11 @@ class AdminAPITests(APITestCase):
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         data = {'email': "test2@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         headers = {
             'project_name': "test_project",
@@ -259,10 +263,10 @@ class AdminAPITests(APITestCase):
         """
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         headers = {
             'project_name': "test_project",
@@ -291,10 +295,10 @@ class AdminAPITests(APITestCase):
 
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         headers = {
             'project_name': "test_project",
@@ -314,11 +318,11 @@ class AdminAPITests(APITestCase):
         self.assertEqual(response.json()['error_notifications'], [])
 
         # Create a second task and ensure it is the new last_created_task
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project_2",
                 'email': "test_2@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         url = "/v1/status/"
         response = self.client.get(url, headers=headers)
@@ -354,10 +358,10 @@ class AdminAPITests(APITestCase):
 
         setup_identity_cache(projects=[project])
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         headers = {
             'project_name': "test_project",
@@ -388,7 +392,7 @@ class AdminAPITests(APITestCase):
 
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(
             response.json(),
             {'notes': ['created token']})
@@ -399,10 +403,10 @@ class AdminAPITests(APITestCase):
         """
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         new_task = Task.objects.all()[0]
 
@@ -424,7 +428,7 @@ class AdminAPITests(APITestCase):
             new_task.uuid)
         self.assertEqual(
             response.json()['notes'],
-            {u'notes': [u'New task for CreateProject.']})
+            {'notes': ["'create_project_and_user' task needs approval."]})
         self.assertEqual(
             response.json()['error'], False)
 
@@ -451,7 +455,7 @@ class AdminAPITests(APITestCase):
                          {"errors": ["No notification with this id."]})
 
     @modify_dict_settings(TASK_SETTINGS={
-        'key_list': ['create_project', 'notifications'],
+        'key_list': ['create_project_and_user', 'notifications'],
         'operation': 'delete',
     })
     def test_notification_acknowledge(self):
@@ -460,10 +464,10 @@ class AdminAPITests(APITestCase):
         """
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         new_task = Task.objects.all()[0]
 
@@ -524,7 +528,7 @@ class AdminAPITests(APITestCase):
                          ['No notification with this id.']})
 
     @modify_dict_settings(TASK_SETTINGS={
-        'key_list': ['create_project', 'notifications'],
+        'key_list': ['create_project_and_user', 'notifications'],
         'operation': 'delete',
     })
     def test_notification_re_acknowledge(self):
@@ -533,10 +537,10 @@ class AdminAPITests(APITestCase):
         """
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         headers = {
             'project_name': "test_project",
@@ -561,7 +565,7 @@ class AdminAPITests(APITestCase):
                          {'notes': ['Notification already acknowledged.']})
 
     @modify_dict_settings(TASK_SETTINGS={
-        'key_list': ['create_project', 'notifications'],
+        'key_list': ['create_project_and_user', 'notifications'],
         'operation': 'delete',
     })
     def test_notification_acknowledge_no_data(self):
@@ -570,10 +574,10 @@ class AdminAPITests(APITestCase):
         """
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         headers = {
             'project_name': "test_project",
@@ -598,13 +602,13 @@ class AdminAPITests(APITestCase):
         """
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         data = {'project_name': "test_project2", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         headers = {
             'project_name': "test_project",
@@ -681,7 +685,7 @@ class AdminAPITests(APITestCase):
             }
         }
     }, TASK_SETTINGS={
-        'key_list': ['create_project', 'emails'],
+        'key_list': ['create_project_and_user', 'emails'],
         'operation': 'override',
         'value': {
             'initial': None,
@@ -695,10 +699,10 @@ class AdminAPITests(APITestCase):
         """
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         new_task = Task.objects.all()[0]
 
@@ -719,8 +723,11 @@ class AdminAPITests(APITestCase):
             new_task.uuid)
 
         self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[0].subject, 'create_project notification')
-        self.assertTrue("New task for CreateProject" in mail.outbox[0].body)
+        self.assertEqual(
+            mail.outbox[0].subject, 'create_project_and_user notification')
+        self.assertTrue(
+            "'create_project_and_user' task needs approval."
+            in mail.outbox[0].body)
 
     def test_token_expired_delete(self):
         """
@@ -739,15 +746,14 @@ class AdminAPITests(APITestCase):
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(
             response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
 
-        url = "/v1/actions/ResetPassword"
         data = {'email': "test2@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(
             response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
@@ -788,7 +794,7 @@ class AdminAPITests(APITestCase):
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(
             response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
@@ -838,8 +844,8 @@ class AdminAPITests(APITestCase):
         data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), {'notes': ['task created']})
 
         task = Task.objects.all()[0]
         new_token = Token.objects.all()[0]
@@ -878,7 +884,7 @@ class AdminAPITests(APITestCase):
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(
             response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
@@ -917,7 +923,7 @@ class AdminAPITests(APITestCase):
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(
             response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
@@ -950,10 +956,10 @@ class AdminAPITests(APITestCase):
 
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'email': "test@example.com", "project_name": "test_project"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(
             response.json()['notes'], [u'task created'])
 
@@ -982,10 +988,10 @@ class AdminAPITests(APITestCase):
 
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         headers = {
             'project_name': "test_project",
@@ -1016,10 +1022,10 @@ class AdminAPITests(APITestCase):
 
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         headers = {
             'project_name': "test_project",
@@ -1033,17 +1039,19 @@ class AdminAPITests(APITestCase):
         url = "/v1/tasks/" + new_task.uuid
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+
+        new_token = Token.objects.all()[0]
 
         response = self.client.delete(url, format='json',
                                       headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        new_token = Token.objects.all()[0]
+        self.assertEqual(0, Token.objects.count())
         url = "/v1/tokens/" + new_token.token
         data = {'password': 'testpassword'}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
 
     def test_reapprove_task_delete_tokens(self):
         """
@@ -1052,10 +1060,10 @@ class AdminAPITests(APITestCase):
 
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         headers = {
             'project_name': "test_project",
@@ -1069,7 +1077,7 @@ class AdminAPITests(APITestCase):
         url = "/v1/tasks/" + new_task.uuid
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(len(Token.objects.all()), 1)
 
         new_token = Token.objects.all()[0]
@@ -1081,7 +1089,7 @@ class AdminAPITests(APITestCase):
         url = "/v1/tasks/" + new_task.uuid
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         # Old token no longer found
         url = "/v1/tokens/" + new_token.token
@@ -1097,10 +1105,10 @@ class AdminAPITests(APITestCase):
 
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         headers = {
             'project_name': "test_project",
@@ -1115,7 +1123,7 @@ class AdminAPITests(APITestCase):
         url = "/v1/tasks/" + new_task.uuid
         response = self.client.post(url, {'approved': True}, format='json',
                                     headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         new_task = Task.objects.all()[0]
         self.assertEqual(new_task.approved, True)
 
@@ -1145,8 +1153,8 @@ class AdminAPITests(APITestCase):
         data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), {'notes': ['task created']})
 
         new_task = Task.objects.all()[0]
         url = "/v1/tasks/" + new_task.uuid
@@ -1184,8 +1192,8 @@ class AdminAPITests(APITestCase):
         data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), {'notes': ['task created']})
 
         new_task = Task.objects.all()[0]
         url = "/v1/tasks/" + new_task.uuid
@@ -1214,15 +1222,15 @@ class AdminAPITests(APITestCase):
         data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         data = {'email': "test2@example.com", 'roles': ["_member_"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         data = {'email': "test3@example.com", 'roles': ["_member_"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         headers = {
             'project_name': "test_project",
@@ -1258,15 +1266,15 @@ class AdminAPITests(APITestCase):
         data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         data = {'email': "test2@example.com", 'roles': ["_member_"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         data = {'email': "test3@example.com", 'roles': ["_member_"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         headers = {
             'project_name': "test_project",
@@ -1306,16 +1314,16 @@ class AdminAPITests(APITestCase):
         data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         data = {'email': "test2@example.com", 'roles': ["_member_"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project2", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         headers = {
             'project_name': "test_project",
@@ -1327,7 +1335,7 @@ class AdminAPITests(APITestCase):
         }
         params = {
             "filters": json.dumps({
-                "task_type": {"exact": "create_project"}
+                "task_type": {"exact": "create_project_and_user"}
             })
         }
 
@@ -1340,7 +1348,7 @@ class AdminAPITests(APITestCase):
 
         params = {
             "filters": json.dumps({
-                "task_type": {"exact": "invite_user"}
+                "task_type": {"exact": "invite_user_to_project"}
             })
         }
         response = self.client.get(
@@ -1399,7 +1407,7 @@ class AdminAPITests(APITestCase):
         params = {
             "filters": json.dumps({
                 "project_id": {"exact": "test_project_id"},
-                "task_type": {"exact": "invite_user"}
+                "task_type": {"exact": "invite_user_to_project"}
             })
         }
         url = "/v1/tasks"
@@ -1478,7 +1486,7 @@ class AdminAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     @modify_dict_settings(TASK_SETTINGS={
-        'key_list': ['reset_password', 'action_settings',
+        'key_list': ['reset_user_password', 'action_settings',
                      'ResetUserPasswordAction', 'blacklisted_roles'],
         'operation': 'append',
         'value': ['admin']
@@ -1506,7 +1514,7 @@ class AdminAPITests(APITestCase):
         url = "/v1/actions/ResetPassword"
         data = {'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(
             response.json()['notes'],
             ['If user with email exists, reset token will be issued.'])
@@ -1515,18 +1523,18 @@ class AdminAPITests(APITestCase):
     @mock.patch('adjutant.common.tests.fake_clients.FakeManager.find_project')
     def test_apiview_error_handler(self, mocked_find):
         """
-        Ensure the _handle_task_error function works as expected for APIViews.
+        Ensure the handle_task_error function works as expected for APIViews.
         """
 
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProject"
+        url = "/v1/actions/CreateProjectAndUser"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(
-            response.status_code, status.HTTP_200_OK)
+            response.status_code, status.HTTP_202_ACCEPTED)
 
-        mocked_find.side_effect = KeyError("Forced key error.")
+        mocked_find.side_effect = KeyError("Forced key error for testing.")
 
         new_task = Task.objects.all()[0]
         url = "/v1/tasks/" + new_task.uuid
@@ -1544,12 +1552,11 @@ class AdminAPITests(APITestCase):
         }
         response = self.client.put(url, data, format='json', headers=headers)
         self.assertEqual(
-            response.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+            response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
 
         self.assertEqual(
             response.json()['errors'],
-            ["Error: Something went wrong on the server. "
-             "It will be looked into shortly."])
+            ['Service temporarily unavailable, try again later.'])
 
         new_task = Task.objects.all()[0]
         new_notification = Notification.objects.all()[1]
@@ -1558,6 +1565,6 @@ class AdminAPITests(APITestCase):
         self.assertEqual(
             new_notification.notes,
             {'errors': [
-                "Error: KeyError('Forced key error.') while updating task. "
-                "See task itself for details."]})
+                "Error: KeyError('Forced key error for testing.') while "
+                "setting up task. See task itself for details."]})
         self.assertEqual(new_notification.task, new_task)

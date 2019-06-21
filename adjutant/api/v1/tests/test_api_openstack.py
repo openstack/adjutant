@@ -38,10 +38,10 @@ from datetime import timedelta
             FakeManager)
 class OpenstackAPITests(AdjutantAPITestCase):
     """
-    TaskView tests specific to the openstack style urls.
-    Many of the original TaskView tests are valid and need
+    DelegateAPI tests specific to the openstack style urls.
+    Many of the original DelegateAPI tests are valid and need
     not be repeated here, but some additional features in the
-    unique TaskViews need testing.
+    unique DelegateAPI need testing.
     """
 
     def test_new_user(self):
@@ -65,8 +65,8 @@ class OpenstackAPITests(AdjutantAPITestCase):
         data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), {'notes': ['task created']})
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -95,8 +95,8 @@ class OpenstackAPITests(AdjutantAPITestCase):
         data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), {'notes': ['task created']})
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -108,8 +108,8 @@ class OpenstackAPITests(AdjutantAPITestCase):
         data = {'email': "test2@example.com", 'roles': ["_member_"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), {'notes': ['task created']})
 
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -310,48 +310,6 @@ class OpenstackAPITests(AdjutantAPITestCase):
             if adj_user['id'] == user2.id:
                 self.assertTrue(adj_user['manageable'])
 
-    def test_force_reset_password(self):
-        """
-        Ensure the force password endpoint works as expected,
-        and only for admin.
-
-        Should also check if template can be rendered.
-        """
-
-        user = fake_clients.FakeUser(
-            name="test@example.com", password="123", email="test@example.com")
-
-        setup_identity_cache(users=[user])
-
-        headers = {
-            'project_name': "test_project",
-            'project_id': "test_project_id",
-            'roles': "_member_",
-            'username': "test@example.com",
-            'user_id': "test_user_id",
-            'authenticated': True
-        }
-
-        url = "/v1/openstack/users/password-set"
-        data = {'email': "test@example.com"}
-        response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        headers["roles"] = "admin,_member_"
-        response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            response.json()['notes'],
-            ['If user with email exists, reset token will be issued.'])
-
-        new_token = Token.objects.all()[0]
-        url = "/v1/tokens/" + new_token.token
-        data = {'password': 'new_test_password'}
-        response = self.client.post(url, data, format='json')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(user.password, 'new_test_password')
-
     def test_remove_user_role(self):
         """ Remove all roles on a user from our project """
         project = fake_clients.FakeProject(name="test_project")
@@ -382,9 +340,8 @@ class OpenstackAPITests(AdjutantAPITestCase):
         data = {'roles': ["_member_"]}
         response = self.client.delete(url, data,
                                       format='json', headers=admin_headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(),
-                         {'notes': ['Task completed successfully.']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), {'notes': ['task created']})
 
     @override_settings(USERNAME_IS_EMAIL=False)
     def test_new_user_username_not_email(self):
@@ -408,8 +365,8 @@ class OpenstackAPITests(AdjutantAPITestCase):
         data = {'email': "test@example.com", 'roles': ["_member_"],
                 'project_id': project.id, 'username': 'user_name'}
         response = self.client.post(url, data, format='json', headers=headers)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.json(), {'notes': ['created token']})
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+        self.assertEqual(response.json(), {'notes': ['task created']})
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -441,11 +398,14 @@ class QuotaAPITests(AdjutantAPITestCase):
         setup_mock_caches('RegionTwo', 'test_project_id')
 
     def check_quota_cache(self, region_name, project_id, size,
-                          extra_services=[]):
+                          extra_services=None):
         """
         Helper function to check if the global quota caches now match the size
         defined in the config
         """
+        if extra_services is None:
+            extra_services = []
+
         cinderquota = cinder_cache[region_name][project_id]['quota']
         gigabytes = settings.PROJECT_QUOTA_SIZES[size]['cinder']['gigabytes']
         self.assertEqual(cinderquota['gigabytes'], gigabytes)
@@ -492,7 +452,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         response = self.client.post(url, data,
                                     headers=admin_headers, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         # Then check to see the quotas have changed
         self.check_quota_cache('RegionOne', project.id, 'medium')
@@ -527,7 +487,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         response = self.client.post(url, data,
                                     headers=admin_headers, format='json')
         # First check we can actually access the page correctly
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         # Then check to see the quotas have changed
         self.check_quota_cache('RegionOne', project.id, 'medium')
@@ -595,7 +555,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         response = self.client.post(url, data,
                                     headers=admin_headers, format='json')
         # First check we can actually access the page correctly
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         # Then check to see the quotas have changed
         self.check_quota_cache('RegionOne', project.id, 'medium')
@@ -605,7 +565,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         response = self.client.post(url, data,
                                     headers=admin_headers, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         # Then check to see the quotas have changed
         self.check_quota_cache('RegionOne', project.id, 'small')
@@ -640,7 +600,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         response = self.client.post(url, data,
                                     headers=admin_headers, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         # Then check to see the quotas have changed
         self.check_quota_cache('RegionOne', project.id, 'medium')
@@ -655,7 +615,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         response = self.client.post(url, data,
                                     headers=admin_headers, format='json')
         # First check we can actually access the page correctly
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         # Then check to see the quotas have changed
         self.check_quota_cache('RegionOne', project.id, 'small')
@@ -694,7 +654,7 @@ class QuotaAPITests(AdjutantAPITestCase):
                 'regions': ['RegionOne']}
         response = self.client.post(url, data, headers=headers, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         # Then check to see the quotas have changed
         self.check_quota_cache('RegionOne', project.id, 'medium')
@@ -711,7 +671,7 @@ class QuotaAPITests(AdjutantAPITestCase):
                 'project_id': project2.id}
         response = self.client.post(url, data, headers=headers, format='json')
         # First check we can actually access the page correctly
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         # Then check to see the quotas have changed
         self.check_quota_cache('RegionOne', project2.id, 'medium')
@@ -956,7 +916,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         data = {'size': 'medium', 'regions': ['RegionOne', 'RegionTwo']}
         response = self.client.post(url, data, headers=headers, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         self.check_quota_cache('RegionOne', 'test_project_id', 'medium')
 
@@ -990,7 +950,7 @@ class QuotaAPITests(AdjutantAPITestCase):
                 'regions': ['RegionOne', 'RegionTwo']}
         response = self.client.post(url, data, headers=headers, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         self.check_quota_cache('RegionOne', project.id, 'medium')
 
@@ -1061,7 +1021,7 @@ class QuotaAPITests(AdjutantAPITestCase):
                 'regions': ['RegionOne']}
         response = self.client.post(url, data, headers=headers, format='json')
         # First check we can actually access the page correctly
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         self.check_quota_cache('RegionOne', project.id, 'medium')
 
@@ -1171,7 +1131,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         response = self.client.post(url, data,
                                     headers=headers, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         self.check_quota_cache('RegionOne', project.id, 'small')
 
@@ -1319,7 +1279,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         response = self.client.post(url, data,
                                     headers=admin_headers, format='json')
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
         # Then check to see the quotas have changed
         self.check_quota_cache(

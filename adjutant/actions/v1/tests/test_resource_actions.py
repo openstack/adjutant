@@ -50,7 +50,6 @@ class ProjectSetupActionTests(TestCase):
         """
         setup_neutron_cache('RegionOne', 'test_project_id')
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin'],
                 'project_id': 'test_project_id'})
@@ -72,10 +71,10 @@ class ProjectSetupActionTests(TestCase):
         action = NewDefaultNetworkAction(
             data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         self.assertEqual(
@@ -100,7 +99,6 @@ class ProjectSetupActionTests(TestCase):
         """
         setup_neutron_cache('RegionOne', 'test_project_id')
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin'],
                 'project_id': 'test_project_id'})
@@ -122,10 +120,10 @@ class ProjectSetupActionTests(TestCase):
         action = NewDefaultNetworkAction(
             data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         self.assertEqual(action.action.cache, {})
@@ -145,7 +143,6 @@ class ProjectSetupActionTests(TestCase):
         setup_neutron_cache('RegionOne', 'test_project_id')
         global neutron_cache
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin'],
                 'project_id': 'test_project_id'})
@@ -167,13 +164,13 @@ class ProjectSetupActionTests(TestCase):
         action = NewDefaultNetworkAction(
             data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
         neutron_cache['RegionOne']['test_project_id']['routers'] = []
 
         try:
-            action.post_approve()
+            action.approve()
             self.fail("Shouldn't get here.")
         except Exception:
             pass
@@ -193,7 +190,7 @@ class ProjectSetupActionTests(TestCase):
 
         neutron_cache['RegionOne']['test_project_id']['routers'] = {}
 
-        action.post_approve()
+        action.approve()
 
         self.assertEqual(
             action.action.cache,
@@ -227,7 +224,7 @@ class ProjectSetupActionTests(TestCase):
         """
         setup_neutron_cache('RegionOne', 'test_project_id')
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+            keystone_user={'roles': ['admin']})
 
         data = {
             'setup_network': True,
@@ -237,7 +234,7 @@ class ProjectSetupActionTests(TestCase):
         action = NewProjectDefaultNetworkAction(
             data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
         # Now we add the project data as this is where the project
@@ -252,7 +249,7 @@ class ProjectSetupActionTests(TestCase):
 
         task.cache = {'project_id': "test_project_id"}
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         self.assertEqual(
@@ -277,7 +274,7 @@ class ProjectSetupActionTests(TestCase):
         """
         setup_neutron_cache('RegionOne', 'test_project_id')
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+            keystone_user={'roles': ['admin']})
 
         data = {
             'setup_network': True,
@@ -287,10 +284,10 @@ class ProjectSetupActionTests(TestCase):
         action = NewProjectDefaultNetworkAction(
             data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, False)
 
         self.assertEqual(action.action.cache, {})
@@ -309,7 +306,7 @@ class ProjectSetupActionTests(TestCase):
         """
         setup_neutron_cache('RegionOne', 'test_project_id')
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+            keystone_user={'roles': ['admin']})
 
         data = {
             'setup_network': False,
@@ -319,7 +316,7 @@ class ProjectSetupActionTests(TestCase):
         action = NewProjectDefaultNetworkAction(
             data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
         # Now we add the project data as this is where the project
@@ -334,7 +331,7 @@ class ProjectSetupActionTests(TestCase):
 
         task.cache = {'project_id': "test_project_id"}
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         self.assertEqual(action.action.cache, {})
@@ -354,7 +351,7 @@ class ProjectSetupActionTests(TestCase):
         setup_neutron_cache('RegionOne', 'test_project_id')
         global neutron_cache
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+            keystone_user={'roles': ['admin']})
 
         data = {
             'setup_network': True,
@@ -364,7 +361,7 @@ class ProjectSetupActionTests(TestCase):
         action = NewProjectDefaultNetworkAction(
             data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
         neutron_cache['RegionOne']['test_project_id']['routers'] = []
@@ -382,7 +379,7 @@ class ProjectSetupActionTests(TestCase):
         task.cache = {'project_id': "test_project_id"}
 
         try:
-            action.post_approve()
+            action.approve()
             self.fail("Shouldn't get here.")
         except Exception:
             pass
@@ -402,7 +399,7 @@ class ProjectSetupActionTests(TestCase):
 
         neutron_cache['RegionOne']['test_project_id']['routers'] = {}
 
-        action.post_approve()
+        action.approve()
 
         self.assertEqual(
             action.action.cache,
@@ -433,16 +430,16 @@ class ProjectSetupActionTests(TestCase):
         setup_mock_caches('RegionOne', 'test_project_id')
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+            keystone_user={'roles': ['admin']})
 
         task.cache = {'project_id': "test_project_id"}
 
         action = SetProjectQuotaAction({}, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         # check the quotas were updated
@@ -502,7 +499,7 @@ class QuotaActionTests(TestCase):
 
         # Test sending to only a single region
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+            keystone_user={'roles': ['admin']})
 
         data = {
             'project_id': 'test_project_id',
@@ -513,10 +510,10 @@ class QuotaActionTests(TestCase):
 
         action = UpdateProjectQuotasAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         # check the quotas were updated
@@ -550,7 +547,7 @@ class QuotaActionTests(TestCase):
         setup_mock_caches('RegionTwo', project.id)
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+            keystone_user={'roles': ['admin']})
 
         data = {
             'project_id': 'test_project_id',
@@ -562,10 +559,10 @@ class QuotaActionTests(TestCase):
 
         action = UpdateProjectQuotasAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         # check the quotas were updated
@@ -609,7 +606,7 @@ class QuotaActionTests(TestCase):
         setup_mock_caches('RegionTwo', project.id)
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+            keystone_user={'roles': ['admin']})
 
         data = {
             'project_id': 'test_project_id',
@@ -620,10 +617,10 @@ class QuotaActionTests(TestCase):
 
         action = UpdateProjectQuotasAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         # check the quotas were updated
@@ -666,7 +663,7 @@ class QuotaActionTests(TestCase):
         setup_mock_caches('RegionOne', project.id)
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+            keystone_user={'roles': ['admin']})
 
         data = {
             'project_id': 'test_project_id',
@@ -677,10 +674,10 @@ class QuotaActionTests(TestCase):
 
         action = UpdateProjectQuotasAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         # check the quotas were updated
@@ -718,7 +715,7 @@ class QuotaActionTests(TestCase):
         setup_mock_caches('RegionOne', project.id)
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+            keystone_user={'roles': ['admin']})
 
         data = {
             'project_id': 'test_project_id',
@@ -734,10 +731,10 @@ class QuotaActionTests(TestCase):
 
         action = UpdateProjectQuotasAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, False)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, False)
 
         # check the quotas were updated

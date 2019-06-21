@@ -14,7 +14,6 @@
 
 from logging import getLogger
 
-from django.conf import settings
 from django.utils import timezone
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
@@ -24,9 +23,11 @@ from rest_framework.views import APIView
 
 from adjutant.api import utils
 from adjutant.api.views import SingleVersionView
-from adjutant.api.models import Notification, Task, Token
-from adjutant.api.v1.utils import (
-    create_notification, create_token, parse_filters, send_stage_email)
+from adjutant.api.models import Notification, Token
+from adjutant.api.v1.utils import parse_filters
+from adjutant import exceptions
+from adjutant.tasks.v1.manager import TaskManager
+from adjutant.tasks.models import Task
 
 
 class V1VersionEndpoint(SingleVersionView):
@@ -40,29 +41,7 @@ class APIViewWithLogger(APIView):
     def __init__(self, *args, **kwargs):
         super(APIViewWithLogger, self).__init__(*args, **kwargs)
         self.logger = getLogger('adjutant')
-
-    def _handle_task_error(self, e, task, error_text="while running task",
-                           return_response=False):
-        import traceback
-        trace = traceback.format_exc()
-        self.logger.critical((
-            "(%s) - Exception escaped! %s\nTrace: \n%s") % (
-                timezone.now(), e, trace))
-        notes = {
-            'errors':
-                ["Error: %s(%s) %s. See task itself for details."
-                 % (type(e).__name__, e, error_text)]
-        }
-        create_notification(task, notes, error=True)
-
-        response_dict = {
-            'errors':
-                ["Error: Something went wrong on the server. "
-                 "It will be looked into shortly."]
-        }
-        if return_response:
-            return Response(response_dict, status=500)
-        return response_dict, 500
+        self.task_manager = TaskManager()
 
 
 class StatusView(APIViewWithLogger):
@@ -219,6 +198,7 @@ class TaskList(APIViewWithLogger):
         if not filters:
             filters = {}
 
+        # TODO(adriant): better handle this bit of incode policy
         if 'admin' not in request.keystone_user['roles']:
             # Ignore any filters with project_id in them
             for field_filter in filters.keys():
@@ -240,7 +220,7 @@ class TaskList(APIViewWithLogger):
                                 status=400)
         task_list = []
         for task in tasks:
-            task_list.append(task._to_dict())
+            task_list.append(task.to_dict())
 
         if tasks_per_page:
             return Response({'tasks': task_list,
@@ -262,13 +242,13 @@ class TaskDetail(APIViewWithLogger):
         and its related actions.
         """
         try:
+            # TODO(adriant): better handle this bit of incode policy
             if 'admin' in request.keystone_user['roles']:
                 task = Task.objects.get(uuid=uuid)
-                return Response(task._to_dict())
             else:
                 task = Task.objects.get(
                     uuid=uuid, project_id=request.keystone_user['project_id'])
-                return Response(task.to_dict())
+            return Response(task.to_dict())
         except Task.DoesNotExist:
             return Response(
                 {'errors': ['No task with this id.']},
@@ -278,200 +258,37 @@ class TaskDetail(APIViewWithLogger):
     def put(self, request, uuid, format=None):
         """
         Allows the updating of action data and retriggering
-        of the pre_approve step.
+        of the prepare step.
         """
-        try:
-            task = Task.objects.get(uuid=uuid)
-        except Task.DoesNotExist:
-            return Response(
-                {'errors': ['No task with this id.']},
-                status=404)
+        self.task_manager.update(uuid, request.data)
 
-        if task.completed:
-            return Response(
-                {'errors':
-                    ['This task has already been completed.']},
-                status=400)
-
-        if task.cancelled:
-            # NOTE(adriant): If we can uncancel a task, that should happen
-            # at this endpoint.
-            return Response(
-                {'errors':
-                    ['This task has been cancelled.']},
-                status=400)
-
-        if task.approved:
-            return Response(
-                {'errors':
-                    ['This task has already been approved.']},
-                status=400)
-
-        act_list = []
-
-        valid = True
-        for action in task.actions:
-            action_serializer = settings.ACTION_CLASSES[action.action_name][1]
-
-            if action_serializer is not None:
-                serializer = action_serializer(data=request.data)
-            else:
-                serializer = None
-
-            act_list.append({
-                'name': action.action_name,
-                'action': action,
-                'serializer': serializer})
-
-            if serializer is not None and not serializer.is_valid():
-                valid = False
-
-        if valid:
-            for act in act_list:
-                if act['serializer'] is not None:
-                    data = act['serializer'].validated_data
-                else:
-                    data = {}
-                act['action'].action_data = data
-                act['action'].save()
-
-                try:
-                    act['action'].get_action().pre_approve()
-                except Exception as e:
-                    return self._handle_task_error(
-                        e, task, "while updating task", return_response=True)
-
-            return Response(
-                {'notes': ["Task successfully updated."]},
-                status=200)
-        else:
-            errors = {}
-            for act in act_list:
-                if act['serializer'] is not None:
-                    errors.update(act['serializer'].errors)
-            return Response({'errors': errors}, status=400)
+        return Response(
+            {'notes': ["Task successfully updated."]},
+            status=200)
 
     @utils.admin
     def post(self, request, uuid, format=None):
         """
         Will approve the Task specified,
-        followed by running the post_approve actions
+        followed by running the approve actions
         and if valid will setup and create a related token.
         """
         try:
-            task = Task.objects.get(uuid=uuid)
-        except Task.DoesNotExist:
-            return Response(
-                {'errors': ['No task with this id.']},
-                status=404)
-
-        try:
             if request.data.get('approved') is not True:
-                return Response(
-                    {'approved': ["this is a required boolean field."]},
-                    status=400)
+                raise exceptions.TaskSerializersInvalid(
+                    {'approved': ["this is a required boolean field."]})
         except ParseError:
-            return Response(
-                {'approved': ["this is a required boolean field."]},
-                status=400)
+            raise exceptions.TaskSerializersInvalid(
+                {'approved': ["this is a required boolean field."]})
+
+        task = self.task_manager.approve(uuid, request.keystone_user)
 
         if task.completed:
             return Response(
-                {'errors':
-                    ['This task has already been completed.']},
-                status=400)
-
-        if task.cancelled:
+                {'notes': ["Task completed successfully."]}, status=200)
+        else:
             return Response(
-                {'errors':
-                    ['This task has been cancelled.']},
-                status=400)
-
-        # we check that the task is valid before approving it:
-        valid = True
-        for action in task.actions:
-            if not action.valid:
-                valid = False
-
-        if not valid:
-            return Response(
-                {'errors':
-                    ['Cannot approve an invalid task. '
-                     'Update data and rerun pre_approve.']},
-                status=400)
-
-        if task.approved:
-            # Expire previously in use tokens
-            Token.objects.filter(task=task.uuid).delete()
-
-        # We approve the task before running actions,
-        # that way if something goes wrong we know if it was approved,
-        # when it was approved, and who approved it last. Subsequent
-        # reapproval attempts overwrite previous approved_by/on.
-        task.approved = True
-        task.approved_by = request.keystone_user
-        task.approved_on = timezone.now()
-        task.save()
-
-        need_token = False
-        valid = True
-
-        actions = []
-
-        for action in task.actions:
-            act_model = action.get_action()
-            actions.append(act_model)
-            try:
-                act_model.post_approve()
-            except Exception as e:
-                return self._handle_task_error(
-                    e, task, "while approving task", return_response=True)
-
-            if not action.valid:
-                valid = False
-            if action.need_token:
-                need_token = True
-
-        if valid:
-            if need_token:
-                token = create_token(task)
-                try:
-                    class_conf = settings.TASK_SETTINGS.get(
-                        task.task_type, settings.DEFAULT_TASK_SETTINGS)
-
-                    # will throw a key error if the token template has not
-                    # been specified
-                    email_conf = class_conf['emails']['token']
-                    send_stage_email(task, email_conf, token)
-                    return Response({'notes': ['created token']},
-                                    status=200)
-                except KeyError as e:
-                    return self._handle_task_error(
-                        e, task, "while sending token", return_response=True)
-            else:
-                for action in actions:
-                    try:
-                        action.submit({})
-                    except Exception as e:
-                        return self._handle_task_error(
-                            e, task, "while submitting task",
-                            return_response=True)
-
-                task.completed = True
-                task.completed_on = timezone.now()
-                task.save()
-
-                # Sending confirmation email:
-                class_conf = settings.TASK_SETTINGS.get(
-                    task.task_type, settings.DEFAULT_TASK_SETTINGS)
-                email_conf = class_conf.get(
-                    'emails', {}).get('completed', None)
-                send_stage_email(task, email_conf)
-
-                return Response(
-                    {'notes': ["Task completed successfully."]},
-                    status=200)
-        return Response({'errors': ['actions invalid']}, status=400)
+                {'notes': ['created token']}, status=202)
 
     @utils.mod_or_admin
     def delete(self, request, uuid, format=None):
@@ -482,6 +299,7 @@ class TaskDetail(APIViewWithLogger):
         associated with their project.
         """
         try:
+            # TODO(adriant): better handle this bit of incode policy
             if 'admin' in request.keystone_user['roles']:
                 task = Task.objects.get(uuid=uuid)
             else:
@@ -492,20 +310,7 @@ class TaskDetail(APIViewWithLogger):
                 {'errors': ['No task with this id.']},
                 status=404)
 
-        if task.completed:
-            return Response(
-                {'errors':
-                    ['This task has already been completed.']},
-                status=400)
-
-        if task.cancelled:
-            return Response(
-                {'errors':
-                    ['This task has already been cancelled.']},
-                status=400)
-
-        task.cancelled = True
-        task.save()
+        self.task_manager.cancel(task)
 
         return Response(
             {'notes': ["Task cancelled successfully."]},
@@ -545,6 +350,7 @@ class TokenList(APIViewWithLogger):
                 {'errors': {'task': ["This field is required.", ]}},
                 status=400)
         try:
+            # TODO(adriant): better handle this bit of incode policy
             if 'admin' in request.keystone_user['roles']:
                 task = Task.objects.get(uuid=uuid)
             else:
@@ -555,38 +361,7 @@ class TokenList(APIViewWithLogger):
                 {'errors': ['No task with this id.']},
                 status=404)
 
-        if task.completed:
-            return Response(
-                {'errors':
-                    ['This task has already been completed.']},
-                status=400)
-
-        if task.cancelled:
-            return Response(
-                {'errors':
-                    ['This task has been cancelled.']},
-                status=400)
-
-        if not task.approved:
-            return Response(
-                {'errors': ['This task has not been approved.']},
-                status=400)
-
-        for token in task.tokens:
-            token.delete()
-
-        token = create_token(task)
-        try:
-            class_conf = settings.TASK_SETTINGS.get(
-                task.task_type, settings.DEFAULT_TASK_SETTINGS)
-
-            # will throw a key error if the token template has not
-            # been specified
-            email_conf = class_conf['emails']['token']
-            send_stage_email(task, email_conf, token)
-        except KeyError as e:
-            return self._handle_task_error(
-                e, task, "while sending token", return_response=True)
+        self.task_manager.reissue_token(task)
         return Response(
             {'notes': ['Token reissued.']}, status=200)
 
@@ -660,69 +435,7 @@ class TokenDetail(APIViewWithLogger):
                 {'errors': ['This token does not exist or has expired.']},
                 status=404)
 
-        if token.task.completed:
-            return Response(
-                {'errors':
-                    ['This task has already been completed.']},
-                status=400)
-
-        if token.task.cancelled:
-            return Response(
-                {'errors':
-                    ['This task has been cancelled.']},
-                status=400)
-
-        required_fields = set()
-        actions = []
-        for action in token.task.actions:
-            a = action.get_action()
-            actions.append(a)
-            for field in a.token_fields:
-                required_fields.add(field)
-
-        errors = {}
-        data = {}
-
-        for field in required_fields:
-            try:
-                data[field] = request.data[field]
-            except KeyError:
-                errors[field] = ["This field is required.", ]
-            except TypeError:
-                errors = ["Improperly formated json. "
-                          "Should be a key-value object."]
-                break
-
-        if errors:
-            return Response({"errors": errors}, status=400)
-
-        valid = True
-        for action in actions:
-            try:
-                action.submit(data)
-
-                if not action.valid:
-                    valid = False
-
-            except Exception as e:
-                return self._handle_task_error(
-                    e, token.task, "while submiting task",
-                    return_response=True)
-
-        if not valid:
-            return Response({"errors": ["Actions invalid"]}, status=400)
-
-        token.task.completed = True
-        token.task.completed_on = timezone.now()
-        token.task.save()
-        token.delete()
-
-        # Sending confirmation email:
-        class_conf = settings.TASK_SETTINGS.get(
-            token.task.task_type, settings.DEFAULT_TASK_SETTINGS)
-        email_conf = class_conf.get(
-            'emails', {}).get('completed', None)
-        send_stage_email(token.task, email_conf)
+        self.task_manager.submit(token.task, request.data)
 
         return Response(
             {'notes': ["Token submitted successfully."]},

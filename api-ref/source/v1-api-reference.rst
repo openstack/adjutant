@@ -3,7 +3,7 @@ Admin Logic Version 1 API reference
 ###################################
 
 This is the reference for Adjutant when it is using the default configuration.
-Different deployments may exclude certain task views or include their own
+Different deployments may exclude certain DelegateAPIs or include their own
 additional ones.
 
 The core functionality of Adjutant is built around the concept of tasks and
@@ -74,14 +74,13 @@ Version One Details Endpoint
 
 Unauthenticated.
 
-Details V1 version details and the available taskviews and their fields.
-See below for further details on the individual taskviews.
+Details V1 version details.
 
 Normal response code: 200
 
 .. include:: admin-api.inc
 
-.. include:: taskviews.inc
+.. include:: delegate-apis.inc
 
 
 ****************************

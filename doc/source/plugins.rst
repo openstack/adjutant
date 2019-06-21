@@ -11,89 +11,102 @@ extend the core service where and when need.
 An example of such a plugin is here:
 https://github.com/catalyst/adjutant-odoo
 
-New TaskViews should inherit from adjutant.api.v1.tasks.TaskView
+Building DelegateAPIs
+=====================
+
+New DelegateAPIs should inherit from adjutant.api.v1.base.BaseDelegateAPI
 can be registered as such::
 
-  from adjutant.api.v1.models import register_taskview_class,
+    from adjutant.api.v1.models import register_delegate_api_class,
 
-  from myplugin import tasks
+    from myplugin import apis
 
-  register_taskview_class(r'^openstack/sign-up/?$', tasks.OpenStackSignUp)
+    register_delegate_api_class(r'^my-plugin/some-action/?$', apis.MyAPIView)
+
+A DelegateAPI must both be registered with a valid URL and specified in
+ACTIVE_DELEGATE_APIS in the configuration to be accessible.
+
+A new DelegateAPI from a plugin can effectively 'override' a default
+DelegateAPI by registering with the same URL. However it must have
+a different class name and the previous DelegateAPI must be removed from
+ACTIVE_DELEGATE_APIS.
+
+Examples of DelegateAPIs can be found in adjutant.api.v1.openstack
+
+Minimally they can look like this::
+
+    class NewCreateProject(BaseDelegateAPI):
+
+        @utils.authenticated
+        def post(self, request):
+            self.task_manager.create_from_request('my_custom_task', request)
+
+            return Response({'notes': ['task created']}, status=202)
+
+Access can be restricted with the decorators mod_or_admin, project_admin and
+admin decorators found in adjutant.api.utils. The request handlers are fairly
+standard django view handlers and can execute any needed code. Additional
+information for the task should be placed in request.data.
+
+
+Building Tasks
+==============
+
+Tasks must be derived from adjutant.tasks.v1.base.BaseTask and can be
+registered as such::
+
+    from adjutant.tasks.v1.models import register_task_class
+
+    register_task_class(MyPluginTask)
+
+Examples of tasks can be found in `adjutant.tasks.v1`
+
+Minimally task should define their required fields::
+
+    class My(MyPluginTask):
+        task_type = "my_custom_task"
+        default_actions = [
+            "MyCustomAction",
+        ]
+        duplicate_policy = "cancel" # default is cancel
+
+
+Building Actions
+================
 
 Actions must be derived from adjutant.actions.v1.base.BaseAction and are
 registered alongside their serializer::
 
   from adjutant.actions.v1.models import register_action_class
 
-  register_action_class(NewClientSignUpAction, NewClientSignUpActionSerializer)
+  register_action_class(MyCustomAction, MyCustomActionSerializer)
 
 Serializers can inherit from either rest_framework.serializers.Serializer, or
 the current serializers in adjutant.actions.v1.serializers.
 
-A task must both be registered with a valid URL and specified in
-ACTIVE_TASKVIEWS in the configuration to be accessible.
-
-A new task from a plugin can effectively 'override' a default task by
-registering with the same URL, and sharing the task type. However it must have
-a different class name and the previous task must be removed from
-ACTIVE_TASKVIEWS.
-
-
-**********************
-Building Taskviews
-**********************
-
-Examples of taskviews can be found in adjutant.api.v1.openstack
-
-Minimally they can look like this::
-
-    class NewCreateProject(TaskView):
-
-        task_type = "new_create_project"
-
-        default_actions = ["NewProjectWithUserAction", ]
-
-        def post(self, request, format=None):
-            processed, status = self.process_actions(request)
-
-            errors = processed.get('errors', None)
-            if errors:
-                self.logger.info("(%s) - Validation errors with task." %
-                                 timezone.now())
-                return Response(errors, status=status)
-
-            return Response(response_dict, status=status)
-
-Access can be restricted with the decorators mod_or_admin, project_admin and
-admin decorators found in adjutant.api.utils. The request handlers are fairly
-standard django view handlers and can execute any needed code. Additional
-information for the actions should be placed in request.data.
-
-
-*********************
-Building Actions
-*********************
-
-Examples of actions can be found in adjutant.actions.v1.
+Examples of actions can be found in `adjutant.actions.v1`
 
 Minimally actions should define their required fields and implement 3
 functions::
 
-    required = [
-        'user_id',
-        'value1',
-    ]
+    class MyCustomAction(BaseAction):
 
-    def _pre_approve(self):
-        self.perform_action('initial')
+        required = [
+            'user_id',
+            'value1',
+        ]
 
-    def _post_approve(self):
-        self.perform_action('token')
-        self.action.task.cache['value'] = self.value1
+        def _prepare(self):
+            # Do some validation here
+            pass
 
-    def _submit(self, data):
-        self.perform_action('completed')
-        self.add_note("Submit action performed")
+        def _approve(self):
+            # Do some logic here
+            self.action.task.cache['value'] = self.value1
+
+        def _submit(self, data):
+            # Do some logic here
+            self.add_note("Submit action performed")
 
 Information set in the action task cache is available in email templates under
 task.cache.value, and the action data is available in action.ActionName.value.
@@ -127,7 +140,7 @@ Example::
     from adjutant.actions.v1.serializers import BaseUserIdSerializer
     from rest_framework import serializers
 
-    class NewActionSerializer(BaseUserIdSerializer):
+    class MyCustomActionSerializer(BaseUserIdSerializer):
         value_1 = serializers.CharField()
 
 ******************************
@@ -169,3 +182,6 @@ The Identity Manager is designed to replace access to the Keystone Client. It
 can be imported from ``adjutant.actions.user_store.IdentityManager`` .
 Functions for access to some of the other Openstack Clients are in
 ``adjutant.actions.openstack_clients``.
+
+This will be expanded on in future, with the IdentityManager itself also
+becoming pluggable.

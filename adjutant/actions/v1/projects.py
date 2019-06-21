@@ -28,7 +28,7 @@ class NewProjectAction(BaseAction, ProjectMixin, UserMixin):
     """
     Creates a new project for the current keystone_user.
 
-    This action can only be used for an autheticated taskview.
+    This action can only be used for an autheticated task.
     """
 
     required = [
@@ -69,10 +69,10 @@ class NewProjectAction(BaseAction, ProjectMixin, UserMixin):
             return self._validate_parent_project()
         return True
 
-    def _pre_approve(self):
+    def _prepare(self):
         self._validate()
 
-    def _post_approve(self):
+    def _approve(self):
         project_id = self.get_cache('project_id')
         if project_id:
             self.action.task.cache['project_id'] = project_id
@@ -116,7 +116,7 @@ class NewProjectAction(BaseAction, ProjectMixin, UserMixin):
 
     def _submit(self, token_data):
         """
-        Nothing to do here. Everything is done at post_approve.
+        Nothing to do here. Everything is done at the approve step.
         """
         pass
 
@@ -215,10 +215,10 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
 
         self.action.save()
 
-    def _pre_approve(self):
+    def _prepare(self):
         self._validate()
 
-    def _post_approve(self):
+    def _approve(self):
         """
         Approving a new project means we set up the project itself,
         and if the user doesn't exist, create it right away. An existing
@@ -369,7 +369,7 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
         The submit action is performed when a token is submitted.
         This is done to set a user password only, and so should now only
         change the user password. The project and user themselves are created
-        on post_approve.
+        on approve.
         """
 
         self._validate_user_submit()
@@ -445,10 +445,10 @@ class AddDefaultUsersToProjectAction(BaseAction, ProjectMixin, UserMixin):
         ])
         self.action.save()
 
-    def _pre_approve(self):
+    def _prepare(self):
         self._pre_validate()
 
-    def _post_approve(self):
+    def _approve(self):
         id_manager = user_store.IdentityManager()
         self.project_id = self.action.task.cache.get('project_id', None)
         self._validate()

@@ -15,7 +15,7 @@ reused in deployer specific workflow in their own plugins. If anything could
 be considered a feature, it potentially could be these. The plan is to add many
 of these, which any cloud can use out of the box, or augment as needed.
 
-To enable these they must be added to `ACTIVE_TASKVIEWS` in the conf file.
+To enable these they must be added to `ACTIVE_DELEGATE_APIS` in the conf file.
 
 For most of these there are matching panels in Horizon.
 

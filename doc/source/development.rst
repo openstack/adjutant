@@ -12,7 +12,7 @@ type.
 An Action is both a simple database representation of itself, and a more
 complex in memory class that handles all the logic around it.
 
-Each action class has the functions "pre_approve", "post_approve", and
+Each action class has the functions "prepare", "approve", and
 "submit". These relate to stages of the approval process, and any python code
 can be executed in those functions, some of which should ideally be validation.
 
@@ -24,11 +24,16 @@ requires some info passed along to a later step of execution.
 
 See ``actions.models`` and ``actions.v1`` for a good idea of Actions.
 
-Tasks originate at a TaskView, and start the action processing. They encompass
-the user side of interaction.
+Tasks, like actions, are also a database representation, and a more complex in
+memory class. These classes define what actions the task has, and certain other
+elements of how it functions. Most of the logic for task and action processing
+is in the base task class, with most interactions with tasks occuring via the
+TaskManager.
+
+See ``tasks.models`` and ``tasks.v1`` for a good idea of Tasks.
 
 The main workflow consists of three possible steps which can be executed at
-different points in time, depending on how the TaskView and the actions within
+different points in time, depending on how the task and the actions within
 it are defined.
 
 The base use case is three stages:
@@ -36,16 +41,16 @@ The base use case is three stages:
 * Receive Request
     * Validate request data against action serializers.
     * If valid, setup Task to represent the request, and the Actions specified
-      for that TaskView.
-    * The service runs the pre_approve function on all actions which should do
+      for that Task.
+    * The service runs the "prepare" function on all actions which should do
       any self validation to mark the actions themselves as valid or invalid,
-      and populating the nodes in the Task based on that.
-* Admin Approval
-    * An admin looks at the Task and its notes.
-    * If they decide it is safe to approve, they do so.
-        * If there are any invalid actions approval will do nothing until the
-          action data is updated and initial validation is rerun.
-    * The service runs the post_approve function on all actions.
+      and populating the notes in the Task based on that.
+* Auto or Admin Approval
+    * Either a task is set to auto_approve or and admin looks at it to decide.
+        * If they decide it is safe to approve, they do so.
+            * If there are any invalid actions approval will do nothing until
+              the action data is updated and initial validation is rerun.
+    * The service runs the "approve" function on all actions.
     * If any of the actions require a Token to be issued and emailed for
       additional data such as a user password, then that will occur.
     * If no Token is required, the Task will run submit actions, and be
@@ -57,17 +62,17 @@ The base use case is three stages:
     * The action will then complete with the given final data.
     * Task is marked as complete.
 
-There are cases and TaskViews that auto-approve, and thus automatically do the
+There are cases where Tasks auto-approve, and thus automatically do the
 middle step right after the first. There are also others which do not need a
 Token and thus run the submit step as part of the second, or even all three at
 once. The exact number of 'steps' and the time between them depends on the
-definition of the TaskView.
+definition of the Task.
 
 Actions themselves can also effectively do anything within the scope of those
 three stages, and there is even the ability to chain multiple actions together,
 and pass data along to other actions.
 
-Details for adding taskviews and actions can be found on the :doc:`plugins`
+Details for adding task and actions can be found on the :doc:`plugins`
 page.
 
 
@@ -82,16 +87,19 @@ type.
 An Action is both a simple database representation of itself, and a more
 complex in memory class that handles all the logic around it.
 
-Each action class has the functions "pre_approve", "post_approve", and
+Each action class has the functions "prepare", "approve", and
 "submit". These relate to stages of the approval process, and any python code
 can be executed in those functions.
 
 What is a Task?
 ===============
-A task is a top level model representation of the request. It wraps the
-request metadata, and based on the TaskView, will have actions associated with
-it.
 
+A task is a top level model representation of the workflow. Much like an Action
+it is a simple database representation of itself, and a more complex in memory
+class that handles all the logic around it.
+
+Tasks define what actions are part of a task, and handle the logic of
+processing them.
 
 What is a Token?
 ================
@@ -99,27 +107,26 @@ What is a Token?
 A token is a unique identifier linking to a task, so that anyone submitting
 the token will submit to the actions related to the task.
 
-What is an TaskView?
-====================
+What is a DelegateAPI?
+======================
 
-TaskViews are classes which extend the base TaskView class and use its inbuilt
-functions to process actions. They also have actions associated with them and
-the inbuilt functions from the base class are there to process and validate
-those against data coming in.
+DelegateAPIs are classes which extend the base DelegateAPI class.
 
-The TaskView will process incoming data and build it into a Task,
-and the related Action classes.
+They are mostly used to expose underlying tasks as APIs, and they do so
+by using the TaskManager to handle the workflow. The TaskManager will
+handle the data validation, and raise error responses for errors that
+the user should see. If valid the TaskManager will process incoming
+data and build it into a Task, and the related Action classes.
 
-The base TaskView class has three functions:
+DelegateAPIs can also be used for small arbitary queries, or building
+a full suite of query and task APIs. They are built to be flexible, and
+easily pluggable into Adjutant. At their base DelegateAPIs are Django
+Rest Framework ApiViews, with a helpers for task handling.
 
-* get
-    * just a basic view function that by default returns list of actions,
-      and their required fields for the action view.
-* process_actions
-    * needs to be called in the TaskView definition
-    * A function to run the processing and validation of request data for
-      actions.
-    * Builds and returns the task object, or the validation errors.
-
-At their base TaskViews are django-rest ApiViews, with a few magic functions
-to wrap the task logic.
+The only constraint with DelegateAPIs is that they should not do any
+resourse creation/alteration/deletion themselves. If you need to work with
+resources, use the task layer and define a task and actions for it.
+Building DelegateAPIs which just query other APIs and don't alter
+resources, but need to return information about resources in other
+systems is fine. These are useful small little APIs to suppliment any
+admin logic you need to expose.

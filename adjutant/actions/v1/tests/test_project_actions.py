@@ -35,14 +35,13 @@ class ProjectActionTests(TestCase):
         """
         Base case, no project, no user.
 
-        Project and user created at post_approve step,
+        Project and user created at approve step,
         user password at submit step.
         """
 
         setup_identity_cache()
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={}
         )
 
@@ -55,10 +54,10 @@ class ProjectActionTests(TestCase):
 
         action = NewProjectWithUserAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         new_project = fake_clients.identity_cache['new_projects'][0]
@@ -88,14 +87,13 @@ class ProjectActionTests(TestCase):
 
     def test_new_project_reapprove(self):
         """
-        Project created at post_approve step,
+        Project created at approve step,
         ensure reapprove does nothing.
         """
 
         setup_identity_cache()
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={}
         )
 
@@ -108,10 +106,10 @@ class ProjectActionTests(TestCase):
 
         action = NewProjectWithUserAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         new_project = fake_clients.identity_cache['new_projects'][0]
@@ -126,7 +124,7 @@ class ProjectActionTests(TestCase):
             {'project_id': new_project.id, 'user_id': new_user.id,
              'user_state': 'default'})
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
         self.assertEqual(
             len(fake_clients.identity_cache['new_projects']), 1)
@@ -152,7 +150,7 @@ class ProjectActionTests(TestCase):
 
     def test_new_project_reapprove_failure(self):
         """
-        Project created at post_approve step, failure at role grant.
+        Project created at approve step, failure at role grant.
 
         Ensure reapprove correctly finishes.
         """
@@ -160,7 +158,6 @@ class ProjectActionTests(TestCase):
         setup_identity_cache()
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={}
         )
 
@@ -173,7 +170,7 @@ class ProjectActionTests(TestCase):
 
         action = NewProjectWithUserAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
         # NOTE(adrian): We need the code to fail at the
@@ -189,7 +186,7 @@ class ProjectActionTests(TestCase):
         action.grant_roles = fail_grant
 
         # Now we expect the failure
-        self.assertRaises(FakeException, action.post_approve)
+        self.assertRaises(FakeException, action.approve)
 
         # No roles_granted yet, but user created
         self.assertTrue("user_id" in action.action.cache)
@@ -206,7 +203,7 @@ class ProjectActionTests(TestCase):
         # And then swap back the correct function
         action.grant_roles = old_grant_function
         # and try again, it should work this time
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
         # roles_granted in cache
         self.assertTrue("roles_granted" in action.action.cache)
@@ -235,7 +232,6 @@ class ProjectActionTests(TestCase):
         setup_identity_cache(users=[user])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={}
         )
 
@@ -248,10 +244,10 @@ class ProjectActionTests(TestCase):
 
         action = NewProjectWithUserAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         new_project = fake_clients.identity_cache['new_projects'][0]
@@ -291,7 +287,6 @@ class ProjectActionTests(TestCase):
         setup_identity_cache(users=[user])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={}
         )
 
@@ -305,10 +300,10 @@ class ProjectActionTests(TestCase):
 
         action = NewProjectWithUserAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, False)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, False)
 
         self.assertEqual(
@@ -327,7 +322,6 @@ class ProjectActionTests(TestCase):
         setup_identity_cache()
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={}
         )
 
@@ -340,10 +334,10 @@ class ProjectActionTests(TestCase):
 
         action = NewProjectWithUserAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         new_project = fake_clients.identity_cache['new_projects'][0]
@@ -363,7 +357,6 @@ class ProjectActionTests(TestCase):
         setup_identity_cache()
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={}
         )
 
@@ -376,10 +369,10 @@ class ProjectActionTests(TestCase):
 
         action = NewProjectWithUserAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         new_user = fake_clients.identity_cache['new_users'][0]
@@ -404,7 +397,6 @@ class ProjectActionTests(TestCase):
         setup_identity_cache(users=[user])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={}
         )
 
@@ -418,10 +410,10 @@ class ProjectActionTests(TestCase):
         # Sign up, approve
         action = NewProjectWithUserAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         new_project = fake_clients.identity_cache['new_projects'][0]
@@ -471,7 +463,6 @@ class ProjectActionTests(TestCase):
 
         # Sign up for the project+user, validate.
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={}
         )
 
@@ -484,7 +475,7 @@ class ProjectActionTests(TestCase):
 
         # Sign up
         action = NewProjectWithUserAction(data, task=task, order=1)
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
         # Create the disabled user directly with the Identity Manager.
@@ -500,7 +491,7 @@ class ProjectActionTests(TestCase):
         fake_client.disable_user(user.id)
 
         # approve previous signup
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         new_project = fake_clients.identity_cache['new_projects'][0]
@@ -544,7 +535,6 @@ class ProjectActionTests(TestCase):
         setup_identity_cache(projects=[project])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
                 'project_id': 'test_project_id',
@@ -560,10 +550,10 @@ class ProjectActionTests(TestCase):
 
         action = NewProjectWithUserAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, False)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, False)
 
     def test_new_project_invalid_domain_id(self):
@@ -572,7 +562,6 @@ class ProjectActionTests(TestCase):
         setup_identity_cache()
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={
                 'roles': ['admin', 'project_mod'],
                 'project_id': 'test_project_id',
@@ -588,10 +577,10 @@ class ProjectActionTests(TestCase):
 
         action = NewProjectWithUserAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, False)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, False)
 
     @override_settings(USERNAME_IS_EMAIL=False)
@@ -599,14 +588,13 @@ class ProjectActionTests(TestCase):
         """
         Base case, no project, no user.
 
-        Project and user created at post_approve step,
+        Project and user created at approve step,
         user password at submit step.
         """
 
         setup_identity_cache()
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={}
         )
 
@@ -620,10 +608,10 @@ class ProjectActionTests(TestCase):
 
         action = NewProjectWithUserAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         new_project = fake_clients.identity_cache['new_projects'][0]
@@ -670,17 +658,17 @@ class ProjectActionTests(TestCase):
         setup_identity_cache(projects=[project])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+            keystone_user={'roles': ['admin']})
 
         task.cache = {'project_id': project.id}
 
         action = AddDefaultUsersToProjectAction(
             {'domain_id': 'default'}, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         fake_client = fake_clients.FakeManager()
@@ -691,23 +679,23 @@ class ProjectActionTests(TestCase):
     def test_add_default_users_invalid_project(self):
         """Add default users to a project that doesn't exist.
 
-        Action should become invalid at the post_approve state, it's ok if
-        the project isn't created yet during pre_approve.
+        Action should become invalid at the approve state, it's ok if
+        the project isn't created yet during prepare.
         """
         setup_identity_cache()
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+            keystone_user={'roles': ['admin']})
 
         task.cache = {'project_id': "invalid_project_id"}
 
         action = AddDefaultUsersToProjectAction(
             {'domain_id': 'default'}, task=task, order=1)
-        action.pre_approve()
+        action.prepare()
         # No need to test project yet - it's ok if it doesn't exist
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         # Now the missing project should make the action invalid
         self.assertEqual(action.valid, False)
 
@@ -725,17 +713,17 @@ class ProjectActionTests(TestCase):
         setup_identity_cache(projects=[project])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0", keystone_user={'roles': ['admin']})
+            keystone_user={'roles': ['admin']})
 
         task.cache = {'project_id': project.id}
 
         action = AddDefaultUsersToProjectAction(
             {'domain_id': 'default'}, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         fake_client = fake_clients.FakeManager()
@@ -743,7 +731,7 @@ class ProjectActionTests(TestCase):
         roles = fake_client._get_roles_as_names(user, project)
         self.assertEqual(roles, ['admin'])
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         roles = fake_client._get_roles_as_names(user, project)
@@ -762,7 +750,6 @@ class ProjectActionTests(TestCase):
         setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={"user_id": user.id,
                            "project_id": project.id,
                            "project_domain_id": 'default'})
@@ -776,10 +763,10 @@ class ProjectActionTests(TestCase):
 
         action = NewProjectAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         new_project = fake_clients.identity_cache['new_projects'][0]
@@ -796,7 +783,7 @@ class ProjectActionTests(TestCase):
         action.submit({})
         self.assertEqual(action.valid, True)
 
-    def test_new_project_action_rerun_post_approve(self):
+    def test_new_project_action_rerun_approve(self):
         """
         Tests the new project action for an existing user does
         nothing on reapproval.
@@ -810,7 +797,6 @@ class ProjectActionTests(TestCase):
         setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={"user_id": user.id,
                            "project_id": project.id,
                            "project_domain_id": 'default'})
@@ -824,10 +810,10 @@ class ProjectActionTests(TestCase):
 
         action = NewProjectAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         new_project = fake_clients.identity_cache['new_projects'][0]
@@ -841,7 +827,7 @@ class ProjectActionTests(TestCase):
             sorted(['_member_', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
-        action.post_approve()
+        action.approve()
         # Nothing should change
         self.assertEqual(action.valid, True)
 
@@ -871,7 +857,6 @@ class ProjectActionTests(TestCase):
         setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={"user_id": user.id,
                            "project_id": project.id,
                            "project_domain_id": 'default'})
@@ -885,10 +870,10 @@ class ProjectActionTests(TestCase):
 
         action = NewProjectAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, False)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, False)
 
         action.submit({})
@@ -908,7 +893,6 @@ class ProjectActionTests(TestCase):
         setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={"user_id": user.id,
                            "project_id": project.id,
                            "project_domain_id": 'default'})
@@ -922,10 +906,10 @@ class ProjectActionTests(TestCase):
 
         action = NewProjectAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, False)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, False)
 
         action.submit({})
@@ -944,7 +928,6 @@ class ProjectActionTests(TestCase):
         setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
-            ip_address="0.0.0.0",
             keystone_user={"user_id": user.id,
                            "project_id": project.id,
                            "project_domain_id": 'default'})
@@ -958,10 +941,10 @@ class ProjectActionTests(TestCase):
 
         action = NewProjectAction(data, task=task, order=1)
 
-        action.pre_approve()
+        action.prepare()
         self.assertEqual(action.valid, True)
 
-        action.post_approve()
+        action.approve()
         self.assertEqual(action.valid, True)
 
         new_project = fake_clients.identity_cache['new_projects'][0]

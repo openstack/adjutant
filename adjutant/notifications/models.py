@@ -43,7 +43,7 @@ class EmailNotification(NotificationEngine):
     send an email with the given templates.
 
     Example conf:
-        <TaskView>:
+        <task_type>:
             notifications:
                 EmailNotification:
                     standard:
