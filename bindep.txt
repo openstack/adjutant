@@ -1,0 +1,20 @@
+# See openstack-infra/project-config:jenkins/data/bindep-fallback.txt
+# This is used by bindep: sudo [apt-get | yum] install $(bindep -b)
+
+libffi-dev [platform:dpkg]
+libffi-devel [platform:rpm]
+virtual/libffi [platform:gentoo]
+
+libmysqlclient-dev [platform:dpkg]
+mysql-client [platform:dpkg]
+mysql-server [platform:dpkg]
+mariadb [platform:rpm]
+mariadb-devel [platform:redhat]
+mariadb-server [platform:rpm]
+libmariadb-devel [platform:suse]
+dev-db/mariadb [platform:gentoo]
+
+python-all-dev [platform:dpkg]
+python3-all-dev [platform:dpkg]
+python2-devel [platform:rpm]
+python3-devel [platform:fedora]
