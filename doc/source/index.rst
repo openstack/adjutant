@@ -6,6 +6,7 @@ Welcome to Adjutant's documentation!
    :maxdepth: 1
 
    development
+   release-notes
    devstack-guide
    configuration
    plugins

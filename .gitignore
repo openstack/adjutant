@@ -11,3 +11,7 @@ env/*
 cover/*
 .vscode/
 venv/
+
+AUTHORS
+ChangeLog
+releasenotes/build
