@@ -14,6 +14,7 @@ python-novaclient>=14.0.0
 python-octaviaclient>=1.8.0
 PyYAML>=5.1
 six>=1.12.0
+confspirator>=0.1.6
 
 # Address soon:
 Django>=1.11,<1.12

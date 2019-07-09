@@ -15,3 +15,5 @@
 # Date formats to use when storing time data we expect to parse.
 DATE_FORMAT = "%Y-%m-%dT%H:%M:%S"
 DATE_FORMAT_MS = "%Y-%m-%dT%H:%M:%S.%f"
+EMAIL_REGEX = r"(^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"
+EMAIL_WITH_TEMPLATE_REGEX = r"(^[%()a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$)"

@@ -34,7 +34,7 @@ Response Example
                 "name": "demo",
                 "roles": [
                     "project_admin",
-                    "__member__"
+                    "_member_"
                 ],
                 "status": "Active"
             }
@@ -64,7 +64,7 @@ Request Example
 
     curl -H "X-Auth-Token: $NOS_TOKEN" http://0.0.0.0:5050/v1/openstack/users \
      -H 'Content-Type: application/json' \
-    -d '{"roles": ["_member_"], "email": "new@example.com"}'
+    -d '{"roles": ["member"], "email": "new@example.com"}'
 
 Response Example
 -----------------
@@ -216,7 +216,7 @@ Response Example
                 "links": {
                     "self": "http://identity/v3/roles/9fe2ff9ee4384b1894a90878d3e92bab"
                 },
-                "name": "_member_"
+                "name": "member"
             },
         ]
     }

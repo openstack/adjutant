@@ -16,9 +16,8 @@ from logging import getLogger
 
 from six import string_types
 
-from django.conf import settings
-
 from adjutant import exceptions
+from adjutant import tasks
 from adjutant.tasks.models import Task
 from adjutant.tasks.v1.base import BaseTask
 
@@ -35,9 +34,9 @@ class TaskManager(object):
         otherwise if it is a valid task class, will return it.
         """
         try:
-            return settings.TASK_CLASSES[task_type]
+            return tasks.TASK_CLASSES[task_type]
         except KeyError:
-            if task_type in settings.TASK_CLASSES.values():
+            if task_type in tasks.TASK_CLASSES.values():
                 return task_type
         raise exceptions.TaskNotRegistered(
             "Unknown task type: '%s'" % task_type)
@@ -69,7 +68,7 @@ class TaskManager(object):
                     "Task not found with uuid of: '%s'" % task)
         if isinstance(task, Task):
             try:
-                return settings.TASK_CLASSES[task.task_type](task)
+                return tasks.TASK_CLASSES[task.task_type](task)
             except KeyError:
                 # TODO(adriant): Maybe we should handle this better
                 # for older deprecated tasks:

@@ -23,6 +23,18 @@ class InviteUser(BaseTask):
         "NewUserAction",
     ]
 
+    email_config = {
+        'initial': None,
+        'token': {
+            'template': 'invite_user_to_project_token.txt',
+            'subject': 'invite_user_to_project'
+        },
+        'completed': {
+            'template': 'invite_user_to_project_completed.txt',
+            'subject': 'invite_user_to_project'
+        }
+    }
+
 
 class ResetUserPassword(BaseTask):
     task_type = "reset_user_password"
@@ -30,6 +42,18 @@ class ResetUserPassword(BaseTask):
     default_actions = [
         "ResetUserPasswordAction",
     ]
+
+    email_config = {
+        'initial': None,
+        'token': {
+            'template': 'reset_user_password_token.txt',
+            'subject': 'Password Reset for OpenStack'
+        },
+        'completed': {
+            'template': 'reset_user_password_completed.txt',
+            'subject': 'Password Reset for OpenStack'
+        }
+    }
 
 
 class EditUserRoles(BaseTask):
@@ -39,6 +63,12 @@ class EditUserRoles(BaseTask):
         "EditUserRolesAction",
     ]
 
+    email_config = {
+        'initial': None,
+        'token': None,
+        'completed': None
+    }
+
 
 class UpdateUserEmail(BaseTask):
     task_type = "update_user_email"
@@ -46,3 +76,26 @@ class UpdateUserEmail(BaseTask):
     default_actions = [
         "UpdateUserEmailAction",
     ]
+    additional_actions = [
+        'SendAdditionalEmailAction',
+    ]
+    action_config = {
+        'SendAdditionalEmailAction': {
+            'initial': {
+                'subject': 'OpenStack Email Update Requested',
+                'template': 'update_user_email_started.txt',
+                'email_current_user': True,
+            },
+        },
+    }
+    email_config = {
+        'initial': None,
+        'token': {
+            'subject': 'update_user_email_token',
+            'template': 'update_user_email_token.txt'
+        },
+        'completed': {
+            'subject': 'Email Update Complete',
+            'template': 'update_user_email_completed.txt'
+        }
+    }

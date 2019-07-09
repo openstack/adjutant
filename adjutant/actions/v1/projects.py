@@ -14,9 +14,12 @@
 
 from uuid import uuid4
 
-from django.conf import settings
+from confspirator import groups
+from confspirator import fields
+
 from django.utils import timezone
 
+from adjutant.config import CONF
 from adjutant.common import user_store
 from adjutant.common.utils import str_datetime
 from adjutant.actions.utils import validate_steps
@@ -37,6 +40,17 @@ class NewProjectAction(BaseAction, ProjectMixin, UserMixin):
         'project_name',
         'description',
     ]
+
+    config_group = groups.DynamicNameConfigGroup(
+        children=[
+            fields.ListConfig(
+                "default_roles",
+                help_text="Roles to be given on project to the creating user.",
+                default=[],
+                sample_default=["member", "project_admin"]
+            ),
+        ],
+    )
 
     def __init__(self, *args, **kwargs):
         super(NewProjectAction, self).__init__(*args, **kwargs)
@@ -90,7 +104,7 @@ class NewProjectAction(BaseAction, ProjectMixin, UserMixin):
             self.action.task.cache['user_id'] = user_id
             self.add_note("User already given roles.")
         else:
-            default_roles = self.settings.get("default_roles", {})
+            default_roles = self.config.default_roles
 
             project_id = self.get_cache('project_id')
             keystone_user = self.action.task.keystone_user
@@ -135,6 +149,17 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
         'email'
     ]
 
+    config_group = groups.DynamicNameConfigGroup(
+        children=[
+            fields.ListConfig(
+                "default_roles",
+                help_text="Roles to be given on project for the user.",
+                default=[],
+                sample_default=["member", "project_admin"]
+            ),
+        ],
+    )
+
     def __init__(self, *args, **kwargs):
         super(NewProjectWithUserAction, self).__init__(*args, **kwargs)
 
@@ -166,7 +191,7 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
             self.set_token_fields(["password"])
             return True
 
-        if (not settings.USERNAME_IS_EMAIL
+        if (not CONF.identity.username_is_email
                 and getattr(user, 'email', None) != self.email):
             self.add_note("Existing user '%s' with non-matching email." %
                           self.username)
@@ -263,7 +288,7 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
 
     def _create_user_for_project(self):
         id_manager = user_store.IdentityManager()
-        default_roles = self.settings.get("default_roles", {})
+        default_roles = self.config.default_roles
 
         project_id = self.get_cache('project_id')
 
@@ -414,10 +439,25 @@ class AddDefaultUsersToProjectAction(BaseAction, ProjectMixin, UserMixin):
         'domain_id',
     ]
 
+    config_group = groups.DynamicNameConfigGroup(
+        children=[
+            fields.ListConfig(
+                "default_users",
+                help_text="Users which this action should add to the project.",
+                default=[],
+            ),
+            fields.ListConfig(
+                "default_roles",
+                help_text="Roles which those users should get.",
+                default=[],
+            ),
+        ],
+    )
+
     def __init__(self, *args, **kwargs):
         super(AddDefaultUsersToProjectAction, self).__init__(*args, **kwargs)
-        self.users = self.settings.get('default_users', [])
-        self.roles = self.settings.get('default_roles', [])
+        self.users = self.config.default_users
+        self.roles = self.config.default_roles
 
     def _validate_users(self):
         id_manager = user_store.IdentityManager()

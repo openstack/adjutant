@@ -20,7 +20,7 @@ from django.utils import timezone
 from rest_framework.response import Response
 
 from adjutant import exceptions
-from adjutant.api.v1.utils import create_notification
+from adjutant.notifications.utils import create_notification
 
 
 LOG = getLogger('adjutant')

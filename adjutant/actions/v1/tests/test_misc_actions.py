@@ -13,15 +13,18 @@
 #    under the License.
 
 import mock
+from smtplib import SMTPException
 
 from django.core import mail
+
+from confspirator.tests import utils as conf_utils
 
 from adjutant.actions.v1.misc import SendAdditionalEmailAction
 from adjutant.actions.utils import send_email
 from adjutant.api.models import Task
 from adjutant.common.tests.fake_clients import FakeManager
-from adjutant.common.tests.utils import modify_dict_settings, AdjutantTestCase
-from smtplib import SMTPException
+from adjutant.common.tests.utils import AdjutantTestCase
+from adjutant.config import CONF
 
 default_email_conf = {
     'from': "adjutant@example.com",
@@ -79,18 +82,17 @@ class MiscActionTests(AdjutantTestCase):
 
     @mock.patch('adjutant.actions.utils.EmailMultiAlternatives',
                 FailEmail)
-    @modify_dict_settings(DEFAULT_ACTION_SETTINGS={
-        'operation': 'update',
-        'key_list': ['SendAdditionalEmailAction', 'token'],
-        'value': {
-            'email_task_cache': True,
-            'subject': 'Email Subject',
-            'template': 'token.txt'
-        }
-    }, DEFAULT_TASK_SETTINGS={
-        'operation': 'delete',
-        'key_list': ['notifications'],
-    })
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.workflow.action_defaults.SendAdditionalEmailAction.approve": [
+                {'operation': 'overlay', 'value': {
+                    'email_task_cache': True,
+                    'subject': 'Email Subject',
+                    'template': 'token.txt'
+                }},
+            ],
+        })
     def test_send_additional_email_fail(self):
         """
         Tests that a failure to send an additional email doesn't cause
@@ -102,7 +104,6 @@ class MiscActionTests(AdjutantTestCase):
             task_type='edit_roles',
         )
 
-        # setup settings
         action = SendAdditionalEmailAction({}, task=task, order=1)
 
         action.prepare()
@@ -116,21 +117,23 @@ class MiscActionTests(AdjutantTestCase):
 
         self.assertEqual(len(mail.outbox), 0)
         self.assertTrue(
-            "Unable to send additional email. Stage: token" in
+            "Unable to send additional email. Stage: approve" in
             action.action.task.action_notes['SendAdditionalEmailAction'][1])
 
         action.submit({})
         self.assertEqual(action.valid, True)
 
-    @modify_dict_settings(DEFAULT_ACTION_SETTINGS={
-        'operation': 'update',
-        'key_list': ['SendAdditionalEmailAction', 'token'],
-        'value': {
-            'email_task_cache': True,
-            'subject': 'Email Subject',
-            'template': 'token.txt'
-        }
-    })
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.workflow.action_defaults.SendAdditionalEmailAction.approve": [
+                {'operation': 'overlay', 'value': {
+                    'email_task_cache': True,
+                    'subject': 'Email Subject',
+                    'template': 'token.txt'
+                }},
+            ],
+        })
     def test_send_additional_email_task_cache(self):
         """
         Tests sending an additional email with the address placed in the
@@ -141,7 +144,6 @@ class MiscActionTests(AdjutantTestCase):
             keystone_user={}
         )
 
-        # setup settings
         action = SendAdditionalEmailAction({}, task=task, order=1)
 
         action.prepare()
@@ -161,15 +163,17 @@ class MiscActionTests(AdjutantTestCase):
         self.assertEqual(action.valid, True)
         self.assertEqual(len(mail.outbox), 1)
 
-    @modify_dict_settings(DEFAULT_ACTION_SETTINGS={
-        'operation': 'update',
-        'key_list': ['SendAdditionalEmailAction', 'token'],
-        'value': {
-            'email_task_cache': True,
-            'subject': 'Email Subject',
-            'template': 'token.txt'
-        }
-    })
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.workflow.action_defaults.SendAdditionalEmailAction.approve": [
+                {'operation': 'overlay', 'value': {
+                    'email_task_cache': True,
+                    'subject': 'Email Subject',
+                    'template': 'token.txt'
+                }},
+            ],
+        })
     def test_send_additional_email_task_cache_none_set(self):
         """
         Tests sending an additional email with 'email_task_cache' set but
@@ -180,7 +184,6 @@ class MiscActionTests(AdjutantTestCase):
             keystone_user={}
         )
 
-        # setup settings
         action = SendAdditionalEmailAction({}, task=task, order=1)
 
         action.prepare()
@@ -194,16 +197,19 @@ class MiscActionTests(AdjutantTestCase):
         action.submit({})
         self.assertEqual(action.valid, True)
 
-    @modify_dict_settings(DEFAULT_ACTION_SETTINGS={
-        'operation': 'update',
-        'key_list': ['SendAdditionalEmailAction', 'token'],
-        'value': {
-            'email_additional_addresses': ['anadminwhocares@example.com'],
-            'subject': 'Email Subject',
-            'template': 'token.txt'
-        }
-    })
-    def test_send_additional_email_email_in_settings(self):
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.workflow.action_defaults.SendAdditionalEmailAction.approve": [
+                {'operation': 'overlay', 'value': {
+                    'email_additional_addresses': [
+                        'anadminwhocares@example.com'],
+                    'subject': 'Email Subject',
+                    'template': 'token.txt'
+                }},
+            ],
+        })
+    def test_send_additional_email_email_in_config(self):
         """
         Tests sending an additional email with the address placed in the
         task cache.
@@ -213,7 +219,6 @@ class MiscActionTests(AdjutantTestCase):
             keystone_user={}
         )
 
-        # setup settings
         action = SendAdditionalEmailAction({}, task=task, order=1)
 
         action.prepare()

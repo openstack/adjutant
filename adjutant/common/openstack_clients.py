@@ -13,8 +13,6 @@
 #    under the License.
 
 
-from django.conf import settings
-
 from keystoneauth1.identity import v3
 from keystoneauth1 import session
 from keystoneclient import client as ks_client
@@ -23,6 +21,8 @@ from cinderclient import client as cinderclient
 from neutronclient.v2_0 import client as neutronclient
 from novaclient import client as novaclient
 from octaviaclient.api.v2 import octavia
+
+from adjutant.config import CONF
 
 # Defined for use locally
 DEFAULT_COMPUTE_VERSION = "2"
@@ -43,12 +43,12 @@ def get_auth_session():
     if not client_auth_session:
 
         auth = v3.Password(
-            username=settings.KEYSTONE['username'],
-            password=settings.KEYSTONE['password'],
-            project_name=settings.KEYSTONE['project_name'],
-            auth_url=settings.KEYSTONE['auth_url'],
-            user_domain_id=settings.KEYSTONE.get('domain_id', "default"),
-            project_domain_id=settings.KEYSTONE.get('domain_id', "default"),
+            username=CONF.identity.auth.username,
+            password=CONF.identity.auth.password,
+            project_name=CONF.identity.auth.project_name,
+            auth_url=CONF.identity.auth.auth_url,
+            user_domain_id=CONF.identity.auth.user_domain_id,
+            project_domain_id=CONF.identity.auth.project_domain_id,
         )
         client_auth_session = session.Session(auth=auth)
 

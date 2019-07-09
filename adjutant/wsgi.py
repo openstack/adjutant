@@ -22,9 +22,12 @@ https://docs.djangoproject.com/en/1.8/howto/deployment/wsgi/
 """
 
 import os
+
 from django.core.wsgi import get_wsgi_application
-from django.conf import settings
+
 from keystonemiddleware.auth_token import AuthProtocol
+
+from adjutant.config import CONF
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "adjutant.settings")
 
@@ -35,14 +38,14 @@ application = get_wsgi_application()
 # the Keystone Auth Middleware.
 conf = {
     "auth_plugin": "password",
-    'username': settings.KEYSTONE['username'],
-    'password': settings.KEYSTONE['password'],
-    'project_name': settings.KEYSTONE['project_name'],
-    "project_domain_id": settings.KEYSTONE.get('domain_id', "default"),
-    "user_domain_id": settings.KEYSTONE.get('domain_id', "default"),
-    "auth_url": settings.KEYSTONE['auth_url'],
+    'username': CONF.identity.auth.username,
+    'password': CONF.identity.auth.password,
+    'project_name': CONF.identity.auth.project_name,
+    "project_domain_id": CONF.identity.auth.project_domain_id,
+    "user_domain_id": CONF.identity.auth.user_domain_id,
+    "auth_url": CONF.identity.auth.auth_url,
     'delay_auth_decision': True,
     'include_service_catalog': False,
-    'token_cache_time': settings.TOKEN_CACHE_TIME,
+    'token_cache_time': CONF.identity.token_cache_time,
 }
 application = AuthProtocol(application, conf)

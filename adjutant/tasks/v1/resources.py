@@ -20,3 +20,12 @@ class UpdateProjectQuotas(BaseTask):
     default_actions = [
         "UpdateProjectQuotasAction",
     ]
+
+    email_config = {
+        'initial': None,
+        'token': None,
+        'completed': {
+            'template': 'create_project_and_user_completed.txt',
+            'subject': 'signup completed'
+        }
+    }

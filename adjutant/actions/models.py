@@ -14,9 +14,10 @@
 
 from jsonfield import JSONField
 
-from django.conf import settings
 from django.db import models
 from django.utils import timezone
+
+from adjutant import actions
 
 
 class Action(models.Model):
@@ -45,5 +46,5 @@ class Action(models.Model):
     def get_action(self):
         """Returns self as the appropriate action wrapper type."""
         data = self.action_data
-        return settings.ACTION_CLASSES[self.action_name][0](
+        return actions.ACTION_CLASSES[self.action_name][0](
             data=data, action_model=self)

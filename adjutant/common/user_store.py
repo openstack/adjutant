@@ -14,32 +14,15 @@
 
 from collections import defaultdict
 
-from django.conf import settings
-
 from keystoneclient import exceptions as ks_exceptions
 
+from adjutant.config import CONF
 from adjutant.common.openstack_clients import get_keystoneclient
-
-
-def get_managable_roles(user_roles):
-    """
-    Given a list of user role names, returns a list of names
-    that the user is allowed to manage.
-    """
-    manage_mapping = settings.ROLES_MAPPING
-    # merge mapping lists to form a flat permitted roles list
-    managable_role_names = [mrole for role_name in user_roles
-                            if role_name in manage_mapping
-                            for mrole in manage_mapping[role_name]]
-    # a set has unique items
-    managable_role_names = set(managable_role_names)
-    return managable_role_names
 
 
 def subtree_ids_list(subtree, id_list=None):
     if id_list is None:
         id_list = []
-
     if not subtree:
         return id_list
     for key in subtree.keys():
@@ -64,7 +47,7 @@ class IdentityManager(object):  # pragma: no cover
 
         # TODO(adriant): decide if we want to have some function calls
         # throw errors if this is false.
-        self.can_edit_users = settings.KEYSTONE.get('can_edit_users', True)
+        self.can_edit_users = CONF.identity.can_edit_users
 
     def find_user(self, name, domain):
         try:
@@ -355,3 +338,28 @@ class IdentityManager(object):  # pragma: no cover
         for cred in credentials:
             if cred.user_id == user_id and cred.type == cred_type:
                 self.ks_client.credentials.delete(cred)
+
+    # TODO(adriant): Move this to a BaseIdentityManager class when
+    #                it exists.
+    def get_manageable_roles(self, user_roles=None):
+        """Get roles which can be managed
+
+        Given a list of user role names, returns a list of names
+        that the user is allowed to manage.
+
+        If user_roles is not given, returns all possible roles.
+        """
+        roles_mapping = CONF.identity.role_mapping
+        if user_roles is None:
+            all_roles = []
+            for options in roles_mapping.values():
+                all_roles += options
+            return list(set(all_roles))
+
+        # merge mapping lists to form a flat permitted roles list
+        manageable_role_names = [mrole for role_name in user_roles
+                                 if role_name in roles_mapping
+                                 for mrole in roles_mapping[role_name]]
+        # a set has unique items
+        manageable_role_names = set(manageable_role_names)
+        return manageable_role_names

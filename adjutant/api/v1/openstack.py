@@ -12,11 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.conf import settings
 from django.utils import timezone
 
-
 from rest_framework.response import Response
+
+from confspirator import groups
+from confspirator import fields
 
 from adjutant.common import user_store
 from adjutant.api import models
@@ -24,22 +25,34 @@ from adjutant.api import utils
 from adjutant.api.v1 import tasks
 from adjutant.api.v1.base import BaseDelegateAPI
 from adjutant.common.quota import QuotaManager
+from adjutant.config import CONF
 
 
 class UserList(tasks.InviteUser):
 
+    config_group = groups.DynamicNameConfigGroup(
+        children=[
+            fields.ListConfig(
+                'blacklisted_roles',
+                help_text="Users with any of these roles will be hidden from the user list.",
+                default=[],
+                sample_default=['admin']
+            ),
+        ]
+    )
+
     @utils.mod_or_admin
     def get(self, request):
         """Get a list of all users who have been added to a project"""
-        class_conf = settings.TASK_SETTINGS.get(
-            'edit_user_roles', settings.DEFAULT_TASK_SETTINGS)
-        role_blacklist = class_conf.get('role_blacklist', [])
+        class_conf = self.config
+        blacklisted_roles = class_conf.blacklisted_roles
+
         user_list = []
         id_manager = user_store.IdentityManager()
         project_id = request.keystone_user['project_id']
         project = id_manager.get_project(project_id)
 
-        can_manage_roles = user_store.get_managable_roles(
+        can_manage_roles = id_manager.get_manageable_roles(
             request.keystone_user['roles'])
 
         active_emails = set()
@@ -47,7 +60,7 @@ class UserList(tasks.InviteUser):
             skip = False
             roles = []
             for role in user.roles:
-                if role.name in role_blacklist:
+                if role.name in blacklisted_roles:
                     skip = True
                     continue
                 roles.append(role.name)
@@ -55,7 +68,7 @@ class UserList(tasks.InviteUser):
                 continue
             inherited_roles = []
             for role in user.inherited_roles:
-                if role.name in role_blacklist:
+                if role.name in blacklisted_roles:
                     skip = True
                     continue
                 inherited_roles.append(role.name)
@@ -81,7 +94,7 @@ class UserList(tasks.InviteUser):
             skip = False
             roles = []
             for role in user.roles:
-                if role.name in role_blacklist:
+                if role.name in blacklisted_roles:
                     skip = True
                     continue
                 roles.append(role.name)
@@ -145,7 +158,7 @@ class UserList(tasks.InviteUser):
                 'cohort': 'Invited',
                 'status': task['status']
             }
-            if not settings.USERNAME_IS_EMAIL:
+            if not CONF.identity.username_is_email:
                 user['name'] = task['task_data']['username']
 
             user_list.append(user)
@@ -154,7 +167,17 @@ class UserList(tasks.InviteUser):
 
 
 class UserDetail(BaseDelegateAPI):
-    task_type = 'edit_user_roles'
+
+    config_group = groups.DynamicNameConfigGroup(
+        children=[
+            fields.ListConfig(
+                'blacklisted_roles',
+                help_text="User with these roles will return not found.",
+                default=[],
+                sample_default=['admin']
+            ),
+        ]
+    )
 
     @utils.mod_or_admin
     def get(self, request, user_id):
@@ -170,18 +193,18 @@ class UserDetail(BaseDelegateAPI):
         if not user:
             return Response(no_user, status=404)
 
-        class_conf = settings.TASK_SETTINGS.get(
-            self.task_type, settings.DEFAULT_TASK_SETTINGS)
-        role_blacklist = class_conf.get('role_blacklist', [])
+        class_conf = self.config
+        blacklisted_roles = class_conf.blacklisted_roles
+
         project_id = request.keystone_user['project_id']
         project = id_manager.get_project(project_id)
 
         roles = [role.name for role in id_manager.get_roles(user, project)]
-        roles_blacklisted = set(role_blacklist) & set(roles)
+        roles_blacklisted = set(blacklisted_roles) & set(roles)
         inherited_roles = [
             role.name for role in id_manager.get_roles(user, project, True)]
         inherited_roles_blacklisted = (
-            set(role_blacklist) & set(inherited_roles))
+            set(blacklisted_roles) & set(inherited_roles))
 
         if not roles or roles_blacklisted or inherited_roles_blacklisted:
             return Response(no_user, status=404)
@@ -221,7 +244,18 @@ class UserDetail(BaseDelegateAPI):
 
 class UserRoles(BaseDelegateAPI):
 
-    task_type = 'edit_user_roles'
+    config_group = groups.DynamicNameConfigGroup(
+        children=[
+            fields.ListConfig(
+                'blacklisted_roles',
+                help_text="User with these roles will return not found.",
+                default=[],
+                sample_default=['admin']
+            ),
+        ]
+    )
+
+    task_type = "edit_user_roles"
 
     @utils.mod_or_admin
     def get(self, request, user_id):
@@ -236,16 +270,15 @@ class UserRoles(BaseDelegateAPI):
         project_id = request.keystone_user['project_id']
         project = id_manager.get_project(project_id)
 
-        class_conf = settings.TASK_SETTINGS.get(
-            self.task_type, settings.DEFAULT_TASK_SETTINGS)
-        role_blacklist = class_conf.get('role_blacklist', [])
+        class_conf = self.config
+        blacklisted_roles = class_conf.blacklisted_roles
 
         roles = [role.name for role in id_manager.get_roles(user, project)]
-        roles_blacklisted = set(role_blacklist) & set(roles)
+        roles_blacklisted = set(blacklisted_roles) & set(roles)
         inherited_roles = [
             role.name for role in id_manager.get_roles(user, project, True)]
         inherited_roles_blacklisted = (
-            set(role_blacklist) & set(inherited_roles))
+            set(blacklisted_roles) & set(inherited_roles))
 
         if not roles or roles_blacklisted or inherited_roles_blacklisted:
             return Response(no_user, status=404)
@@ -290,18 +323,18 @@ class RoleList(BaseDelegateAPI):
 
         # get roles for this user on the project
         user_roles = request.keystone_user['roles']
-        managable_role_names = user_store.get_managable_roles(user_roles)
 
         id_manager = user_store.IdentityManager()
+        manageable_role_names = id_manager.get_manageable_roles(user_roles)
 
         # look up role names and form output dict of valid roles
-        managable_roles = []
-        for role_name in managable_role_names:
+        manageable_roles = []
+        for role_name in manageable_role_names:
             role = id_manager.find_role(role_name)
             if role:
-                managable_roles.append(role.to_dict())
+                manageable_roles.append(role.to_dict())
 
-        return Response({'roles': managable_roles})
+        return Response({'roles': manageable_roles})
 
 
 class UserResetPassword(tasks.ResetPassword):
@@ -387,8 +420,8 @@ class UpdateProjectQuotas(BaseDelegateAPI):
         as well as the current status of a specified region's quotas.
         """
 
-        quota_settings = settings.PROJECT_QUOTA_SIZES
-        size_order = settings.QUOTA_SIZES_ASC
+        quota_sizes = CONF.quota.sizes
+        size_order = CONF.quota.sizes_ascending
 
         self.project_id = request.keystone_user['project_id']
         regions = request.query_params.get('regions', None)
@@ -416,7 +449,7 @@ class UpdateProjectQuotas(BaseDelegateAPI):
         response_tasks = self.get_active_quota_tasks()
 
         return Response({'regions': region_quotas,
-                         "quota_sizes": quota_settings,
+                         "quota_sizes": quota_sizes,
                          "quota_size_order": size_order,
                          "active_quota_tasks": response_tasks})
 

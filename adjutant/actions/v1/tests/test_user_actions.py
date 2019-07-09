@@ -14,7 +14,7 @@
 
 import mock
 
-from django.test.utils import override_settings
+from confspirator.tests import utils as conf_utils
 
 from adjutant.actions.v1.users import (
     EditUserRolesAction, NewUserAction, ResetUserPasswordAction,
@@ -22,11 +22,29 @@ from adjutant.actions.v1.users import (
 from adjutant.api.models import Task
 from adjutant.common.tests import fake_clients
 from adjutant.common.tests.fake_clients import setup_identity_cache
-from adjutant.common.tests.utils import modify_dict_settings, AdjutantTestCase
+from adjutant.common.tests.utils import AdjutantTestCase
+from adjutant.config import CONF
 
 
 @mock.patch('adjutant.common.user_store.IdentityManager',
             fake_clients.FakeManager)
+@conf_utils.modify_conf(
+    CONF,
+    operations={
+        "adjutant.identity.role_mapping": [
+            {'operation': 'override', 'value': {
+                'admin': [
+                    'project_admin', 'project_mod', 'member', 'heat_stack_owner'
+                ],
+                'project_admin': [
+                    'project_mod', 'member', 'heat_stack_owner', 'project_admin',
+                ],
+                'project_mod': [
+                    'member', 'heat_stack_owner', 'project_mod',
+                ],
+            }},
+        ],
+    })
 class UserActionTests(AdjutantTestCase):
 
     def test_new_user(self):
@@ -48,7 +66,7 @@ class UserActionTests(AdjutantTestCase):
         data = {
             'email': 'test@example.com',
             'project_id': project.id,
-            'roles': ['_member_'],
+            'roles': ['member'],
             'inherited_roles': [],
             'domain_id': 'default',
         }
@@ -75,7 +93,7 @@ class UserActionTests(AdjutantTestCase):
         self.assertEqual(user.password, '123456')
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(roles, ['_member_'])
+        self.assertEqual(roles, ['member'])
 
     def test_new_user_existing(self):
         """
@@ -98,7 +116,7 @@ class UserActionTests(AdjutantTestCase):
         data = {
             'email': 'test@example.com',
             'project_id': project.id,
-            'roles': ['_member_'],
+            'roles': ['member'],
             'inherited_roles': [],
             'domain_id': 'default',
         }
@@ -118,7 +136,7 @@ class UserActionTests(AdjutantTestCase):
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(roles, ['_member_'])
+        self.assertEqual(roles, ['member'])
 
     def test_new_user_disabled(self):
         """
@@ -143,7 +161,7 @@ class UserActionTests(AdjutantTestCase):
         data = {
             'email': 'test@example.com',
             'project_id': project.id,
-            'roles': ['_member_'],
+            'roles': ['member'],
             'inherited_roles': [],
             'domain_id': 'default',
         }
@@ -170,7 +188,7 @@ class UserActionTests(AdjutantTestCase):
         self.assertTrue(user.enabled)
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(roles, ['_member_'])
+        self.assertEqual(roles, ['member'])
 
     def test_new_user_existing_role(self):
         """
@@ -187,7 +205,7 @@ class UserActionTests(AdjutantTestCase):
 
         assignment = fake_clients.FakeRoleAssignment(
             scope={'project': {'id': project.id}},
-            role_name="_member_",
+            role_name="member",
             user={'id': user.id}
         )
 
@@ -204,7 +222,7 @@ class UserActionTests(AdjutantTestCase):
         data = {
             'email': 'test@example.com',
             'project_id': project.id,
-            'roles': ['_member_'],
+            'roles': ['member'],
             'inherited_roles': [],
             'domain_id': 'default',
         }
@@ -225,7 +243,7 @@ class UserActionTests(AdjutantTestCase):
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(roles, ['_member_'])
+        self.assertEqual(roles, ['member'])
 
     def test_new_user_no_tenant(self):
         """
@@ -244,7 +262,7 @@ class UserActionTests(AdjutantTestCase):
         data = {
             'email': 'test@example.com',
             'project_id': 'test_project_id',
-            'roles': ['_member_'],
+            'roles': ['member'],
             'inherited_roles': [],
             'domain_id': 'default',
         }
@@ -285,7 +303,7 @@ class UserActionTests(AdjutantTestCase):
         data = {
             'email': 'test@example.com',
             'project_id': 'test_project_id_1',
-            'roles': ['_member_'],
+            'roles': ['member'],
             'inherited_roles': [],
             'domain_id': 'default',
         }
@@ -311,7 +329,7 @@ class UserActionTests(AdjutantTestCase):
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['_member_'],
+                'roles': ['member'],
                 'project_id': project.id,
                 'project_domain_id': 'default',
             })
@@ -319,7 +337,7 @@ class UserActionTests(AdjutantTestCase):
         data = {
             'email': 'test@example.com',
             'project_id': project.id,
-            'roles': ['_member_'],
+            'roles': ['member'],
             'inherited_roles': [],
             'domain_id': 'default',
         }
@@ -343,7 +361,7 @@ class UserActionTests(AdjutantTestCase):
 
         assignment = fake_clients.FakeRoleAssignment(
             scope={'project': {'id': project.id}},
-            role_name="_member_",
+            role_name="member",
             user={'id': user.id}
         )
 
@@ -360,7 +378,7 @@ class UserActionTests(AdjutantTestCase):
         data = {
             'email': 'test@example.com',
             'project_id': project.id,
-            'roles': ['_member_'],
+            'roles': ['member'],
             'inherited_roles': [],
             'domain_id': 'not_default',
         }
@@ -504,7 +522,7 @@ class UserActionTests(AdjutantTestCase):
             'domain_id': 'default',
             'user_id': user.id,
             'project_id': project.id,
-            'roles': ['_member_', 'project_mod'],
+            'roles': ['member', 'project_mod'],
             'inherited_roles': [],
             'remove': False
         }
@@ -524,7 +542,7 @@ class UserActionTests(AdjutantTestCase):
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(sorted(roles), sorted(['_member_', 'project_mod']))
+        self.assertEqual(sorted(roles), sorted(['member', 'project_mod']))
 
     def test_edit_user_roles_add_complete(self):
         """
@@ -538,7 +556,7 @@ class UserActionTests(AdjutantTestCase):
         assignments = [
             fake_clients.FakeRoleAssignment(
                 scope={'project': {'id': project.id}},
-                role_name="_member_",
+                role_name="member",
                 user={'id': user.id}
             ),
             fake_clients.FakeRoleAssignment(
@@ -562,7 +580,7 @@ class UserActionTests(AdjutantTestCase):
             'domain_id': 'default',
             'user_id': user.id,
             'project_id': project.id,
-            'roles': ['_member_', 'project_mod'],
+            'roles': ['member', 'project_mod'],
             'inherited_roles': [],
             'remove': False
         }
@@ -583,7 +601,7 @@ class UserActionTests(AdjutantTestCase):
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(roles, ['_member_', 'project_mod'])
+        self.assertEqual(roles, ['member', 'project_mod'])
 
     def test_edit_user_roles_remove(self):
         """
@@ -598,7 +616,7 @@ class UserActionTests(AdjutantTestCase):
         assignments = [
             fake_clients.FakeRoleAssignment(
                 scope={'project': {'id': project.id}},
-                role_name="_member_",
+                role_name="member",
                 user={'id': user.id}
             ),
             fake_clients.FakeRoleAssignment(
@@ -642,7 +660,7 @@ class UserActionTests(AdjutantTestCase):
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(roles, ['_member_'])
+        self.assertEqual(roles, ['member'])
 
     def test_edit_user_roles_remove_complete(self):
         """
@@ -656,7 +674,7 @@ class UserActionTests(AdjutantTestCase):
 
         assignment = fake_clients.FakeRoleAssignment(
             scope={'project': {'id': project.id}},
-            role_name="_member_",
+            role_name="member",
             user={'id': user.id}
         )
 
@@ -695,7 +713,7 @@ class UserActionTests(AdjutantTestCase):
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(roles, ['_member_'])
+        self.assertEqual(roles, ['member'])
 
     def test_edit_user_roles_can_manage_all(self):
         """
@@ -710,7 +728,7 @@ class UserActionTests(AdjutantTestCase):
         assignments = [
             fake_clients.FakeRoleAssignment(
                 scope={'project': {'id': project.id}},
-                role_name="_member_",
+                role_name="member",
                 user={'id': user.id}
             ),
             fake_clients.FakeRoleAssignment(
@@ -747,11 +765,11 @@ class UserActionTests(AdjutantTestCase):
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(roles, ['_member_', 'project_admin'])
+        self.assertEqual(roles, ['member', 'project_admin'])
 
-    def test_edit_user_roles_modified_settings(self):
+    def test_edit_user_roles_modified_config(self):
         """
-        Tests that the role mappings do come from settings and that they
+        Tests that the role mappings do come from config and that they
         are enforced.
         """
         project = fake_clients.FakeProject(name="test_project")
@@ -789,11 +807,18 @@ class UserActionTests(AdjutantTestCase):
         action.prepare()
         self.assertEqual(action.valid, True)
 
-        # Change settings
-        with self.modify_dict_settings(ROLES_MAPPING={
-                'key_list': ['project_mod'],
-                'operation': "remove",
-                'value': 'heat_stack_owner'}):
+        # Change config
+        with conf_utils.modify_conf(
+                CONF,
+                operations={
+                    "adjutant.identity.role_mapping": [
+                        {'operation': 'update', 'value': {
+                            'project_mod': [
+                                'member', 'project_mod',
+                            ],
+                        }},
+                    ],
+                }):
             action.approve()
             self.assertEqual(action.valid, False)
 
@@ -814,11 +839,20 @@ class UserActionTests(AdjutantTestCase):
         roles = fake_client._get_roles_as_names(user, project)
         self.assertEqual(roles, ['project_mod', 'heat_stack_owner'])
 
-    @modify_dict_settings(ROLES_MAPPING={'key_list': ['project_mod'],
-                          'operation': "append", 'value': 'new_role'})
-    def test_edit_user_roles_modified_settings_add(self):
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.identity.role_mapping": [
+                {'operation': 'update', 'value': {
+                    'project_mod': [
+                        'member', 'heat_stack_owner', 'project_mod', 'new_role',
+                    ],
+                }},
+            ],
+        })
+    def test_edit_user_roles_modified_config_add(self):
         """
-        Tests that the role mappings do come from settings and a new role
+        Tests that the role mappings do come from config and a new role
         added there will be allowed.
         """
         project = fake_clients.FakeProject(name="test_project")
@@ -873,7 +907,13 @@ class UserActionTests(AdjutantTestCase):
         self.assertEqual(roles, ['project_mod', 'new_role'])
 
     # Simple positive tests for when USERNAME_IS_EMAIL=False
-    @override_settings(USERNAME_IS_EMAIL=False)
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.identity.username_is_email": [
+                {'operation': 'override', 'value': False},
+            ],
+        })
     def test_create_user_email_not_username(self):
         """
         Test the default case, all valid.
@@ -895,7 +935,7 @@ class UserActionTests(AdjutantTestCase):
             'username': 'test_user',
             'email': 'test@example.com',
             'project_id': project.id,
-            'roles': ['_member_'],
+            'roles': ['member'],
             'inherited_roles': [],
             'domain_id': 'default',
         }
@@ -922,9 +962,15 @@ class UserActionTests(AdjutantTestCase):
         self.assertTrue(user.enabled)
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(roles, ['_member_'])
+        self.assertEqual(roles, ['member'])
 
-    @override_settings(USERNAME_IS_EMAIL=False)
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.identity.username_is_email": [
+                {'operation': 'override', 'value': False},
+            ],
+        })
     def test_reset_user_email_not_username(self):
         """
         Base case, existing user.
@@ -968,7 +1014,13 @@ class UserActionTests(AdjutantTestCase):
         self.assertEqual(user.email, 'test@example.com')
         self.assertEqual(user.password, '123456')
 
-    @override_settings(USERNAME_IS_EMAIL=False)
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.identity.username_is_email": [
+                {'operation': 'override', 'value': False},
+            ],
+        })
     def test_reset_user_password_case_insensitive_not_username(self):
         """
         Existing user, ensure action is case insensitive.
@@ -1010,7 +1062,6 @@ class UserActionTests(AdjutantTestCase):
             fake_clients.identity_cache['users'][user.id].password,
             '123456')
 
-    @override_settings(USERNAME_IS_EMAIL=True)
     def test_update_email(self):
         """
         Base test case for user updating email address.
@@ -1054,7 +1105,6 @@ class UserActionTests(AdjutantTestCase):
             fake_clients.identity_cache['users'][user.id].name,
             'new_test@example.com')
 
-    @override_settings(USERNAME_IS_EMAIL=True)
     def test_update_email_invalid_user(self):
         """
         Test case for an invalid user being updated.
@@ -1086,7 +1136,13 @@ class UserActionTests(AdjutantTestCase):
         action.submit(token_data)
         self.assertEqual(action.valid, False)
 
-    @override_settings(USERNAME_IS_EMAIL=False)
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.identity.username_is_email": [
+                {'operation': 'override', 'value': False},
+            ],
+        })
     def test_update_email_username_not_email(self):
         """
         Test case for a user attempting to update with an invalid email.

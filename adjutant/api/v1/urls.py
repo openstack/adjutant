@@ -14,8 +14,9 @@
 
 from django.conf.urls import url
 from adjutant.api.v1 import views
-from django.conf import settings
 
+from adjutant import api
+from adjutant.config import CONF
 
 urlpatterns = [
     url(r'^status/?$', views.StatusView.as_view()),
@@ -28,8 +29,8 @@ urlpatterns = [
     url(r'^notifications/?$', views.NotificationList.as_view()),
 ]
 
-for active_view in settings.ACTIVE_DELEGATE_APIS:
-    delegate_api = settings.DELEGATE_API_CLASSES[active_view]
+for active_view in CONF.api.active_delegate_apis:
+    delegate_api = api.DELEGATE_API_CLASSES[active_view]
 
     urlpatterns.append(
         url(delegate_api['url'], delegate_api['class'].as_view())

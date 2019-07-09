@@ -12,10 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-
+from adjutant.config import CONF
 from adjutant.common import openstack_clients
-
-from django.conf import settings
 
 
 class QuotaManager(object):
@@ -182,23 +180,22 @@ class QuotaManager(object):
         self.default_helpers = dict(self._quota_updaters)
         self.helpers = {}
 
-        if settings.QUOTA_SERVICES:
-            quota_services = dict(settings.QUOTA_SERVICES)
+        quota_services = dict(CONF.quota.services)
 
-            all_regions = quota_services.pop('*', None)
-            if all_regions:
-                self.default_helpers = {}
-                for service in all_regions:
-                    if service in self._quota_updaters:
-                        self.default_helpers[service] = \
-                            self._quota_updaters[service]
+        all_regions = quota_services.pop('*', None)
+        if all_regions:
+            self.default_helpers = {}
+            for service in all_regions:
+                if service in self._quota_updaters:
+                    self.default_helpers[service] = \
+                        self._quota_updaters[service]
 
-            for region, services in quota_services.items():
-                self.helpers[region] = {}
-                for service in services:
-                    if service in self._quota_updaters:
-                        self.helpers[region][service] = \
-                            self._quota_updaters[service]
+        for region, services in quota_services.items():
+            self.helpers[region] = {}
+            for service in services:
+                if service in self._quota_updaters:
+                    self.helpers[region][service] = \
+                        self._quota_updaters[service]
 
         self.project_id = project_id
         self.size_diff_threshold = (size_difference_threshold
@@ -217,7 +214,7 @@ class QuotaManager(object):
     def get_quota_differences(self, current_quota):
         """ Gets the closest matching quota size for a given quota """
         quota_differences = {}
-        for size, setting in settings.PROJECT_QUOTA_SIZES.items():
+        for size, setting in CONF.quota.sizes.items():
             match_percentages = []
             for service_name, values in setting.items():
                 if service_name not in current_quota:
@@ -268,7 +265,7 @@ class QuotaManager(object):
 
     def get_quota_change_options(self, quota_size):
         """ Get's the pre-approved quota change options for a given size """
-        quota_list = settings.QUOTA_SIZES_ASC
+        quota_list = CONF.quota.sizes_ascending
         try:
             list_position = quota_list.index(quota_size)
         except ValueError:
@@ -283,7 +280,7 @@ class QuotaManager(object):
 
     def get_smaller_quota_options(self, quota_size):
         """ Get the quota sizes smaller than the current size."""
-        quota_list = settings.QUOTA_SIZES_ASC
+        quota_list = CONF.quota.sizes_ascending
         try:
             list_position = quota_list.index(quota_size)
         except ValueError:

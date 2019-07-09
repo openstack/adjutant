@@ -12,6 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import json
+
+from confspirator.exceptions import InvalidConf
+
 
 def management_command():
     """Entry-point for the 'adjutant' command-line admin utility."""
@@ -22,4 +26,9 @@ def management_command():
 
     from django.core.management import execute_from_command_line
 
-    execute_from_command_line(sys.argv)
+    try:
+        execute_from_command_line(sys.argv)
+    except InvalidConf as e:
+        print("This command requires a valid config, see following errors:")
+        print(json.dumps(e.errors["adjutant"], indent=2))
+        sys.exit(1)

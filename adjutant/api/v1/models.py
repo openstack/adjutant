@@ -12,25 +12,32 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.conf import settings
-
+from adjutant import api
 from adjutant.api.v1 import tasks
 from adjutant.api.v1 import openstack
 from adjutant.api.v1.base import BaseDelegateAPI
 from adjutant import exceptions
+from adjutant.config.api import delegate_apis_group as api_config
 
 
-def register_delegate_api_class(url, API_class):
-    if not issubclass(API_class, BaseDelegateAPI):
+def register_delegate_api_class(url, api_class):
+    if not issubclass(api_class, BaseDelegateAPI):
         raise exceptions.InvalidAPIClass(
             "'%s' is not a built off the BaseDelegateAPI class."
-            % API_class.__name__
+            % api_class.__name__
         )
     data = {}
-    data[API_class.__name__] = {
-        'class': API_class,
+    data[api_class.__name__] = {
+        'class': api_class,
         'url': url}
-    settings.DELEGATE_API_CLASSES.update(data)
+    api.DELEGATE_API_CLASSES.update(data)
+    if api_class.config_group:
+        # NOTE(adriant): We copy the config_group before naming it
+        # to avoid cases where a subclass inherits but doesn't extend it
+        setting_group = api_class.config_group.copy()
+        setting_group.set_name(
+            api_class.__name__, reformat_name=False)
+        api_config.register_child_config(setting_group)
 
 
 register_delegate_api_class(

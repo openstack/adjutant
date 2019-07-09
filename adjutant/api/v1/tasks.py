@@ -12,10 +12,12 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.conf import settings
 from django.utils import timezone
 
 from rest_framework.response import Response
+
+from confspirator import groups
+from confspirator import fields
 
 from adjutant import exceptions
 from adjutant.api import utils
@@ -27,6 +29,29 @@ from adjutant.api.v1.base import BaseDelegateAPI
 
 class CreateProjectAndUser(BaseDelegateAPI):
 
+    config_group = groups.DynamicNameConfigGroup(
+        children=[
+            fields.StrConfig(
+                'default_region',
+                help_text="Default region in which any potential resources may be created.",
+                required=True,
+                default="RegionOne",
+            ),
+            fields.StrConfig(
+                "default_domain_id",
+                help_text="Domain in which project and users will be created.",
+                default="default",
+                required=True,
+            ),
+            fields.StrConfig(
+                "default_parent_id",
+                help_text="Parent id under which this project will be created. "
+                          "Default is None, and will create under default domain.",
+                default=None,
+            )
+        ]
+    )
+
     task_type = "create_project_and_user"
 
     def post(self, request, format=None):
@@ -37,20 +62,19 @@ class CreateProjectAndUser(BaseDelegateAPI):
         incoming data and create a task to be approved
         later.
         """
-        self.logger.info("(%s) - Starting new project task." %
-                         timezone.now())
+        self.logger.info(
+            "(%s) - Starting new project task." % timezone.now())
 
-        class_conf = settings.TASK_SETTINGS.get(self.task_type, {})
+        class_conf = self.config
 
         # we need to set the region the resources will be created in:
-        request.data['region'] = class_conf.get('default_region')
+        request.data['region'] = class_conf.default_region
 
         # domain
-        request.data['domain_id'] = class_conf.get(
-            'default_domain_id', 'default')
+        request.data['domain_id'] = class_conf.default_domain_id
 
         # parent_id for new project, if null defaults to domain:
-        request.data['parent_id'] = class_conf.get('default_parent_id')
+        request.data['parent_id'] = class_conf.default_parent_id
 
         self.task_manager.create_from_request(self.task_type, request)
 

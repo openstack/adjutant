@@ -12,15 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.conf import settings
-
 from adjutant import exceptions
-from adjutant.tasks.v1.base import BaseTask
+from adjutant import tasks
+from adjutant.config.workflow import tasks_group as tasks_group
+from adjutant.tasks.v1 import base
 from adjutant.tasks.v1 import projects, users, resources
 
 
 def register_task_class(task_class):
-    if not issubclass(task_class, BaseTask):
+    if not issubclass(task_class, base.BaseTask):
         raise exceptions.InvalidTaskClass(
             "'%s' is not a built off the BaseTask class."
             % task_class.__name__
@@ -30,7 +30,11 @@ def register_task_class(task_class):
     if task_class.deprecated_task_types:
         for old_type in task_class.deprecated_task_types:
             data[old_type] = task_class
-    settings.TASK_CLASSES.update(data)
+    tasks.TASK_CLASSES.update(data)
+    setting_group = base.make_task_config(task_class)
+    setting_group.set_name(
+        task_class.task_type, reformat_name=False)
+    tasks_group.register_child_config(setting_group)
 
 
 register_task_class(projects.CreateProjectAndUser)

@@ -12,11 +12,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.conf import settings
 from django.db import models
 from uuid import uuid4
 from django.utils import timezone
 from jsonfield import JSONField
+
+from adjutant.config import CONF
+from adjutant import tasks
 
 
 def hex_uuid():
@@ -75,7 +77,15 @@ class Task(models.Model):
 
     def get_task(self):
         """Returns self as the appropriate task wrapper type."""
-        return settings.TASK_CLASSES[self.task_type](task_model=self)
+        return tasks.TASK_CLASSES[self.task_type](task_model=self)
+
+    @property
+    def config(self):
+        try:
+            task_conf = CONF.workflow.tasks[self.task_type]
+        except KeyError:
+            task_conf = {}
+        return CONF.workflow.task_defaults.overlay(task_conf)
 
     @property
     def actions(self):

@@ -12,10 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.test import TestCase
-from django.test.utils import override_settings
-
 import mock
+
+from confspirator.tests import utils as conf_utils
 
 from adjutant.actions.v1.projects import (
     NewProjectWithUserAction, AddDefaultUsersToProjectAction,
@@ -24,12 +23,31 @@ from adjutant.api.models import Task
 from adjutant.common.tests import fake_clients
 from adjutant.common.tests.fake_clients import (
     FakeManager, setup_identity_cache)
-from adjutant.common.tests.utils import modify_dict_settings
+from adjutant.common.tests.utils import AdjutantTestCase
+from adjutant.config import CONF
 
 
 @mock.patch('adjutant.common.user_store.IdentityManager',
             FakeManager)
-class ProjectActionTests(TestCase):
+@conf_utils.modify_conf(
+    CONF,
+    operations={
+        "adjutant.workflow.action_defaults.NewProjectWithUserAction.default_roles": [
+            {'operation': 'override', 'value': [
+                'member', 'heat_stack_owner', 'project_admin', 'project_mod']},
+        ],
+        "adjutant.workflow.action_defaults.NewProjectAction.default_roles": [
+            {'operation': 'override', 'value': [
+                'member', 'heat_stack_owner', 'project_admin', 'project_mod']},
+        ],
+        "adjutant.workflow.action_defaults.AddDefaultUsersToProjectAction.default_users": [
+            {'operation': 'override', 'value': ['admin']},
+        ],
+        "adjutant.workflow.action_defaults.AddDefaultUsersToProjectAction.default_roles": [
+            {'operation': 'override', 'value': ['admin']},
+        ],
+    })
+class ProjectActionTests(AdjutantTestCase):
 
     def test_new_project(self):
         """
@@ -82,7 +100,7 @@ class ProjectActionTests(TestCase):
         roles = fake_client._get_roles_as_names(new_user, new_project)
         self.assertEqual(
             sorted(roles),
-            sorted(['_member_', 'project_admin',
+            sorted(['member', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
     def test_new_project_reapprove(self):
@@ -145,7 +163,7 @@ class ProjectActionTests(TestCase):
         roles = fake_client._get_roles_as_names(new_user, new_project)
         self.assertEqual(
             sorted(roles),
-            sorted(['_member_', 'project_admin',
+            sorted(['member', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
     def test_new_project_reapprove_failure(self):
@@ -218,7 +236,7 @@ class ProjectActionTests(TestCase):
         roles = fake_client._get_roles_as_names(new_user, new_project)
         self.assertEqual(
             sorted(roles),
-            sorted(['_member_', 'project_admin',
+            sorted(['member', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
     def test_new_project_existing_user(self):
@@ -271,10 +289,16 @@ class ProjectActionTests(TestCase):
         roles = fake_client._get_roles_as_names(user, new_project)
         self.assertEqual(
             sorted(roles),
-            sorted(['_member_', 'project_admin',
+            sorted(['member', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
-    @override_settings(USERNAME_IS_EMAIL=False)
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.identity.username_is_email": [
+                {'operation': 'override', 'value': False},
+            ],
+        })
     def test_new_project_user_nonmatching_email(self):
         """
         Attempts to create a new project and a new user, where there is
@@ -447,7 +471,7 @@ class ProjectActionTests(TestCase):
         roles = fake_client._get_roles_as_names(user, new_project)
         self.assertEqual(
             sorted(roles),
-            sorted(['_member_', 'project_admin',
+            sorted(['member', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
     def test_new_project_user_disabled_during_signup(self):
@@ -522,7 +546,7 @@ class ProjectActionTests(TestCase):
         roles = fake_client._get_roles_as_names(user, new_project)
         self.assertEqual(
             sorted(roles),
-            sorted(['_member_', 'project_admin',
+            sorted(['member', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
     def test_new_project_existing_project(self):
@@ -583,7 +607,13 @@ class ProjectActionTests(TestCase):
         action.approve()
         self.assertEqual(action.valid, False)
 
-    @override_settings(USERNAME_IS_EMAIL=False)
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.identity.username_is_email": [
+                {'operation': 'override', 'value': False},
+            ],
+        })
     def test_new_project_email_not_username(self):
         """
         Base case, no project, no user.
@@ -636,20 +666,14 @@ class ProjectActionTests(TestCase):
         roles = fake_client._get_roles_as_names(new_user, new_project)
         self.assertEqual(
             sorted(roles),
-            sorted(['_member_', 'project_admin',
+            sorted(['member', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
-    @modify_dict_settings(DEFAULT_ACTION_SETTINGS={
-                          'key_list': ['AddDefaultUsersToProjectAction'],
-                          'operation': 'override',
-                          'value': {'default_users': ['admin', ],
-                                    'default_roles': ['admin', ]}})
     def test_add_default_users(self):
         """
         Base case, adds admin user with admin role to project.
 
-        NOTE(adriant): both the lists of users, and the roles to add
-        come from test_settings. This test assumes the conf setting of:
+        NOTE(adriant): This test assumes the conf setting of:
         default_users = ['admin']
         default_roles = ['admin']
         """
@@ -699,11 +723,6 @@ class ProjectActionTests(TestCase):
         # Now the missing project should make the action invalid
         self.assertEqual(action.valid, False)
 
-    @modify_dict_settings(DEFAULT_ACTION_SETTINGS={
-                          'key_list': ['AddDefaultUsersToProjectAction'],
-                          'operation': 'override',
-                          'value': {'default_users': ['admin', ],
-                                    'default_roles': ['admin', ]}})
     def test_add_default_users_reapprove(self):
         """
         Ensure nothing happens or changes during rerun of approve.
@@ -777,7 +796,7 @@ class ProjectActionTests(TestCase):
         roles = fake_client._get_roles_as_names(user, new_project)
         self.assertEqual(
             sorted(roles),
-            sorted(['_member_', 'project_admin',
+            sorted(['member', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
         action.submit({})
@@ -824,7 +843,7 @@ class ProjectActionTests(TestCase):
         roles = fake_client._get_roles_as_names(user, new_project)
         self.assertEqual(
             sorted(roles),
-            sorted(['_member_', 'project_admin',
+            sorted(['member', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
         action.approve()
@@ -837,7 +856,7 @@ class ProjectActionTests(TestCase):
         roles = fake_client._get_roles_as_names(user, new_project)
         self.assertEqual(
             sorted(roles),
-            sorted(['_member_', 'project_admin',
+            sorted(['member', 'project_admin',
                     'project_mod', 'heat_stack_owner']))
 
         action.submit({})

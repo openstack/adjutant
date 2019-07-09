@@ -12,9 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.conf import settings
-from django.db import models
+from confspirator import groups
+from confspirator import fields
 
+from adjutant.config import CONF
 from adjutant.common import user_store
 from adjutant.actions.v1.base import (
     UserNameAction, UserIdAction, UserMixin, ProjectMixin)
@@ -58,7 +59,7 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
             self.action.task.cache['user_state'] = "default"
             self.set_token_fields(["password"])
             return True
-        if (not settings.USERNAME_IS_EMAIL
+        if (not CONF.identity.username_is_email
                 and getattr(user, 'email', None) != self.email):
             self.add_note(
                 'Found matching username, but email did not match. '
@@ -174,18 +175,25 @@ class ResetUserPasswordAction(UserNameAction, UserMixin):
     Simple action to reset a password for a given user.
     """
 
-    username = models.CharField(max_length=200)
-    email = models.EmailField()
-
     required = [
         'domain_name',
         'username',
         'email'
     ]
 
+    config_group = groups.DynamicNameConfigGroup(
+        children=[
+            fields.ListConfig(
+                "blacklisted_roles",
+                help_text="Users with these roles cannot reset their passwords.",
+                default=[],
+                sample_default=['admin'],
+            ),
+        ],
+    )
+
     def __init__(self, *args, **kwargs):
         super(ResetUserPasswordAction, self).__init__(*args, **kwargs)
-        self.blacklist = self.settings.get("blacklisted_roles", [])
 
     def _validate_user_roles(self):
         id_manager = user_store.IdentityManager()
@@ -196,7 +204,7 @@ class ResetUserPasswordAction(UserNameAction, UserMixin):
         for roles in roles.values():
             user_roles.extend(role.name for role in roles)
 
-        if set(self.blacklist) & set(user_roles):
+        if set(self.config.blacklisted_roles) & set(user_roles):
             self.add_note('Cannot reset users with blacklisted roles.')
             return False
 
@@ -205,7 +213,7 @@ class ResetUserPasswordAction(UserNameAction, UserMixin):
     def _validate_user_email(self):
         # NOTE(adriant): We only need to check the USERNAME_IS_EMAIL=False
         # case since '_validate_username_exists' will ensure the True case
-        if not settings.USERNAME_IS_EMAIL:
+        if not CONF.identity.username_is_email:
             if (self.user and (
                     getattr(self.user, 'email', None).lower()
                     != self.email.lower())):
@@ -316,13 +324,13 @@ class EditUserRolesAction(UserIdAction, ProjectMixin, UserMixin):
                                                   user=self.user_id)
         current_user_roles = [role.name for role in current_user_roles]
 
-        current_roles_manageable = self.are_roles_managable(
+        current_roles_manageable = self.are_roles_manageable(
             self.action.task.keystone_user['roles'], current_user_roles)
 
         all_roles = set()
         all_roles.update(self.roles)
         all_roles.update(self.inherited_roles)
-        new_roles_manageable = self.are_roles_managable(
+        new_roles_manageable = self.are_roles_manageable(
             self.action.task.keystone_user['roles'], all_roles)
 
         return new_roles_manageable and current_roles_manageable
@@ -414,7 +422,7 @@ class UpdateUserEmailAction(UserIdAction, UserMixin):
         return False
 
     def _validate_email_not_in_use(self):
-        if settings.USERNAME_IS_EMAIL:
+        if CONF.identity.username_is_email:
             self.domain_id = self.action.task.keystone_user[
                 'project_domain_id']
 
@@ -445,7 +453,7 @@ class UpdateUserEmailAction(UserIdAction, UserMixin):
             self.old_username = str(self.user.name)
             self.update_email(self.new_email, user=self.user)
 
-            if settings.USERNAME_IS_EMAIL:
+            if CONF.identity.username_is_email:
                 self.update_user_name(self.new_email, user=self.user)
 
             self.add_note('The email for user %s has been changed to %s.'

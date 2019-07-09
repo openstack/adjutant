@@ -12,16 +12,19 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from datetime import timedelta
+
+from django.utils import timezone
+
+from confspirator import groups
+from confspirator import fields
+
 from adjutant.actions.v1.base import BaseAction, ProjectMixin, QuotaMixin
 from adjutant.actions.utils import validate_steps
 from adjutant.common import openstack_clients, user_store
 from adjutant.api import models
 from adjutant.common.quota import QuotaManager
-
-from django.utils import timezone
-from django.conf import settings
-
-from datetime import timedelta
+from adjutant.config import CONF
 
 
 class NewDefaultNetworkAction(BaseAction, ProjectMixin):
@@ -36,6 +39,49 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
         'project_id',
         'region',
     ]
+
+    config_group = groups.DynamicNameConfigGroup(
+        children=[
+            groups.ConfigGroup(
+                "region_defaults",
+                children=[
+                    fields.StrConfig(
+                        "network_name",
+                        help_text="Name to be given to the default network.",
+                        default="default_network",
+                    ),
+                    fields.StrConfig(
+                        "subnet_name",
+                        help_text="Name to be given to the default subnet.",
+                        default="default_subnet",
+                    ),
+                    fields.StrConfig(
+                        "router_name",
+                        help_text="Name to be given to the default router.",
+                        default="default_router",
+                    ),
+                    fields.StrConfig(
+                        "public_network",
+                        help_text="ID of the public network.",
+                    ),
+                    fields.StrConfig(
+                        "subnet_cidr",
+                        help_text="CIDR for the default subnet.",
+                    ),
+                    fields.ListConfig(
+                        "dns_nameservers",
+                        help_text="DNS nameservers for the subnet.",
+                    ),
+                ]
+            ),
+            fields.DictConfig(
+                "regions",
+                help_text="Specific per region config for default network. "
+                          "See 'region_defaults'.",
+                default={},
+            ),
+        ]
+    )
 
     def __init__(self, *args, **kwargs):
         super(NewDefaultNetworkAction, self).__init__(*args, **kwargs)
@@ -54,33 +100,28 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
         self.add_note('Region: %s exists.' % self.region)
         return True
 
-    def _validate_defaults(self):
-        defaults = self.settings.get(self.region, {})
-
-        if not defaults:
-            self.add_note('ERROR: No default settings for region %s.' %
-                          self.region)
-            return False
-        return True
-
     def _validate(self):
         self.action.valid = validate_steps([
             self._validate_region,
             self._validate_project_id,
-            self._validate_defaults,
             self._validate_keystone_user_project_id,
         ])
         self.action.save()
 
     def _create_network(self):
         neutron = openstack_clients.get_neutronclient(region=self.region)
-        defaults = self.settings.get(self.region, {})
+        try:
+            region_config = self.config.regions[self.region]
+            network_config = self.config.region_defaults.overlay(
+                region_config)
+        except KeyError:
+            network_config = self.config.region_defaults
 
         if not self.get_cache('network_id'):
             try:
                 network_body = {
                     "network": {
-                        "name": defaults['network_name'],
+                        "name": network_config.network_name,
                         'tenant_id': self.project_id,
                         "admin_state_up": True
                     }
@@ -89,15 +130,15 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
             except Exception as e:
                 self.add_note(
                     "Error: '%s' while creating network: %s" %
-                    (e, defaults['network_name']))
+                    (e, network_config.network_name))
                 raise
             self.set_cache('network_id', network['network']['id'])
             self.add_note("Network %s created for project %s" %
-                          (defaults['network_name'],
+                          (network_config.network_name,
                            self.project_id))
         else:
             self.add_note("Network %s already created for project %s" %
-                          (defaults['network_name'],
+                          (network_config.network_name,
                            self.project_id))
 
         if not self.get_cache('subnet_id'):
@@ -107,8 +148,8 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
                         "network_id": self.get_cache('network_id'),
                         "ip_version": 4,
                         'tenant_id': self.project_id,
-                        'dns_nameservers': defaults['DNS_NAMESERVERS'],
-                        "cidr": defaults['SUBNET_CIDR']
+                        'dns_nameservers': network_config.dns_nameservers,
+                        "cidr": network_config.subnet_cidr
                     }
                 }
                 subnet = neutron.create_subnet(body=subnet_body)
@@ -118,18 +159,18 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
                 raise
             self.set_cache('subnet_id', subnet['subnet']['id'])
             self.add_note("Subnet created for network %s" %
-                          defaults['network_name'])
+                          network_config.network_name)
         else:
             self.add_note("Subnet already created for network %s" %
-                          defaults['network_name'])
+                          network_config.network_name)
 
         if not self.get_cache('router_id'):
             try:
                 router_body = {
                     "router": {
-                        "name": defaults['router_name'],
+                        "name": network_config.router_name,
                         "external_gateway_info": {
-                            "network_id": defaults['public_network']
+                            "network_id": network_config.public_network
                         },
                         'tenant_id': self.project_id,
                         "admin_state_up": True
@@ -139,7 +180,7 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
             except Exception as e:
                 self.add_note(
                     "Error: '%s' while creating router: %s" %
-                    (e, defaults['router_name']))
+                    (e, network_config.router_name))
                 raise
             self.set_cache('router_id', router['router']['id'])
             self.add_note("Router created for project %s" %
@@ -195,7 +236,6 @@ class NewProjectDefaultNetworkAction(NewDefaultNetworkAction):
         # Note: Don't check project here as it doesn't exist yet.
         self.action.valid = validate_steps([
             self._validate_region,
-            self._validate_defaults,
         ])
         self.action.save()
 
@@ -203,7 +243,6 @@ class NewProjectDefaultNetworkAction(NewDefaultNetworkAction):
         self.action.valid = validate_steps([
             self._validate_region,
             self._validate_project_id,
-            self._validate_defaults,
         ])
         self.action.save()
 
@@ -227,17 +266,26 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
         'regions',
     ]
 
-    default_days_between_autoapprove = 30
-
-    def __init__(self, *args, **kwargs):
-        super(UpdateProjectQuotasAction, self).__init__(*args, **kwargs)
-        self.size_difference_threshold = settings.TASK_SETTINGS.get(
-            self.action.task.task_type, {}).get(
-            'size_difference_threshold')
+    config_group = groups.DynamicNameConfigGroup(
+        children=[
+            fields.FloatConfig(
+                "size_difference_threshold",
+                help_text="Precentage different allowed when matching quota sizes.",
+                default=0.1,
+                min=0,
+                max=1,
+            ),
+            fields.IntConfig(
+                "days_between_autoapprove",
+                help_text="The allowed number of days between auto approved quota changes.",
+                default=30,
+            ),
+        ]
+    )
 
     def _get_email(self):
 
-        if settings.USERNAME_IS_EMAIL:
+        if CONF.identity.username_is_email:
             return self.action.task.keystone_user['username']
         else:
             id_manager = user_store.IdentityManager()
@@ -250,7 +298,7 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
         return None
 
     def _validate_quota_size_exists(self):
-        size_list = settings.PROJECT_QUOTA_SIZES.keys()
+        size_list = CONF.quota.sizes.keys()
         if self.size not in size_list:
             self.add_note("Quota size: %s does not exist" % self.size)
             return False
@@ -258,24 +306,23 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
 
     def _set_region_quota(self, region_name, quota_size):
         # Set the quota for an individual region
-        quota_settings = settings.PROJECT_QUOTA_SIZES.get(quota_size, {})
-        if not quota_settings:
+        quota_config = CONF.quota.sizes.get(quota_size, {})
+        if not quota_config:
             self.add_note(
                 "Project quota not defined for size '%s' in region %s." % (
                     quota_size, region_name))
             return
 
-        quota_manager = QuotaManager(self.project_id,
-                                     self.size_difference_threshold)
+        quota_manager = QuotaManager(
+            self.project_id, self.config.size_difference_threshold)
 
-        quota_manager.set_region_quota(region_name, quota_settings)
+        quota_manager.set_region_quota(region_name, quota_config)
 
         self.add_note("Project quota for region %s set to %s" % (
                       region_name, quota_size))
 
     def _can_auto_approve(self):
-        wait_days = self.settings.get('days_between_autoapprove',
-                                      self.default_days_between_autoapprove)
+        wait_days = self.config.days_between_autoapprove
         task_list = models.Task.objects.filter(
             completed_on__gte=timezone.now() - timedelta(days=wait_days),
             task_type__exact=self.action.task.task_type,
@@ -294,8 +341,8 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
 
         region_sizes = []
 
-        quota_manager = QuotaManager(self.project_id,
-                                     self.size_difference_threshold)
+        quota_manager = QuotaManager(
+            self.project_id, self.config.size_difference_threshold)
 
         for region in self.regions:
             current_size = quota_manager.get_region_quota_data(
@@ -382,6 +429,17 @@ class SetProjectQuotaAction(UpdateProjectQuotasAction):
     """ Updates quota for a given project to a configured quota level """
     required = []
 
+    config_group = UpdateProjectQuotasAction.config_group.extend(
+        children=[
+            fields.DictConfig(
+                "region_sizes",
+                help_text="Which quota size to use for which region.",
+                default={},
+                sample_default={"RegionOne": "small"},
+            ),
+        ]
+    )
+
     def _get_email(self):
         return None
 
@@ -406,10 +464,8 @@ class SetProjectQuotaAction(UpdateProjectQuotasAction):
             return
 
         # update quota for each openstack service
-        regions_dict = self.settings.get('regions', {})
-        for region_name, region_settings in regions_dict.items():
-            quota_size = region_settings.get('quota_size')
-            self._set_region_quota(region_name, quota_size)
+        for region_name, region_size in self.config.region_sizes.items():
+            self._set_region_quota(region_name, region_size)
 
         self.action.state = "completed"
         self.action.save()

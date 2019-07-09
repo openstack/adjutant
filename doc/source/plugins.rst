@@ -17,11 +17,11 @@ Building DelegateAPIs
 New DelegateAPIs should inherit from adjutant.api.v1.base.BaseDelegateAPI
 can be registered as such::
 
-    from adjutant.api.v1.models import register_delegate_api_class,
+    from adjutant.plugins import register_plugin_delegate_api,
 
     from myplugin import apis
 
-    register_delegate_api_class(r'^my-plugin/some-action/?$', apis.MyAPIView)
+    register_plugin_delegate_api(r'^my-plugin/some-action/?$', apis.MyAPIView)
 
 A DelegateAPI must both be registered with a valid URL and specified in
 ACTIVE_DELEGATE_APIS in the configuration to be accessible.
@@ -55,9 +55,9 @@ Building Tasks
 Tasks must be derived from adjutant.tasks.v1.base.BaseTask and can be
 registered as such::
 
-    from adjutant.tasks.v1.models import register_task_class
+     from adjutant.plugins import register_plugin_task
 
-    register_task_class(MyPluginTask)
+    register_plugin_task(MyPluginTask)
 
 Examples of tasks can be found in `adjutant.tasks.v1`
 
@@ -77,9 +77,9 @@ Building Actions
 Actions must be derived from adjutant.actions.v1.base.BaseAction and are
 registered alongside their serializer::
 
-  from adjutant.actions.v1.models import register_action_class
+    from adjutant.plugins import register_plugin_action
 
-  register_action_class(MyCustomAction, MyCustomActionSerializer)
+    register_action_class(MyCustomAction, MyCustomActionSerializer)
 
 Serializers can inherit from either rest_framework.serializers.Serializer, or
 the current serializers in adjutant.actions.v1.serializers.
@@ -144,34 +144,54 @@ Example::
         value_1 = serializers.CharField()
 
 ******************************
-Building Notification Engines
+Building Notification Handlers
 ******************************
 
-Notification Engines can also be added through a plugin::
+Notification Handlers can also be added through a plugin::
 
-    from adjutant.notifcations.models import NotificationEngine
-    from django.conf import settings
+    from adjutant.notifications.models import BaseNotificationHandler
+    from adjutant.plugins import register_notification_handler
 
-    class NewNotificationEngine(NotificationEngine):
+    class NewNotificationHandler(BaseNotificationHandler):
+
+        settings_group = groups.DynamicNameConfigGroup(
+            children=[
+                fields.BoolConfig(
+                    "do_this_thing",
+                    help_text="Should we do the thing?",
+                    default=False,
+                ),
+            ]
+        )
 
         def _notify(self, task, notification):
-            if self.conf.get('do_this_thing'):
+            conf = self.settings(task, notification)
+            if conf.do_this_thing:
               # do something with the task and notification
 
 
-    settings.NOTIFICATION_ENGINES.update(
-      {'NewNotificationEngine': NewNotificationEngine})
+    register_notification_handler(NewNotificationHandler)
 
-They should then be referred to in conf.yaml::
+You then need to setup the handler to be used either by default for a task,
+or for a specific task::
 
-    TASK_SETTINGS:
-        signup:
+    workflow:
+        task_defaults:
             notifications:
-                NewNotificationEngine:
-                    standard:
-                        do_this_thing: True
-                    error:
-                        do_this_thing: False
+                standard_handlers:
+                    - NewNotificationHandler
+                standard_handler_settings:
+                    NewNotificationHandler:
+                        do_this_thing: true
+        tasks:
+            some_task:
+                notifications:
+                    standard_handlers: null
+                    error_handlers:
+                        - NewNotificationHandler
+                    error_handler_settings:
+                        NewNotificationHandler:
+                            do_this_thing: true
 
 
 *************************************************

@@ -1,13 +1,14 @@
 from django.apps import AppConfig
-from django.conf import settings
 
+from adjutant.config import CONF
+from adjutant import actions, api, tasks
 from adjutant.exceptions import ActionNotRegistered, DelegateAPINotRegistered
 
 
 def check_expected_delegate_apis():
     missing_delegate_apis = list(
-        set(settings.ACTIVE_DELEGATE_APIS)
-        - set(settings.DELEGATE_API_CLASSES.keys()))
+        set(CONF.api.active_delegate_apis)
+        - set(api.DELEGATE_API_CLASSES.keys()))
 
     if missing_delegate_apis:
         raise DelegateAPINotRegistered(
@@ -20,15 +21,15 @@ def check_configured_actions():
     """Check that all the expected actions have been registered."""
     configured_actions = []
 
-    for task in settings.TASK_CLASSES:
-        task_class = settings.TASK_CLASSES.get(task)
+    for task in tasks.TASK_CLASSES:
+        task_class = tasks.TASK_CLASSES.get(task)
 
         configured_actions += task_class.default_actions
-        configured_actions += settings.TASK_SETTINGS.get(
-            task_class.task_type, {}).get('additional_actions', [])
+        configured_actions += CONF.workflow.tasks.get(
+            task_class.task_type).additional_actions
 
     missing_actions = list(
-        set(configured_actions) - set(settings.ACTION_CLASSES.keys()))
+        set(configured_actions) - set(actions.ACTION_CLASSES.keys()))
 
     if missing_actions:
         raise ActionNotRegistered(

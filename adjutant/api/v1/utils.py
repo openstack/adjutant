@@ -16,43 +16,9 @@ import json
 
 from decorator import decorator
 
-from django.conf import settings
 from django.core.exceptions import FieldError
 
 from rest_framework.response import Response
-
-from adjutant.api.models import Notification
-
-
-# TODO(adriant): move this to 'adjutant.notifications.utils'
-def create_notification(task, notes, error=False, engines=True):
-    notification = Notification.objects.create(
-        task=task,
-        notes=notes,
-        error=error
-    )
-    notification.save()
-
-    if not engines:
-        return notification
-
-    class_conf = settings.TASK_SETTINGS.get(
-        task.task_type, settings.DEFAULT_TASK_SETTINGS)
-
-    notification_conf = class_conf.get('notifications', {})
-
-    if notification_conf:
-        for note_engine, conf in notification_conf.items():
-            if error:
-                conf = conf.get('error', {})
-            else:
-                conf = conf.get('standard', {})
-            if not conf:
-                continue
-            engine = settings.NOTIFICATION_ENGINES[note_engine](conf)
-            engine.notify(task, notification)
-
-    return notification
 
 
 # "{'filters': {'fieldname': { 'operation': 'value'}}
@@ -92,13 +58,3 @@ def parse_filters(func, *args, **kwargs):
         return func(*args, **kwargs)
     except FieldError as e:
         return Response({'errors': [str(e)]}, status=400)
-
-
-def add_task_id_for_roles(request, processed, response_dict, req_roles):
-    if request.keystone_user.get('authenticated', False):
-
-        req_roles = set(req_roles)
-        roles = set(request.keystone_user.get('roles', []))
-
-        if roles & req_roles:
-            response_dict['task'] = processed['task'].uuid

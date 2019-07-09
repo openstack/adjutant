@@ -12,14 +12,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from datetime import timedelta
 import mock
 
 from rest_framework import status
 
-from django.conf import settings
-from django.test.utils import modify_settings
-from django.test.utils import override_settings
 from django.utils import timezone
+
+from confspirator.tests import utils as conf_utils
 
 from adjutant.api.models import Token, Task
 from adjutant.common.tests import fake_clients
@@ -28,10 +28,8 @@ from adjutant.common.tests.fake_clients import (
     get_fake_cinderclient, get_fake_octaviaclient, cinder_cache, nova_cache,
     neutron_cache, octavia_cache, setup_mock_caches, setup_quota_cache,
     FakeResource)
-from adjutant.common.tests.utils import (
-    modify_dict_settings, AdjutantAPITestCase)
-
-from datetime import timedelta
+from adjutant.common.tests.utils import AdjutantAPITestCase
+from adjutant.config import CONF
 
 
 @mock.patch('adjutant.common.user_store.IdentityManager',
@@ -57,12 +55,12 @@ class OpenstackAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["_member_"],
+        data = {'email': "test@example.com", 'roles': ["member"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
@@ -86,13 +84,13 @@ class OpenstackAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
 
-        data = {'email': "test@example.com", 'roles': ["_member_"],
+        data = {'email': "test@example.com", 'roles': ["member"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
@@ -105,7 +103,7 @@ class OpenstackAPITests(AdjutantAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
         url = "/v1/openstack/users"
-        data = {'email': "test2@example.com", 'roles': ["_member_"],
+        data = {'email': "test2@example.com", 'roles': ["member"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
@@ -152,12 +150,12 @@ class OpenstackAPITests(AdjutantAPITestCase):
             ),
             fake_clients.FakeRoleAssignment(
                 scope={'project': {'id': project3.id}},
-                role_name="_member_",
+                role_name="member",
                 user={'id': user3.id}
             ),
             fake_clients.FakeRoleAssignment(
                 scope={'project': {'id': project3.id}},
-                role_name="_member_",
+                role_name="member",
                 user={'id': user3.id},
                 inherited=True,
             ),
@@ -176,7 +174,7 @@ class OpenstackAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project3.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -202,8 +200,8 @@ class OpenstackAPITests(AdjutantAPITestCase):
                 self.assertEqual(u['roles'], ['project_mod'])
 
         normal_user = project_users[0]
-        self.assertEqual(normal_user['roles'], ['_member_', 'project_mod'])
-        self.assertEqual(normal_user['inherited_roles'], ['_member_'])
+        self.assertEqual(normal_user['roles'], ['member', 'project_mod'])
+        self.assertEqual(normal_user['inherited_roles'], ['member'])
 
     def test_user_detail(self):
         """
@@ -218,13 +216,13 @@ class OpenstackAPITests(AdjutantAPITestCase):
         assignments = [
             fake_clients.FakeRoleAssignment(
                 scope={'project': {'id': project.id}},
-                role_name="_member_",
+                role_name="member",
                 user={'id': user.id},
                 inherited=True,
             ),
             fake_clients.FakeRoleAssignment(
                 scope={'project': {'id': project.id}},
-                role_name="_member_",
+                role_name="member",
                 user={'id': user.id}
             ),
         ]
@@ -235,7 +233,7 @@ class OpenstackAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -245,10 +243,10 @@ class OpenstackAPITests(AdjutantAPITestCase):
         response = self.client.get(url, headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()['username'], 'test@example.com')
-        self.assertEqual(response.json()['roles'], ["_member_"])
-        self.assertEqual(response.json()['inherited_roles'], ["_member_"])
+        self.assertEqual(response.json()['roles'], ["member"])
+        self.assertEqual(response.json()['inherited_roles'], ["member"])
 
-    def test_user_list_managable(self):
+    def test_user_list_manageable(self):
         """
         Confirm that the manageable value is set correctly.
         """
@@ -265,7 +263,7 @@ class OpenstackAPITests(AdjutantAPITestCase):
         assignments = [
             fake_clients.FakeRoleAssignment(
                 scope={'project': {'id': project.id}},
-                role_name="_member_",
+                role_name="member",
                 user={'id': user.id}
             ),
             fake_clients.FakeRoleAssignment(
@@ -275,7 +273,7 @@ class OpenstackAPITests(AdjutantAPITestCase):
             ),
             fake_clients.FakeRoleAssignment(
                 scope={'project': {'id': project.id}},
-                role_name="_member_",
+                role_name="member",
                 user={'id': user2.id}
             ),
             fake_clients.FakeRoleAssignment(
@@ -293,7 +291,7 @@ class OpenstackAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "_member_,project_mod",
+            'roles': "member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -319,7 +317,7 @@ class OpenstackAPITests(AdjutantAPITestCase):
 
         assignment = fake_clients.FakeRoleAssignment(
             scope={'project': {'id': project.id}},
-            role_name="_member_",
+            role_name="member",
             user={'id': user.id}
         )
 
@@ -329,7 +327,7 @@ class OpenstackAPITests(AdjutantAPITestCase):
         admin_headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -337,13 +335,19 @@ class OpenstackAPITests(AdjutantAPITestCase):
 
         # admins removes role from the test user
         url = "/v1/openstack/users/%s/roles" % user.id
-        data = {'roles': ["_member_"]}
+        data = {'roles': ["member"]}
         response = self.client.delete(url, data,
                                       format='json', headers=admin_headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(response.json(), {'notes': ['task created']})
 
-    @override_settings(USERNAME_IS_EMAIL=False)
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.identity.username_is_email": [
+                {'operation': 'override', 'value': False},
+            ],
+        })
     def test_new_user_username_not_email(self):
         """
         Ensure the new user workflow goes as expected.
@@ -357,12 +361,12 @@ class OpenstackAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["_member_"],
+        data = {'email': "test@example.com", 'roles': ["member"],
                 'project_id': project.id, 'username': 'user_name'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
@@ -407,20 +411,20 @@ class QuotaAPITests(AdjutantAPITestCase):
             extra_services = []
 
         cinderquota = cinder_cache[region_name][project_id]['quota']
-        gigabytes = settings.PROJECT_QUOTA_SIZES[size]['cinder']['gigabytes']
+        gigabytes = CONF.quota.sizes[size]['cinder']['gigabytes']
         self.assertEqual(cinderquota['gigabytes'], gigabytes)
 
         novaquota = nova_cache[region_name][project_id]['quota']
-        ram = settings.PROJECT_QUOTA_SIZES[size]['nova']['ram']
+        ram = CONF.quota.sizes[size]['nova']['ram']
         self.assertEqual(novaquota['ram'], ram)
 
         neutronquota = neutron_cache[region_name][project_id]['quota']
-        network = settings.PROJECT_QUOTA_SIZES[size]['neutron']['network']
+        network = CONF.quota.sizes[size]['neutron']['network']
         self.assertEqual(neutronquota['network'], network)
 
         if 'octavia' in extra_services:
             octaviaquota = octavia_cache[region_name][project_id]['quota']
-            load_balancer = settings.PROJECT_QUOTA_SIZES.get(
+            load_balancer = CONF.quota.sizes.get(
                 size)['octavia']['load_balancer']
             self.assertEqual(octaviaquota['load_balancer'], load_balancer)
 
@@ -438,7 +442,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         admin_headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
@@ -474,7 +478,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         admin_headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
@@ -506,7 +510,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "admin_project",
             'project_id': project.id,
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "admin",
             'user_id': "admin_id",
             'authenticated': True
@@ -542,7 +546,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         admin_headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
@@ -587,7 +591,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         admin_headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
@@ -640,7 +644,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
@@ -661,7 +665,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "second_project",
             'project_id': project2.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test2@example.com",
             'user_id': user.id,
             'authenticated': True
@@ -693,7 +697,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         admin_headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
@@ -717,7 +721,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "admin_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "admin",
             'user_id': "admin_id",
             'authenticated': True
@@ -752,7 +756,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         admin_headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': user.id,
             'authenticated': True
@@ -773,23 +777,29 @@ class QuotaAPITests(AdjutantAPITestCase):
         self.assertEqual(
             response.data['regions'][0]['current_quota_size'], 'small')
 
-    @modify_dict_settings(PROJECT_QUOTA_SIZES=[
-        {'key_list': ['zero'],
-         'operation': 'override',
-         'value':
-            {'nova': {
-                'instances': 0, 'cores': 0, 'ram': 0, 'floating_ips': 0,
-                'fixed_ips': 0, 'metadata_items': 0, 'injected_files': 0,
-                'injected_file_content_bytes': 0, 'key_pairs': 50,
-                'security_groups': 0, 'security_group_rules': 0, },
-             'cinder': {
-                'gigabytes': 0, 'snapshots': 0, 'volumes': 0, },
-             'neutron': {
-                'floatingip': 0, 'network': 0, 'port': 0, 'router': 0,
-                'security_group': 0, 'security_group_rule': 0}
-             }
-         }])
-    @modify_settings(QUOTA_SIZES_ASC={'prepend': 'zero'})
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.quota.sizes": [
+                {'operation': 'update', 'value': {
+                    "zero": {
+                        'nova': {
+                            'instances': 0, 'cores': 0, 'ram': 0, 'floating_ips': 0,
+                            'fixed_ips': 0, 'metadata_items': 0, 'injected_files': 0,
+                            'injected_file_content_bytes': 0, 'key_pairs': 50,
+                            'security_groups': 0, 'security_group_rules': 0, },
+                        'cinder': {
+                            'gigabytes': 0, 'snapshots': 0, 'volumes': 0, },
+                        'neutron': {
+                            'floatingip': 0, 'network': 0, 'port': 0, 'router': 0,
+                            'security_group': 0, 'security_group_rule': 0}
+                    }
+                }},
+            ],
+            "adjutant.quota.sizes_ascending": [
+                {'operation': 'prepend', 'value': "zero"},
+            ],
+        })
     def test_calculate_quota_size_zero(self):
         """
         Ensures that a zero quota enabled picks up
@@ -806,7 +816,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         admin_headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
@@ -866,7 +876,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
@@ -905,7 +915,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
@@ -938,7 +948,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
@@ -970,7 +980,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "admin_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "admin",
             'user_id': "admin_id",
             'authenticated': True
@@ -1007,7 +1017,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
@@ -1040,7 +1050,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "admin_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "admin",
             'user_id': "admin_id",
             'authenticated': True
@@ -1073,7 +1083,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
@@ -1148,7 +1158,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
@@ -1163,11 +1173,13 @@ class QuotaAPITests(AdjutantAPITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @modify_dict_settings(TASK_SETTINGS=[
-        {'key_list': ['update_quota', 'allow_auto_approve'],
-         'operation': 'override',
-         'value': False,
-         }])
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.workflow.tasks.update_quota.allow_auto_approve": [
+                {'operation': 'override', 'value': False},
+            ],
+        })
     def test_no_auto_approved_quota_change(self):
         """ Test allow_auto_approve config setting on a task."""
 
@@ -1182,7 +1194,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True
@@ -1215,7 +1227,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         admin_headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': user.id,
             'authenticated': True
@@ -1230,13 +1242,13 @@ class QuotaAPITests(AdjutantAPITestCase):
             response.data['regions'][0]['quota_change_options'], ['medium'])
 
         cinder_cache['RegionOne'][project.id][
-            'quota'] = settings.PROJECT_QUOTA_SIZES['large']['cinder']
+            'quota'] = CONF.quota.sizes['large']['cinder']
 
         nova_cache['RegionOne'][project.id][
-            'quota'] = settings.PROJECT_QUOTA_SIZES['large']['nova']
+            'quota'] = CONF.quota.sizes['large']['nova']
 
         neutron_cache['RegionOne'][project.id][
-            'quota'] = settings.PROJECT_QUOTA_SIZES['large']['neutron']
+            'quota'] = CONF.quota.sizes['large']['neutron']
 
         response = self.client.get(url, headers=admin_headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -1246,11 +1258,14 @@ class QuotaAPITests(AdjutantAPITestCase):
             response.data['regions'][0]['quota_change_options'],
             ['small', 'medium'])
 
-    @modify_dict_settings(QUOTA_SERVICES={
-        'operation': 'append',
-        'key_list': ['*'],
-        'value': 'octavia'
-    })
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.quota.services": [
+                {'operation': 'override', 'value': {
+                    '*': ['cinder', 'neutron', 'nova', 'octavia']}},
+            ],
+        })
     def test_update_quota_no_history_with_octavia(self):
         """ Update quota for octavia."""
 
@@ -1265,7 +1280,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         admin_headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "user_id",
             'authenticated': True

@@ -14,9 +14,20 @@
 
 from adjutant.api.v1.views import APIViewWithLogger
 
+from adjutant.config import CONF
 
-# TODO(adriant): Decide what this class does now other than just being a
-# namespace for plugin views.
+
 class BaseDelegateAPI(APIViewWithLogger):
     """Base Class for Adjutant's deployer configurable APIs."""
-    pass
+
+    config_group = None
+
+    def __init__(self, *args, **kwargs):
+        super(BaseDelegateAPI, self).__init__(*args, **kwargs)
+        # NOTE(adriant): This is only used at registration,
+        #                so lets not expose it:
+        self.config_group = None
+
+    @property
+    def config(self):
+        return CONF.api.delegate_apis.get(self.__class__.__name__)

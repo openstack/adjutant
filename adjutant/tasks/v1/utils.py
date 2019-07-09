@@ -15,17 +15,16 @@
 from logging import getLogger
 
 from datetime import timedelta
-from smtplib import SMTPException
 from uuid import uuid4
 
-from django.conf import settings
 from django.core.mail import EmailMultiAlternatives
 from django.template import loader
 from django.utils import timezone
 
-from adjutant import exceptions
 from adjutant.api.models import Token
-from adjutant.api.v1.utils import create_notification
+from adjutant.notifications.utils import create_notification
+from adjutant.config import CONF
+from adjutant import exceptions
 
 
 LOG = getLogger('adjutant')
@@ -44,8 +43,10 @@ def handle_task_error(e, task, error_text="while running task"):
     raise exceptions.TaskActionsFailed(task, internal_message=notes)
 
 
-def create_token(task):
-    expire = timezone.now() + timedelta(hours=settings.TOKEN_EXPIRE_TIME)
+def create_token(task, expiry_time=None):
+    if not expiry_time:
+        expiry_time = CONF.workflow.default_token_expiry
+    expire = timezone.now() + timedelta(seconds=expiry_time)
 
     uuid = uuid4().hex
     token = Token.objects.create(
@@ -64,7 +65,7 @@ def send_stage_email(task, email_conf, token=None):
     text_template = loader.get_template(
         email_conf['template'],
         using='include_etc_templates')
-    html_template = email_conf.get('html_template', None)
+    html_template = email_conf['html_template']
     if html_template:
         html_template = loader.get_template(
             html_template,
@@ -97,15 +98,10 @@ def send_stage_email(task, email_conf, token=None):
         'actions': actions
     }
     if token:
-        if settings.HORIZON_URL:
-            tokenurl = settings.HORIZON_URL
-            if not tokenurl.endswith('/'):
-                tokenurl += '/'
-            tokenurl += 'token/'
-        else:
-            tokenurl = settings.TOKEN_SUBMISSION_URL
-            if not tokenurl.endswith('/'):
-                tokenurl += '/'
+        tokenurl = CONF.workflow.horizon_url
+        if not tokenurl.endswith('/'):
+            tokenurl += '/'
+        tokenurl += 'token/'
         context.update({
             'tokenurl': tokenurl,
             'token': token.token
@@ -116,7 +112,7 @@ def send_stage_email(task, email_conf, token=None):
 
         # from_email is the return-path and is distinct from the
         # message headers
-        from_email = email_conf.get('from')
+        from_email = email_conf['from']
         if not from_email:
             from_email = email_conf['reply']
         elif "%(task_uuid)s" in from_email:
@@ -145,24 +141,20 @@ def send_stage_email(task, email_conf, token=None):
 
         email.send(fail_silently=False)
 
-    except SMTPException as e:
+    except Exception as e:
         notes = {
             'errors':
                 ("Error: '%s' while emailing update for task: %s" %
                     (e, task.uuid))
         }
 
-        errors_conf = settings.TASK_SETTINGS.get(
-            task.task_type, settings.DEFAULT_TASK_SETTINGS).get(
-                'errors', {}).get("SMTPException", {})
+        notif_conf = task.config.notifications
 
-        if errors_conf:
+        if e.__class__.__name__ in notif_conf.safe_errors:
             notification = create_notification(
                 task, notes, error=True,
-                engines=errors_conf.get('engines', True))
-
-            if errors_conf.get('notification') == "acknowledge":
-                notification.acknowledged = True
-                notification.save()
+                handlers=False)
+            notification.acknowledged = True
+            notification.save()
         else:
             create_notification(task, notes, error=True)

@@ -1,0 +1,793 @@
+django:
+  # String
+  # The Django secret key.
+  secret_key: Do not ever use this awful secret in prod!!!!
+  # Boolean
+  # Django debug mode is turned on.
+  debug: False
+  # List
+  # The Django allowed hosts
+  allowed_hosts:
+    - '*'
+  # List
+  # A list of additional django apps.
+  # additional_apps:
+  # Dict
+  # Django databases config.
+  databases:
+    default:
+      ATOMIC_REQUESTS: false
+      AUTOCOMMIT: true
+      CONN_MAX_AGE: 0
+      ENGINE: django.db.backends.sqlite3
+      HOST: ''
+      NAME: db.sqlite3
+      OPTIONS: {}
+      PASSWORD: ''
+      PORT: ''
+      TEST:
+        CHARSET: null
+        COLLATION: null
+        MIRROR: null
+        NAME: null
+      TIME_ZONE: null
+      USER: ''
+  # Dict
+  # A full override of the Django logging config for more customised logging.
+  # logging:
+  # String
+  # The name and location of the Adjutant log file, superceded by 'adjutant.django.logging'.
+  log_file: adjutant.log
+  email:
+    # String
+    # Django email backend to use.
+    email_backend: django.core.mail.backends.console.EmailBackend
+    # Integer
+    # Email backend timeout.
+    # timeout: <your_value>
+    # Hostname
+    # Email backend server location.
+    # host: <your_value>
+    # Port
+    # Email backend server port.
+    # port: <your_value>
+    # String
+    # Email backend user.
+    # host_user: <your_value>
+    # String
+    # Email backend user password.
+    # host_password: <your_value>
+    # Boolean
+    # Whether to use TLS for email. Mutually exclusive with 'use_ssl'.
+    use_tls: False
+    # Boolean
+    # Whether to use SSL for email. Mutually exclusive with 'use_tls'.
+    use_ssl: False
+
+identity:
+  # Integer
+  # Cache time for Keystone Tokens in the Keystone Middleware.
+  token_cache_time: -1
+  # Boolean
+  # Is Adjutant allowed (or able) to edit users in Keystone.
+  can_edit_users: True
+  # Boolean
+  # Should Adjutant assume and treat all usernames as emails.
+  username_is_email: True
+  # Dict
+  # A mapping from held role to roles it is allowed to manage.
+  role_mapping:
+    admin:
+    - project_admin
+    - project_mod
+    - heat_stack_owner
+    - member
+    project_admin:
+    - project_admin
+    - project_mod
+    - heat_stack_owner
+    - member
+    project_mod:
+    - project_mod
+    - heat_stack_owner
+    - member
+  auth:
+    # String
+    # Username for Adjutant Keystone admin user.
+    # username: <your_value>
+    # String
+    # Password for Adjutant Keystone admin user.
+    # password: <your_value>
+    # String
+    # Project name for Adjutant Keystone admin user.
+    # project_name: <your_value>
+    # String
+    # Project domain id for Adjutant Keystone admin user.
+    project_domain_id: default
+    # String
+    # User domain id for Adjutant Keystone admin user.
+    user_domain_id: default
+    # URI
+    # Keystone auth url that Adjutant will use.
+    # auth_url: <your_value>
+
+api:
+  # List
+  # List of Active Delegate APIs.
+  active_delegate_apis:
+    - UserRoles
+    - UserDetail
+    - UserResetPassword
+    - UserList
+    - RoleList
+  delegate_apis:
+    CreateProjectAndUser:
+      # String
+      # Default region in which any potential resources may be created.
+      default_region: RegionOne
+      # String
+      # Domain in which project and users will be created.
+      default_domain_id: default
+      # String
+      # Parent id under which this project will be created. Default is None, and will create under default domain.
+      # default_parent_id: <your_value>
+    UserList:
+      # List
+      # Users with any of these roles will be hidden from the user list.
+      blacklisted_roles:
+        - admin
+    UserDetail:
+      # List
+      # User with these roles will return not found.
+      blacklisted_roles:
+        - admin
+    UserRoles:
+      # List
+      # User with these roles will return not found.
+      blacklisted_roles:
+        - admin
+    SignUp:
+      # String
+      # Default region in which any potential resources may be created.
+      default_region: RegionOne
+      # String
+      # Domain in which project and users will be created.
+      default_domain_id: default
+      # String
+      # Parent id under which this project will be created. Default is None, and will create under default domain.
+      # default_parent_id: <your_value>
+
+notifications:
+  handler_defaults:
+    EmailNotification:
+      # List
+      # List of email addresses to send this notification to.
+      # emails:
+      # String
+      # From email for this notification.
+      from: bounce+%(task_uuid)s@example.com
+      # String
+      # Reply-to email for this notification.
+      reply: no-reply@example.com
+      # String
+      # Email template for this notification. No template will cause the email not to send.
+      template: notification.txt
+      # String
+      # Email html template for this notification.
+      # html_template: <your_value>
+
+workflow:
+  # URI
+  # The base Horizon url for Adjutant to use when producing links to Horizon.
+  horizon_url: http://localhost/
+  # Integer
+  # The default token expiry time for Task tokens.
+  default_token_expiry: 86400
+  task_defaults:
+    emails:
+      initial:
+        # String
+        # Default email subject for this stage
+        subject: Task Confirmation
+        # String
+        # Default from email for this stage
+        from: bounce+%(task_uuid)s@example.com
+        # String
+        # Default reply-to email for this stage
+        reply: no-reply@example.com
+        # String
+        # Default email template for this stage
+        template: initial.txt
+        # String
+        # Default email html template for this stage
+        # html_template: <your_value>
+      token:
+        # String
+        # Default email subject for this stage
+        subject: Task Token
+        # String
+        # Default from email for this stage
+        from: bounce+%(task_uuid)s@example.com
+        # String
+        # Default reply-to email for this stage
+        reply: no-reply@example.com
+        # String
+        # Default email template for this stage
+        template: token.txt
+        # String
+        # Default email html template for this stage
+        # html_template: <your_value>
+      completed:
+        # String
+        # Default email subject for this stage
+        subject: Task Completed
+        # String
+        # Default from email for this stage
+        from: bounce+%(task_uuid)s@example.com
+        # String
+        # Default reply-to email for this stage
+        reply: no-reply@example.com
+        # String
+        # Default email template for this stage
+        template: completed.txt
+        # String
+        # Default email html template for this stage
+        # html_template: <your_value>
+    notifications:
+      # List
+      # Handlers to use for standard notifications.
+      standard_handlers:
+        - EmailNotification
+      # List
+      # Handlers to use for error notifications.
+      error_handlers:
+        - EmailNotification
+      # Dict
+      # Settings for standard notification handlers.
+      # standard_handler_config:
+      # Dict
+      # Settings for error notification handlers.
+      # error_handler_config:
+      # List
+      # Error types which are safe to acknowledge automatically.
+      safe_errors:
+        - SMTPException
+  action_defaults:
+    NewProjectWithUserAction:
+      # List
+      # Roles to be given on project for the user.
+      default_roles:
+        - member
+        - project_admin
+    NewProjectAction:
+      # List
+      # Roles to be given on project to the creating user.
+      default_roles:
+        - member
+        - project_admin
+    AddDefaultUsersToProjectAction:
+      # List
+      # Users which this action should add to the project.
+      # default_users:
+      # List
+      # Roles which those users should get.
+      # default_roles:
+    ResetUserPasswordAction:
+      # List
+      # Users with these roles cannot reset their passwords.
+      blacklisted_roles:
+        - admin
+    NewDefaultNetworkAction:
+      region_defaults:
+        # String
+        # Name to be given to the default network.
+        network_name: default_network
+        # String
+        # Name to be given to the default subnet.
+        subnet_name: default_subnet
+        # String
+        # Name to be given to the default router.
+        router_name: default_router
+        # String
+        # ID of the public network.
+        # public_network: <your_value>
+        # String
+        # CIDR for the default subnet.
+        # subnet_cidr: <your_value>
+        # List
+        # DNS nameservers for the subnet.
+        # dns_nameservers:
+      # Dict
+      # Specific per region config for default network. See 'region_defaults'.
+      # regions:
+    NewProjectDefaultNetworkAction:
+      region_defaults:
+        # String
+        # Name to be given to the default network.
+        network_name: default_network
+        # String
+        # Name to be given to the default subnet.
+        subnet_name: default_subnet
+        # String
+        # Name to be given to the default router.
+        router_name: default_router
+        # String
+        # ID of the public network.
+        # public_network: <your_value>
+        # String
+        # CIDR for the default subnet.
+        # subnet_cidr: <your_value>
+        # List
+        # DNS nameservers for the subnet.
+        # dns_nameservers:
+      # Dict
+      # Specific per region config for default network. See 'region_defaults'.
+      # regions:
+    SetProjectQuotaAction:
+      # Float
+      # Precentage different allowed when matching quota sizes.
+      size_difference_threshold: 0.1
+      # Integer
+      # The allowed number of days between auto approved quota changes.
+      days_between_autoapprove: 30
+      # Dict
+      # Which quota size to use for which region.
+      region_sizes:
+        RegionOne: small
+    UpdateProjectQuotasAction:
+      # Float
+      # Precentage different allowed when matching quota sizes.
+      size_difference_threshold: 0.1
+      # Integer
+      # The allowed number of days between auto approved quota changes.
+      days_between_autoapprove: 30
+    SendAdditionalEmailAction:
+      prepare:
+        # String
+        # Email subject for this stage.
+        subject: Openstack Email Notification
+        # String
+        # From email for this stage.
+        from: bounce+%(task_uuid)s@example.com
+        # String
+        # Reply-to email for this stage.
+        reply: no-reply@example.com
+        # String
+        # Email template for this stage. No template will cause the email not to send.
+        # template: <your_value>
+        # String
+        # Email html template for this stage. No template will cause the email not to send.
+        # html_template: <your_value>
+        # Boolean
+        # Email the user who started the task.
+        email_current_user: False
+        # Boolean
+        # Send to an email set in the task cache.
+        email_task_cache: False
+        # List
+        # Send emails to the given roles on the project.
+        # email_roles:
+        # List
+        # Send emails to an arbitrary admin emails
+        # email_additional_addresses:
+      approve:
+        # String
+        # Email subject for this stage.
+        subject: Openstack Email Notification
+        # String
+        # From email for this stage.
+        from: bounce+%(task_uuid)s@example.com
+        # String
+        # Reply-to email for this stage.
+        reply: no-reply@example.com
+        # String
+        # Email template for this stage. No template will cause the email not to send.
+        # template: <your_value>
+        # String
+        # Email html template for this stage. No template will cause the email not to send.
+        # html_template: <your_value>
+        # Boolean
+        # Email the user who started the task.
+        email_current_user: False
+        # Boolean
+        # Send to an email set in the task cache.
+        email_task_cache: False
+        # List
+        # Send emails to the given roles on the project.
+        # email_roles:
+        # List
+        # Send emails to an arbitrary admin emails
+        # email_additional_addresses:
+      submit:
+        # String
+        # Email subject for this stage.
+        subject: Openstack Email Notification
+        # String
+        # From email for this stage.
+        from: bounce+%(task_uuid)s@example.com
+        # String
+        # Reply-to email for this stage.
+        reply: no-reply@example.com
+        # String
+        # Email template for this stage. No template will cause the email not to send.
+        # template: <your_value>
+        # String
+        # Email html template for this stage. No template will cause the email not to send.
+        # html_template: <your_value>
+        # Boolean
+        # Email the user who started the task.
+        email_current_user: False
+        # Boolean
+        # Send to an email set in the task cache.
+        email_task_cache: False
+        # List
+        # Send emails to the given roles on the project.
+        # email_roles:
+        # List
+        # Send emails to an arbitrary admin emails
+        # email_additional_addresses:
+  tasks:
+    create_project_and_user:
+      # Boolean
+      # Override if this task allows auto_approval. Otherwise uses task default.
+      allow_auto_approve: True
+      # List
+      # Additional actions to be run as part of the task after default actions.
+      # additional_actions:
+      # Integer
+      # Override for the task token expiry. Otherwise uses task default.
+      # token_expiry: <your_value>
+      # Dict
+      # Action config overrides over the action defaults. See 'adjutant.workflow.action_defaults'.
+      actions:
+        SomeCustomAction:
+          some_action_setting: <a-uuid-probably>
+      # Dict
+      # Email config overrides for this task over task defaults.See 'adjutant.workflow.emails'.
+      emails:
+        completed:
+          subject: signup completed
+          template: create_project_and_user_completed.txt
+        initial:
+          subject: signup received
+          template: create_project_and_user_initial.txt
+        token:
+          subject: signup approved
+          template: create_project_and_user_token.txt
+      # Dict
+      # Notification config overrides for this task over task defaults.See 'adjutant.workflow.notifications'.
+      notifications:
+        error_handler_config:
+          EmailNotification:
+            emails:
+            - example@example.com
+            reply: no-reply@example.com
+        error_handlers:
+        - EmailNotification
+        standard_handler_config:
+          EmailNotification:
+            emails:
+            - example@example.com
+            reply: no-reply@example.com
+        standard_handlers:
+        - EmailNotification
+    edit_user_roles:
+      # Boolean
+      # Override if this task allows auto_approval. Otherwise uses task default.
+      allow_auto_approve: True
+      # List
+      # Additional actions to be run as part of the task after default actions.
+      # additional_actions:
+      # Integer
+      # Override for the task token expiry. Otherwise uses task default.
+      # token_expiry: <your_value>
+      # Dict
+      # Action config overrides over the action defaults. See 'adjutant.workflow.action_defaults'.
+      actions:
+        SomeCustomAction:
+          some_action_setting: <a-uuid-probably>
+      # Dict
+      # Email config overrides for this task over task defaults.See 'adjutant.workflow.emails'.
+      emails:
+        completed: null
+        initial: null
+        token: null
+      # Dict
+      # Notification config overrides for this task over task defaults.See 'adjutant.workflow.notifications'.
+      notifications:
+        error_handler_config:
+          EmailNotification:
+            emails:
+            - example@example.com
+            reply: no-reply@example.com
+        error_handlers:
+        - EmailNotification
+        standard_handler_config:
+          EmailNotification:
+            emails:
+            - example@example.com
+            reply: no-reply@example.com
+        standard_handlers:
+        - EmailNotification
+    invite_user_to_project:
+      # Boolean
+      # Override if this task allows auto_approval. Otherwise uses task default.
+      allow_auto_approve: True
+      # List
+      # Additional actions to be run as part of the task after default actions.
+      # additional_actions:
+      # Integer
+      # Override for the task token expiry. Otherwise uses task default.
+      # token_expiry: <your_value>
+      # Dict
+      # Action config overrides over the action defaults. See 'adjutant.workflow.action_defaults'.
+      actions:
+        SomeCustomAction:
+          some_action_setting: <a-uuid-probably>
+      # Dict
+      # Email config overrides for this task over task defaults.See 'adjutant.workflow.emails'.
+      emails:
+        completed:
+          subject: invite_user_to_project
+          template: invite_user_to_project_completed.txt
+        initial: null
+        token:
+          subject: invite_user_to_project
+          template: invite_user_to_project_token.txt
+      # Dict
+      # Notification config overrides for this task over task defaults.See 'adjutant.workflow.notifications'.
+      notifications:
+        error_handler_config:
+          EmailNotification:
+            emails:
+            - example@example.com
+            reply: no-reply@example.com
+        error_handlers:
+        - EmailNotification
+        standard_handler_config:
+          EmailNotification:
+            emails:
+            - example@example.com
+            reply: no-reply@example.com
+        standard_handlers:
+        - EmailNotification
+    reset_user_password:
+      # Boolean
+      # Override if this task allows auto_approval. Otherwise uses task default.
+      allow_auto_approve: True
+      # List
+      # Additional actions to be run as part of the task after default actions.
+      # additional_actions:
+      # Integer
+      # Override for the task token expiry. Otherwise uses task default.
+      # token_expiry: <your_value>
+      # Dict
+      # Action config overrides over the action defaults. See 'adjutant.workflow.action_defaults'.
+      actions:
+        SomeCustomAction:
+          some_action_setting: <a-uuid-probably>
+      # Dict
+      # Email config overrides for this task over task defaults.See 'adjutant.workflow.emails'.
+      emails:
+        completed:
+          subject: Password Reset for OpenStack
+          template: reset_user_password_completed.txt
+        initial: null
+        token:
+          subject: Password Reset for OpenStack
+          template: reset_user_password_token.txt
+      # Dict
+      # Notification config overrides for this task over task defaults.See 'adjutant.workflow.notifications'.
+      notifications:
+        error_handler_config:
+          EmailNotification:
+            emails:
+            - example@example.com
+            reply: no-reply@example.com
+        error_handlers:
+        - EmailNotification
+        standard_handler_config:
+          EmailNotification:
+            emails:
+            - example@example.com
+            reply: no-reply@example.com
+        standard_handlers:
+        - EmailNotification
+    update_user_email:
+      # Boolean
+      # Override if this task allows auto_approval. Otherwise uses task default.
+      allow_auto_approve: True
+      # List
+      # Additional actions to be run as part of the task after default actions.
+      additional_actions:
+        - SendAdditionalEmailAction
+      # Integer
+      # Override for the task token expiry. Otherwise uses task default.
+      # token_expiry: <your_value>
+      # Dict
+      # Action config overrides over the action defaults. See 'adjutant.workflow.action_defaults'.
+      actions:
+        SendAdditionalEmailAction:
+          initial:
+            email_current_user: true
+            subject: OpenStack Email Update Requested
+            template: update_user_email_started.txt
+      # Dict
+      # Email config overrides for this task over task defaults.See 'adjutant.workflow.emails'.
+      emails:
+        completed:
+          subject: Email Update Complete
+          template: update_user_email_completed.txt
+        initial: null
+        token:
+          subject: update_user_email_token
+          template: update_user_email_token.txt
+      # Dict
+      # Notification config overrides for this task over task defaults.See 'adjutant.workflow.notifications'.
+      notifications:
+        error_handler_config:
+          EmailNotification:
+            emails:
+            - example@example.com
+            reply: no-reply@example.com
+        error_handlers:
+        - EmailNotification
+        standard_handler_config:
+          EmailNotification:
+            emails:
+            - example@example.com
+            reply: no-reply@example.com
+        standard_handlers:
+        - EmailNotification
+    update_quota:
+      # Boolean
+      # Override if this task allows auto_approval. Otherwise uses task default.
+      allow_auto_approve: True
+      # List
+      # Additional actions to be run as part of the task after default actions.
+      # additional_actions:
+      # Integer
+      # Override for the task token expiry. Otherwise uses task default.
+      # token_expiry: <your_value>
+      # Dict
+      # Action config overrides over the action defaults. See 'adjutant.workflow.action_defaults'.
+      actions:
+        SomeCustomAction:
+          some_action_setting: <a-uuid-probably>
+      # Dict
+      # Email config overrides for this task over task defaults.See 'adjutant.workflow.emails'.
+      emails:
+        completed:
+          subject: signup completed
+          template: create_project_and_user_completed.txt
+        initial: null
+        token: null
+      # Dict
+      # Notification config overrides for this task over task defaults.See 'adjutant.workflow.notifications'.
+      notifications:
+        error_handler_config:
+          EmailNotification:
+            emails:
+            - example@example.com
+            reply: no-reply@example.com
+        error_handlers:
+        - EmailNotification
+        standard_handler_config:
+          EmailNotification:
+            emails:
+            - example@example.com
+            reply: no-reply@example.com
+        standard_handlers:
+        - EmailNotification
+
+quota:
+  # Dict
+  # A definition of the quota size groups that Adjutant should use.
+  sizes:
+    large:
+      cinder:
+        gigabytes: 50000
+        snapshots: 600
+        volumes: 200
+      neutron:
+        floatingip: 50
+        network: 10
+        port: 500
+        router: 10
+        security_group: 100
+        security_group_rule: 800
+        subnet: 10
+      nova:
+        cores: 200
+        fixed_ips: 0
+        floating_ips: 50
+        injected_file_content_bytes: 10240
+        injected_files: 5
+        instances: 100
+        key_pairs: 50
+        metadata_items: 128
+        ram: 655360
+        security_group_rules: 800
+        security_groups: 100
+      octavia:
+        health_monitor: 100
+        listener: 10
+        load_balancer: 10
+        member: 10
+        pool: 10
+    medium:
+      cinder:
+        gigabytes: 10000
+        snapshots: 300
+        volumes: 100
+      neutron:
+        floatingip: 25
+        network: 5
+        port: 250
+        router: 5
+        security_group: 50
+        security_group_rule: 400
+        subnet: 5
+      nova:
+        cores: 100
+        fixed_ips: 0
+        floating_ips: 25
+        injected_file_content_bytes: 10240
+        injected_files: 5
+        instances: 50
+        key_pairs: 50
+        metadata_items: 128
+        ram: 327680
+        security_group_rules: 400
+        security_groups: 50
+      octavia:
+        health_monitor: 50
+        listener: 5
+        load_balancer: 5
+        member: 5
+        pool: 5
+    small:
+      cinder:
+        gigabytes: 5000
+        snapshots: 50
+        volumes: 20
+      neutron:
+        floatingip: 10
+        network: 3
+        port: 50
+        router: 3
+        security_group: 20
+        security_group_rule: 100
+        subnet: 3
+      nova:
+        cores: 20
+        fixed_ips: 0
+        floating_ips: 10
+        injected_file_content_bytes: 10240
+        injected_files: 5
+        instances: 10
+        key_pairs: 50
+        metadata_items: 128
+        ram: 65536
+        security_group_rules: 100
+        security_groups: 20
+      octavia:
+        health_monitor: 5
+        listener: 1
+        load_balancer: 1
+        member: 2
+        pool: 1
+  # List
+  # An ascending list of all the quota size names, so that Adjutant knows their relative sizes/order.
+  sizes_ascending:
+    - small
+    - medium
+    - large
+  # Dict
+  # A per region definition of what services Adjutant should manage quotas for. '*' means all or default region.
+  services:
+    '*':
+    - cinder
+    - neutron
+    - nova
+

@@ -25,9 +25,9 @@ https://docs.djangoproject.com/en/1.11/ref/settings/
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 import os
 import sys
-import yaml
-from adjutant.utils import setup_task_settings
-from adjutant.exceptions import ConfigurationException
+
+from adjutant.config import CONF as adj_conf
+
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 
 # Application definition
@@ -41,10 +41,17 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework_swagger',
+
+    'adjutant.commands',
     'adjutant.actions',
     'adjutant.api',
     'adjutant.notifications',
     'adjutant.tasks',
+
+    # NOTE(adriant): Until we have v2 options, hardcode our v1s
+    'adjutant.actions.v1',
+    'adjutant.tasks.v1',
+    'adjutant.api.v1',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -106,114 +113,63 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [],
 }
 
-# Setup of local settings data
-if 'test' in sys.argv:
-    from adjutant import test_settings
-    CONFIG = test_settings.conf_dict
-else:
-    config_file = "/etc/adjutant/conf.yaml"
-    if not os.path.isfile(config_file):
-        print("%s does not exist. Reverting to default config file." %
-              config_file)
-        config_file = "conf/conf.yaml"
-    with open(config_file) as f:
-        CONFIG = yaml.load(f, Loader=yaml.FullLoader)
-
-SECRET_KEY = CONFIG['SECRET_KEY']
+SECRET_KEY = adj_conf.django.secret_key
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = CONFIG.get('DEBUG', False)
-
+DEBUG = adj_conf.django.debug
 if DEBUG:
     REST_FRAMEWORK['DEFAULT_RENDERER_CLASSES'].append(
         'rest_framework.renderers.BrowsableAPIRenderer')
 
-ALLOWED_HOSTS = CONFIG.get('ALLOWED_HOSTS', [])
+ALLOWED_HOSTS = adj_conf.django.allowed_hosts
 
-for app in CONFIG['ADDITIONAL_APPS']:
-    INSTALLED_APPS = list(INSTALLED_APPS)
-    INSTALLED_APPS.append(app)
-
+_INSTALLED_APPS = list(INSTALLED_APPS) + adj_conf.django.additional_apps
 # NOTE(adriant): Because the order matters, we want this import to be last
 # so the startup checks run after everything is imported.
-INSTALLED_APPS.append("adjutant.startup")
+_INSTALLED_APPS.append("adjutant.startup")
+INSTALLED_APPS = _INSTALLED_APPS
 
-DATABASES = CONFIG['DATABASES']
+DATABASES = adj_conf.django.databases
 
-LOGGING = CONFIG['LOGGING']
-
-
-EMAIL_BACKEND = CONFIG['EMAIL_SETTINGS']['EMAIL_BACKEND']
-EMAIL_TIMEOUT = 60
-
-EMAIL_HOST = CONFIG['EMAIL_SETTINGS'].get('EMAIL_HOST')
-EMAIL_PORT = CONFIG['EMAIL_SETTINGS'].get('EMAIL_PORT')
-EMAIL_HOST_USER = CONFIG['EMAIL_SETTINGS'].get('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = CONFIG['EMAIL_SETTINGS'].get('EMAIL_HOST_PASSWORD')
-EMAIL_USE_TLS = CONFIG['EMAIL_SETTINGS'].get('EMAIL_USE_TLS', False)
-EMAIL_USE_SSL = CONFIG['EMAIL_SETTINGS'].get('EMAIL_USE_SSL', False)
-
-# setting to control if user name and email are allowed
-# to have different values.
-USERNAME_IS_EMAIL = CONFIG['USERNAME_IS_EMAIL']
-
-# Keystone admin credentials:
-KEYSTONE = CONFIG['KEYSTONE']
-
-TOKEN_SUBMISSION_URL = CONFIG.get('TOKEN_SUBMISSION_URL')
-if TOKEN_SUBMISSION_URL:
-    print("'TOKEN_SUBMISSION_URL' is deprecated, use 'HORIZON_URL' instead")
-
-HORIZON_URL = CONFIG.get('HORIZON_URL')
-
-if not HORIZON_URL and not TOKEN_SUBMISSION_URL:
-    raise ConfigurationException("Must supply 'HORIZON_URL'")
-
-TOKEN_EXPIRE_TIME = CONFIG['TOKEN_EXPIRE_TIME']
-
-DEFAULT_ACTION_SETTINGS = CONFIG['DEFAULT_ACTION_SETTINGS']
-
-TASK_SETTINGS = setup_task_settings(
-    CONFIG['DEFAULT_TASK_SETTINGS'],
-    CONFIG['DEFAULT_ACTION_SETTINGS'],
-    CONFIG['TASK_SETTINGS'])
-
-DEFAULT_TASK_SETTINGS = CONFIG['DEFAULT_TASK_SETTINGS']
-
-PLUGIN_SETTINGS = CONFIG.get('PLUGIN_SETTINGS', {})
-
-ROLES_MAPPING = CONFIG['ROLES_MAPPING']
-
-TOKEN_CACHE_TIME = CONFIG.get('TOKEN_CACHE_TIME', 60)
-
-PROJECT_QUOTA_SIZES = CONFIG.get('PROJECT_QUOTA_SIZES')
-
-QUOTA_SIZES_ASC = CONFIG.get('QUOTA_SIZES_ASC', [])
-
-ACTIVE_DELEGATE_APIS = CONFIG.get(
-    'ACTIVE_DELEGATE_APIS',
-    [
-        'UserRoles',
-        'UserDetail',
-        'UserResetPassword',
-        'UserList',
-        'RoleList'
-    ])
-
-# Default services for which to check and update quotas for
-QUOTA_SERVICES = CONFIG.get(
-    'QUOTA_SERVICES',
-    {'*': ['cinder', 'neutron', 'nova']})
+if adj_conf.django.logging:
+    LOGGING = adj_conf.django.logging
+else:
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'handlers': {
+            'file': {
+                'level': 'INFO',
+                'class': 'logging.FileHandler',
+                'filename': adj_conf.django.log_file,
+            },
+        },
+        'loggers': {
+            'adjutant': {
+                'handlers': ['file'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+            'django': {
+                'handlers': ['file'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+            'keystonemiddleware': {
+                'handlers': ['file'],
+                'level': 'INFO',
+                'propagate': False,
+            },
+        },
+    }
 
 
-# Dict of DelegateAPIs and their url_paths.
-# - This is populated by registering DelegateAPIs.
-DELEGATE_API_CLASSES = {}
+EMAIL_BACKEND = adj_conf.django.email.email_backend
+EMAIL_TIMEOUT = adj_conf.django.email.timeout
 
-# Dict of actions and their serializers.
-# - This is populated from the various model modules at startup:
-ACTION_CLASSES = {}
-
-TASK_CLASSES = {}
-
-NOTIFICATION_ENGINES = {}
+EMAIL_HOST = adj_conf.django.email.host
+EMAIL_PORT = adj_conf.django.email.port
+EMAIL_HOST_USER = adj_conf.django.email.host_user
+EMAIL_HOST_PASSWORD = adj_conf.django.email.host_password
+EMAIL_USE_TLS = adj_conf.django.email.use_tls
+EMAIL_USE_SSL = adj_conf.django.email.use_ssl

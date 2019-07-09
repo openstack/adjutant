@@ -12,20 +12,20 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.test import TestCase
-from django.test.utils import override_settings
-
 import mock
+
+from confspirator.tests import utils as conf_utils
 
 from adjutant.actions.v1.resources import (
     NewDefaultNetworkAction, NewProjectDefaultNetworkAction,
     SetProjectQuotaAction, UpdateProjectQuotasAction)
 from adjutant.api.models import Task
-from adjutant.common.tests.utils import modify_dict_settings
 from adjutant.common.tests.fake_clients import (
     FakeManager, setup_identity_cache, get_fake_neutron, get_fake_novaclient,
     get_fake_cinderclient, setup_neutron_cache, neutron_cache, cinder_cache,
     nova_cache, setup_mock_caches, get_fake_octaviaclient, octavia_cache)
+from adjutant.common.tests.utils import AdjutantTestCase
+from adjutant.config import CONF
 
 
 @mock.patch('adjutant.common.user_store.IdentityManager',
@@ -42,7 +42,43 @@ from adjutant.common.tests.fake_clients import (
 @mock.patch(
     'adjutant.common.openstack_clients.get_cinderclient',
     get_fake_cinderclient)
-class ProjectSetupActionTests(TestCase):
+@conf_utils.modify_conf(
+    CONF,
+    operations={
+        "adjutant.workflow.action_defaults.NewDefaultNetworkAction.regions": [
+            {
+                "operation": "override",
+                "value": {
+                    "RegionOne": {
+                        "dns_nameservers": ["193.168.1.2", "193.168.1.3"],
+                        "subnet_cidr": "192.168.1.0/24",
+                        "network_name": "somenetwork",
+                        "public_network": "3cb50f61-5bce-4c03-96e6-8e262e12bb35",
+                        "router_name": "somerouter",
+                        "subnet_name": "somesubnet",
+                    }
+                },
+            }
+        ],
+        "adjutant.quota.sizes": [
+            {
+                "operation": "update",
+                "value": {
+                    "large_cinder_only": {
+                        "cinder": {"gigabytes": 50001, "volumes": 200, "snapshots": 600}
+                    }
+                },
+            }
+        ],
+        "adjutant.workflow.action_defaults.SetProjectQuotaAction.region_sizes": [
+            {
+                "operation": "override",
+                "value": {'RegionOne': 'small', 'RegionThree': 'large_cinder_only'}
+            },
+        ],
+    },
+)
+class ProjectSetupActionTests(AdjutantTestCase):
 
     def test_network_setup(self):
         """
@@ -207,21 +243,11 @@ class ProjectSetupActionTests(TestCase):
         self.assertEqual(len(
             neutron_cache['RegionOne']['test_project_id']['subnets']), 1)
 
-    @modify_dict_settings(DEFAULT_ACTION_SETTINGS={
-        'operation': 'override',
-        'key_list': ['NewDefaultNetworkAction'],
-        'value': {'RegionOne': {
-            'DNS_NAMESERVERS': ['193.168.1.2', '193.168.1.3'],
-            'SUBNET_CIDR': '192.168.1.0/24',
-            'network_name': 'somenetwork',
-            'public_network': '3cb50f61-5bce-4c03-96e6-8e262e12bb35',
-            'router_name': 'somerouter',
-            'subnet_name': 'somesubnet'
-        }}})
     def test_new_project_network_setup(self):
         """
         Base case, setup network after a new project, no issues.
         """
+        setup_identity_cache()
         setup_neutron_cache('RegionOne', 'test_project_id')
         task = Task.objects.create(
             keystone_user={'roles': ['admin']})
@@ -272,6 +298,7 @@ class ProjectSetupActionTests(TestCase):
         """
         No project id given, should do nothing.
         """
+        setup_identity_cache()
         setup_neutron_cache('RegionOne', 'test_project_id')
         task = Task.objects.create(
             keystone_user={'roles': ['admin']})
@@ -304,6 +331,7 @@ class ProjectSetupActionTests(TestCase):
         """
         Told not to setup, should do nothing.
         """
+        setup_identity_cache()
         setup_neutron_cache('RegionOne', 'test_project_id')
         task = Task.objects.create(
             keystone_user={'roles': ['admin']})
@@ -348,6 +376,7 @@ class ProjectSetupActionTests(TestCase):
         """
         Should fail, but on re_approve will continue where it left off.
         """
+        setup_identity_cache()
         setup_neutron_cache('RegionOne', 'test_project_id')
         global neutron_cache
         task = Task.objects.create(
@@ -443,7 +472,6 @@ class ProjectSetupActionTests(TestCase):
         self.assertEqual(action.valid, True)
 
         # check the quotas were updated
-        # This relies on test_settings heavily.
         cinderquota = cinder_cache['RegionOne']['test_project_id']['quota']
         self.assertEqual(cinderquota['gigabytes'], 5000)
         novaquota = nova_cache['RegionOne']['test_project_id']['quota']
@@ -453,8 +481,7 @@ class ProjectSetupActionTests(TestCase):
 
         # RegionThree, cinder only
         self.assertFalse('RegionThree' in nova_cache)
-        r2_cinderquota = cinder_cache['RegionThree'][
-            'test_project_id']['quota']
+        r2_cinderquota = cinder_cache['RegionThree']['test_project_id']['quota']
         self.assertEqual(r2_cinderquota['gigabytes'], 50001)
         self.assertEqual(r2_cinderquota['snapshots'], 600)
         self.assertEqual(r2_cinderquota['volumes'], 200)
@@ -475,7 +502,7 @@ class ProjectSetupActionTests(TestCase):
 @mock.patch(
     'adjutant.common.openstack_clients.get_octaviaclient',
     get_fake_octaviaclient)
-class QuotaActionTests(TestCase):
+class QuotaActionTests(AdjutantTestCase):
 
     def test_update_quota(self):
         """
@@ -495,7 +522,7 @@ class QuotaActionTests(TestCase):
         user.password = "test_password"
 
         setup_identity_cache(projects=[project], users=[user])
-        setup_neutron_cache('RegionOne', 'test_project_id')
+        setup_mock_caches('RegionOne', 'test_project_id')
 
         # Test sending to only a single region
         task = Task.objects.create(
@@ -517,7 +544,6 @@ class QuotaActionTests(TestCase):
         self.assertEqual(action.valid, True)
 
         # check the quotas were updated
-        # This relies on test_settings heavily.
         cinderquota = cinder_cache['RegionOne']['test_project_id']['quota']
         self.assertEqual(cinderquota['gigabytes'], 10000)
         novaquota = nova_cache['RegionOne']['test_project_id']['quota']
@@ -566,7 +592,6 @@ class QuotaActionTests(TestCase):
         self.assertEqual(action.valid, True)
 
         # check the quotas were updated
-        # This relies on test_settings heavily.
         cinderquota = cinder_cache['RegionOne']['test_project_id']['quota']
         self.assertEqual(cinderquota['gigabytes'], 50000)
         novaquota = nova_cache['RegionOne']['test_project_id']['quota']
@@ -581,7 +606,13 @@ class QuotaActionTests(TestCase):
         neutronquota = neutron_cache['RegionTwo']['test_project_id']['quota']
         self.assertEqual(neutronquota['network'], 10)
 
-    @override_settings(QUOTA_SIZES_ASC=[])
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.quota.sizes_ascending": [
+                {'operation': 'override', 'value': []},
+            ],
+        })
     def test_update_quota_not_in_sizes_asc(self):
         """
         Tests that the quota will still update to a size even if it is not
@@ -624,7 +655,6 @@ class QuotaActionTests(TestCase):
         self.assertEqual(action.valid, True)
 
         # check the quotas were updated
-        # This relies on test_settings heavily.
         cinderquota = cinder_cache['RegionOne']['test_project_id']['quota']
         self.assertEqual(cinderquota['gigabytes'], 50000)
         novaquota = nova_cache['RegionOne']['test_project_id']['quota']
@@ -639,11 +669,17 @@ class QuotaActionTests(TestCase):
         neutronquota = neutron_cache['RegionTwo']['test_project_id']['quota']
         self.assertEqual(neutronquota['network'], 10)
 
-    @modify_dict_settings(QUOTA_SERVICES={
-        'operation': 'append',
-        'key_list': ['*'],
-        'value': 'octavia'
-    })
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.quota.services": [
+                {
+                    "operation": "override",
+                    "value": {"*": ["cinder", "neutron", "nova", "octavia"]},
+                }
+            ]
+        },
+    )
     def test_update_quota_octavia(self):
         """Tests the quota update of the octavia service"""
         project = mock.Mock()
@@ -681,7 +717,6 @@ class QuotaActionTests(TestCase):
         self.assertEqual(action.valid, True)
 
         # check the quotas were updated
-        # This relies on test_settings heavily.
         cinderquota = cinder_cache['RegionOne']['test_project_id']['quota']
         self.assertEqual(cinderquota['gigabytes'], 50000)
         novaquota = nova_cache['RegionOne']['test_project_id']['quota']
@@ -691,11 +726,17 @@ class QuotaActionTests(TestCase):
         octaviaquota = octavia_cache['RegionOne']['test_project_id']['quota']
         self.assertEqual(octaviaquota['load_balancer'], 10)
 
-    @modify_dict_settings(QUOTA_SERVICES={
-        'operation': 'append',
-        'key_list': ['*'],
-        'value': 'octavia'
-    })
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.quota.services": [
+                {
+                    "operation": "override",
+                    "value": {"*": ["cinder", "neutron", "nova", "octavia"]},
+                }
+            ]
+        },
+    )
     def test_update_quota_octavia_over_usage(self):
         """When octavia usage is higher than new quota it won't be changed"""
         project = mock.Mock()
@@ -738,7 +779,6 @@ class QuotaActionTests(TestCase):
         self.assertEqual(action.valid, False)
 
         # check the quotas were updated
-        # This relies on test_settings heavily.
         octaviaquota = octavia_cache['RegionOne']['test_project_id']['quota']
         # Still set to default
         self.assertEqual(octaviaquota['load_balancer'], 1)

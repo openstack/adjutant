@@ -12,25 +12,24 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import json
-
 from datetime import timedelta
-
+import json
+import mock
 from unittest import skip
 
 from django.utils import timezone
 from django.core import mail
 
-import mock
-
 from rest_framework import status
 from rest_framework.test import APITestCase
+
+from confspirator.tests import utils as conf_utils
 
 from adjutant.api.models import Task, Token, Notification
 from adjutant.common.tests import fake_clients
 from adjutant.common.tests.fake_clients import (
     FakeManager, setup_identity_cache)
-from adjutant.common.tests.utils import modify_dict_settings
+from adjutant.config import CONF
 
 
 @mock.patch('adjutant.common.user_store.IdentityManager',
@@ -77,7 +76,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -240,7 +239,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -271,7 +270,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -303,7 +302,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -366,7 +365,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -413,7 +412,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -441,7 +440,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -454,10 +453,13 @@ class AdminAPITests(APITestCase):
         self.assertEqual(response.json(),
                          {"errors": ["No notification with this id."]})
 
-    @modify_dict_settings(TASK_SETTINGS={
-        'key_list': ['create_project_and_user', 'notifications'],
-        'operation': 'delete',
-    })
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.workflow.task_defaults.notifications.standard_handlers": [
+                {'operation': 'override', 'value': []},
+            ],
+        })
     def test_notification_acknowledge(self):
         """
         Test that you can acknowledge a notification.
@@ -474,7 +476,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -514,7 +516,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -527,10 +529,13 @@ class AdminAPITests(APITestCase):
                          {'errors':
                          ['No notification with this id.']})
 
-    @modify_dict_settings(TASK_SETTINGS={
-        'key_list': ['create_project_and_user', 'notifications'],
-        'operation': 'delete',
-    })
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.workflow.task_defaults.notifications.standard_handlers": [
+                {'operation': 'override', 'value': []},
+            ],
+        })
     def test_notification_re_acknowledge(self):
         """
         Test that you cant reacknowledge a notification.
@@ -545,7 +550,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -564,10 +569,13 @@ class AdminAPITests(APITestCase):
         self.assertEqual(response.json(),
                          {'notes': ['Notification already acknowledged.']})
 
-    @modify_dict_settings(TASK_SETTINGS={
-        'key_list': ['create_project_and_user', 'notifications'],
-        'operation': 'delete',
-    })
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.workflow.task_defaults.notifications.standard_handlers": [
+                {'operation': 'override', 'value': []},
+            ],
+        })
     def test_notification_acknowledge_no_data(self):
         """
         Test that you have to include 'acknowledged': True to the request.
@@ -582,7 +590,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -613,7 +621,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -650,7 +658,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -667,35 +675,38 @@ class AdminAPITests(APITestCase):
                          {u'notifications':
                           [u'this field is required and needs to be a list.']})
 
-    @modify_dict_settings(DEFAULT_TASK_SETTINGS={
-        'key_list': ['notifications'],
-        'operation': 'override',
-        'value': {
-            'EmailNotification': {
-                'standard': {
-                    'emails': ['example@example.com'],
-                    'reply': 'no-reply@example.com',
-                    'template': 'notification.txt'
-                },
-                'error': {
-                    'emails': ['example@example.com'],
-                    'reply': 'no-reply@example.com',
-                    'template': 'notification.txt'
-                }
-            }
-        }
-    }, TASK_SETTINGS={
-        'key_list': ['create_project_and_user', 'emails'],
-        'operation': 'override',
-        'value': {
-            'initial': None,
-            'token': None,
-            'completed': None
-        }
-    })
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.workflow.tasks.create_project_and_user.notifications": [
+                {'operation': 'override', 'value': {
+                    "standard_handlers": ["EmailNotification"],
+                    "error_handlers": ["EmailNotification"],
+                    "standard_handler_config": {
+                        "EmailNotification": {
+                            'emails': ['example@example.com'],
+                            'reply': 'no-reply@example.com',
+                        }
+                    },
+                    "error_handler_config": {
+                        "EmailNotification": {
+                            'emails': ['example@example.com'],
+                            'reply': 'no-reply@example.com',
+                        }
+                    },
+                }},
+            ],
+            "adjutant.workflow.tasks.create_project_and_user.emails": [
+                {'operation': 'override', 'value': {
+                    'initial': None,
+                    'token': None,
+                    'completed': None
+                }},
+            ],
+        })
     def test_notification_email(self):
         """
-        Tests the email notification engine
+        Tests the email notification handler
         """
         setup_identity_cache()
 
@@ -709,7 +720,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -769,7 +780,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -807,7 +818,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -836,12 +847,12 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["_member_"],
+        data = {'email': "test@example.com", 'roles': ["member"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
@@ -897,7 +908,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -936,7 +947,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -968,7 +979,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -996,7 +1007,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -1030,7 +1041,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -1068,7 +1079,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -1113,7 +1124,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -1145,12 +1156,12 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["_member_"],
+        data = {'email': "test@example.com", 'roles': ["member"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
@@ -1184,12 +1195,12 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["_member_"],
+        data = {'email': "test@example.com", 'roles': ["member"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
@@ -1214,20 +1225,20 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["_member_"],
+        data = {'email': "test@example.com", 'roles': ["member"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
-        data = {'email': "test2@example.com", 'roles': ["_member_"],
+        data = {'email': "test2@example.com", 'roles': ["member"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
-        data = {'email': "test3@example.com", 'roles': ["_member_"],
+        data = {'email': "test3@example.com", 'roles': ["member"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
@@ -1235,7 +1246,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -1258,20 +1269,20 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["_member_"],
+        data = {'email': "test@example.com", 'roles': ["member"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
-        data = {'email': "test2@example.com", 'roles': ["_member_"],
+        data = {'email': "test2@example.com", 'roles': ["member"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
-        data = {'email': "test3@example.com", 'roles': ["_member_"],
+        data = {'email': "test3@example.com", 'roles': ["member"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
@@ -1279,7 +1290,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -1306,16 +1317,16 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["_member_"],
+        data = {'email': "test@example.com", 'roles': ["member"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
-        data = {'email': "test2@example.com", 'roles': ["_member_"],
+        data = {'email': "test2@example.com", 'roles': ["member"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
@@ -1328,7 +1339,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -1385,12 +1396,12 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': project.name,
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "owner@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["_member_"],
+        data = {'email': "test@example.com", 'roles': ["member"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -1398,7 +1409,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': project2.name,
             'project_id': project2.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -1425,7 +1436,7 @@ class AdminAPITests(APITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -1485,12 +1496,13 @@ class AdminAPITests(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    @modify_dict_settings(TASK_SETTINGS={
-        'key_list': ['reset_user_password', 'action_settings',
-                     'ResetUserPasswordAction', 'blacklisted_roles'],
-        'operation': 'append',
-        'value': ['admin']
-    })
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.workflow.action_defaults.ResetUserPasswordAction.blacklisted_roles": [
+                {'operation': 'append', 'value': "admin"},
+            ],
+        })
     def test_reset_admin(self):
         """
         Ensure that you cannot issue a password reset for an
@@ -1539,13 +1551,12 @@ class AdminAPITests(APITestCase):
         new_task = Task.objects.all()[0]
         url = "/v1/tasks/" + new_task.uuid
         data = {
-            'project_name': "test_project", 'email': "test@example.com",
-            'region': 'test'
+            'project_name': "test_project2", 'email': "test@example.com",
         }
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True

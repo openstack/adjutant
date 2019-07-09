@@ -14,11 +14,11 @@
 
 import mock
 
-from django.test.utils import override_settings
-from django.conf import settings
 from django.core import mail
 
 from rest_framework import status
+
+from confspirator.tests import utils as conf_utils
 
 from adjutant.api.models import Token, Notification
 from adjutant.tasks.models import Task
@@ -26,8 +26,8 @@ from adjutant.tasks.v1.projects import CreateProjectAndUser
 from adjutant.common.tests.fake_clients import (
     FakeManager, setup_identity_cache)
 from adjutant.common.tests import fake_clients
-from adjutant.common.tests.utils import (AdjutantAPITestCase,
-                                         modify_dict_settings)
+from adjutant.common.tests.utils import AdjutantAPITestCase
+from adjutant.config import CONF
 
 
 @mock.patch('adjutant.common.user_store.IdentityManager',
@@ -53,12 +53,12 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'wrong_email_field': "test@example.com", 'roles': ["_member_"],
+        data = {'wrong_email_field': "test@example.com", 'roles': ["member"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -76,6 +76,14 @@ class DelegateAPITests(AdjutantAPITestCase):
                 'email': ['Enter a valid email address.'],
                 'roles': ['"not_a_valid_role" is not a valid choice.']}})
 
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.workflow.tasks.invite_user_to_project.emails": [
+                {'operation': 'update', 'value': {
+                    "initial": None, "token": {"subject": "invite_user_to_project"}}},
+            ],
+        })
     def test_new_user(self):
         """
         Ensure the new user workflow goes as expected.
@@ -89,12 +97,12 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["_member_"],
+        data = {'email': "test@example.com", 'roles': ["member"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
@@ -123,12 +131,12 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["_member_"],
+        data = {'email': "test@example.com", 'roles': ["member"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -145,12 +153,12 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "_member_",
+            'roles': "member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["_member_"],
+        data = {'email': "test@example.com", 'roles': ["member"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -164,7 +172,7 @@ class DelegateAPITests(AdjutantAPITestCase):
 
         url = "/v1/actions/InviteUser"
         headers = {}
-        data = {'email': "test@example.com", 'roles': ["_member_"],
+        data = {'email': "test@example.com", 'roles': ["member"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -188,12 +196,12 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["_member_"],
+        data = {'email': "test@example.com", 'roles': ["member"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
@@ -219,7 +227,7 @@ class DelegateAPITests(AdjutantAPITestCase):
 
         assignment = fake_clients.FakeRoleAssignment(
             scope={'project': {'id': project.id}},
-            role_name="_member_",
+            role_name="member",
             user={'id': user.id}
         )
 
@@ -230,12 +238,12 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["_member_"],
+        data = {'email': "test@example.com", 'roles': ["member"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
@@ -262,7 +270,7 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -286,6 +294,20 @@ class DelegateAPITests(AdjutantAPITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.workflow.tasks.create_project_and_user.notifications": [
+                {'operation': 'override', 'value': {
+                    "standard_handler_config": {
+                        "EmailNotification": {
+                            'emails': ['example_notification@example.com'],
+                            'reply': 'no-reply@example.com',
+                        }
+                    }
+                }},
+            ],
+        })
     def test_new_project_invalid_on_submit(self):
         """
         Ensures that when a project becomes invalid at the submit stage
@@ -302,7 +324,7 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -345,7 +367,7 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -380,7 +402,7 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "admin_project",
             'project_id': "admin_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "admin",
             'user_id': "admin_id",
             'authenticated': True
@@ -415,7 +437,7 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "admin_project",
             'project_id': "admin_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "admin",
             'user_id': "admin_id",
             'authenticated': True
@@ -544,7 +566,7 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
@@ -587,12 +609,12 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["_member_"],
+        data = {'email': "test@example.com", 'roles': ["member"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
@@ -600,7 +622,7 @@ class DelegateAPITests(AdjutantAPITestCase):
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
 
-        data = {'email': "test2@example.com", 'roles': ["_member_"],
+        data = {'email': "test2@example.com", 'roles': ["member"],
                 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
@@ -623,7 +645,7 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': user.id,
             'authenticated': True
@@ -643,21 +665,29 @@ class DelegateAPITests(AdjutantAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(user.name, 'new_test@example.com')
 
-    @modify_dict_settings(TASK_SETTINGS=[
-        {'key_list': ['update_user_email', 'additional_actions'],
-         'operation': 'append',
-         'value': ['SendAdditionalEmailAction']},
-        {'key_list': ['update_user_email', 'action_settings',
-                      'SendAdditionalEmailAction', 'initial'],
-         'operation': 'update',
-         'value': {
-            'subject': 'update_user_email_additional',
-            'template': 'update_user_email_started.txt',
-            'email_roles': [],
-            'email_current_user': True,
-        }
-        }
-    ])
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.workflow.tasks.update_user_email.additional_actions": [
+                {'operation': 'append', 'value': "SendAdditionalEmailAction"},
+            ],
+            "adjutant.workflow.tasks.update_user_email.emails": [
+                {'operation': 'update', 'value': {
+                    "initial": None, "token": {"subject": "update_user_email_token"}}},
+            ],
+            "adjutant.workflow.tasks.update_user_email.actions": [
+                {'operation': 'update', 'value': {
+                    "SendAdditionalEmailAction": {
+                        "prepare": {
+                            'subject': 'update_user_email_additional',
+                            'template': 'update_user_email_started.txt',
+                            'email_roles': [],
+                            'email_current_user': True,
+                        }
+                    }
+                }},
+            ],
+        })
     def test_update_email_task_send_email_to_current_user(self):
         """
         Tests the email update workflow, and ensures that when setup
@@ -673,7 +703,7 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': user.id,
             'authenticated': True
@@ -686,6 +716,7 @@ class DelegateAPITests(AdjutantAPITestCase):
         self.assertEqual(response.data, {'notes': ['task created']})
 
         self.assertEqual(len(mail.outbox), 2)
+
         self.assertEqual(mail.outbox[0].to, ['test@example.com'])
         self.assertEqual(
             mail.outbox[0].subject, 'update_user_email_additional')
@@ -703,21 +734,32 @@ class DelegateAPITests(AdjutantAPITestCase):
 
         self.assertEqual(len(mail.outbox), 3)
 
-    @modify_dict_settings(TASK_SETTINGS=[
-        {'key_list': ['update_user_email', 'additional_actions'],
-         'operation': 'append',
-         'value': ['SendAdditionalEmailAction']},
-        {'key_list': ['update_user_email', 'action_settings',
-                      'SendAdditionalEmailAction', 'initial'],
-         'operation': 'update',
-         'value': {
-            'subject': 'update_user_email_additional',
-            'template': 'update_user_email_started.txt',
-            'email_roles': [],
-            'email_current_user': True}
-         }
-    ])
-    @override_settings(USERNAME_IS_EMAIL=False)
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.workflow.tasks.update_user_email.additional_actions": [
+                {'operation': 'append', 'value': "SendAdditionalEmailAction"},
+            ],
+            "adjutant.workflow.tasks.update_user_email.emails": [
+                {'operation': 'update', 'value': {
+                    "initial": None, "token": {"subject": "update_user_email_token"}}},
+            ],
+            "adjutant.workflow.tasks.update_user_email.actions": [
+                {'operation': 'update', 'value': {
+                    "SendAdditionalEmailAction": {
+                        "prepare": {
+                            'subject': 'update_user_email_additional',
+                            'template': 'update_user_email_started.txt',
+                            'email_roles': [],
+                            'email_current_user': True,
+                        }
+                    }
+                }},
+            ],
+            "adjutant.identity.username_is_email": [
+                {'operation': 'override', 'value': False},
+            ],
+        })
     def test_update_email_task_send_email_current_name_not_email(self):
         """
         Tests the email update workflow when USERNAME_IS_EMAIL=False, and
@@ -734,7 +776,7 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "nkdfslnkls",
             'user_id': user.id,
             'authenticated': True,
@@ -775,7 +817,7 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': user.id,
             'authenticated': True
@@ -789,7 +831,16 @@ class DelegateAPITests(AdjutantAPITestCase):
             response.json(),
             {'errors': {'new_email': [u'Enter a valid email address.']}})
 
-    @override_settings(USERNAME_IS_EMAIL=True)
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.identity.username_is_email": [
+                {'operation': 'override', 'value': False},
+            ],
+            "adjutant.workflow.tasks.update_user_email.emails": [
+                {'operation': 'update', 'value': {"initial": None}},
+            ],
+        })
     def test_update_email_pre_existing_user_with_email(self):
 
         user = fake_clients.FakeUser(
@@ -805,7 +856,7 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True,
@@ -821,7 +872,16 @@ class DelegateAPITests(AdjutantAPITestCase):
 
         self.assertEqual(len(mail.outbox), 0)
 
-    @override_settings(USERNAME_IS_EMAIL=False)
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.identity.username_is_email": [
+                {'operation': 'override', 'value': False},
+            ],
+            "adjutant.workflow.tasks.update_user_email.emails": [
+                {'operation': 'update', 'value': {"initial": None}},
+            ],
+        })
     def test_update_email_user_with_email_username_not_email(self):
 
         user = fake_clients.FakeUser(
@@ -837,7 +897,7 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': user.id,
             'authenticated': True
@@ -878,7 +938,13 @@ class DelegateAPITests(AdjutantAPITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-    @override_settings(USERNAME_IS_EMAIL=False)
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.identity.username_is_email": [
+                {'operation': 'override', 'value': False},
+            ],
+        })
     def test_update_email_task_username_not_email(self):
 
         user = fake_clients.FakeUser(
@@ -890,7 +956,7 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test_user",
             'user_id': user.id,
             'authenticated': True
@@ -912,7 +978,17 @@ class DelegateAPITests(AdjutantAPITestCase):
         self.assertEqual(user.email, 'new_test@example.com')
 
     # Tests for USERNAME_IS_EMAIL=False
-    @override_settings(USERNAME_IS_EMAIL=False)
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.identity.username_is_email": [
+                {'operation': 'override', 'value': False},
+            ],
+            "adjutant.workflow.tasks.invite_user_to_project.emails": [
+                {'operation': 'update', 'value': {
+                    "initial": None, "token": {"subject": "invite_user_to_project"}}},
+            ],
+        })
     def test_invite_user_to_project_email_not_username(self):
         """
         Invites a user where the email is different to the username.
@@ -925,13 +1001,13 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "user",
             'user_id': "test_user_id",
             'authenticated': True
         }
         data = {'username': 'new_user', 'email': "new@example.com",
-                'roles': ["_member_"], 'project_id': project.id}
+                'roles': ["member"], 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(response.json(), {'notes': ['task created']})
@@ -951,7 +1027,17 @@ class DelegateAPITests(AdjutantAPITestCase):
             fake_clients.identity_cache['new_users'][0].name,
             'new_user')
 
-    @override_settings(USERNAME_IS_EMAIL=False)
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.identity.username_is_email": [
+                {'operation': 'override', 'value': False},
+            ],
+            "adjutant.workflow.tasks.reset_user_password.emails": [
+                {'operation': 'update', 'value': {
+                    "initial": None, "token": {"subject": "Password Reset for OpenStack"}}},
+            ],
+        })
     def test_reset_user_username_not_email(self):
         """
         Ensure the reset user workflow goes as expected.
@@ -991,7 +1077,13 @@ class DelegateAPITests(AdjutantAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(user.password, 'new_test_password')
 
-    @override_settings(USERNAME_IS_EMAIL=False)
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.identity.username_is_email": [
+                {'operation': 'override', 'value': False},
+            ],
+        })
     def test_new_project_username_not_email(self):
         setup_identity_cache()
 
@@ -1030,22 +1122,27 @@ class DelegateAPITests(AdjutantAPITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @modify_dict_settings(
-        TASK_SETTINGS=[
-            {'key_list': ['invite_user_to_project', 'additional_actions'],
-             'operation': 'append',
-             'value': ['SendAdditionalEmailAction']},
-            {'key_list': ['invite_user_to_project', 'action_settings',
-                          'SendAdditionalEmailAction', 'initial'],
-             'operation': 'update',
-             'value': {
-                'subject': 'update_user_email_additional',
-                'template': 'update_user_email_started.txt',
-                'email_roles': ['project_admin'],
-                'email_current_user': False,
-            }
-            }
-        ])
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.workflow.tasks.invite_user_to_project.additional_actions": [
+                {'operation': 'append', 'value': "SendAdditionalEmailAction"},
+            ],
+            "adjutant.workflow.tasks.invite_user_to_project.emails": [
+                {'operation': 'update', 'value': {"initial": None}},
+            ],
+            "adjutant.workflow.tasks.invite_user_to_project.actions": [
+                {'operation': 'update', 'value': {
+                    "SendAdditionalEmailAction": {
+                        "prepare": {
+                            'subject': 'invite_user_to_project_additional',
+                            'template': 'update_user_email_started.txt',
+                            'email_roles': ['project_admin'],
+                        }
+                    }
+                }},
+            ],
+        })
     def test_additional_emails_roles(self):
         """
         Tests the sending of additional emails to a set of roles in a project
@@ -1072,7 +1169,7 @@ class DelegateAPITests(AdjutantAPITestCase):
         assignments = [
             fake_clients.FakeRoleAssignment(
                 scope={'project': {'id': project.id}},
-                role_name="_member_",
+                role_name="member",
                 user={'id': user.id}
             ),
             fake_clients.FakeRoleAssignment(
@@ -1082,7 +1179,7 @@ class DelegateAPITests(AdjutantAPITestCase):
             ),
             fake_clients.FakeRoleAssignment(
                 scope={'project': {'id': project.id}},
-                role_name="_member_",
+                role_name="member",
                 user={'id': user2.id}
             ),
             fake_clients.FakeRoleAssignment(
@@ -1092,7 +1189,7 @@ class DelegateAPITests(AdjutantAPITestCase):
             ),
             fake_clients.FakeRoleAssignment(
                 scope={'project': {'id': project.id}},
-                role_name="_member_",
+                role_name="member",
                 user={'id': user3.id}
             ),
             fake_clients.FakeRoleAssignment(
@@ -1110,14 +1207,14 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
 
         data = {'email': "new_test@example.com",
-                'roles': ['_member_'], 'project_id': project.id}
+                'roles': ['member'], 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(response.json(), {'notes': ['task created']})
@@ -1128,7 +1225,7 @@ class DelegateAPITests(AdjutantAPITestCase):
         self.assertEqual(set(mail.outbox[0].to),
                          set([user.email, user2.email]))
         self.assertEqual(
-            mail.outbox[0].subject, 'update_user_email_additional')
+            mail.outbox[0].subject, 'invite_user_to_project_additional')
 
         # Test that the token email gets sent to the other addresses
         self.assertEqual(mail.outbox[1].to[0], 'new_test@example.com')
@@ -1140,22 +1237,28 @@ class DelegateAPITests(AdjutantAPITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @modify_dict_settings(
-        TASK_SETTINGS=[
-            {'key_list': ['invite_user_to_project', 'additional_actions'],
-             'operation': 'append',
-             'value': ['SendAdditionalEmailAction']},
-            {'key_list': ['invite_user_to_project', 'action_settings',
-                          'SendAdditionalEmailAction', 'initial'],
-             'operation': 'update',
-             'value': {
-                'subject': 'update_user_email_additional',
-                'template': 'update_user_email_started.txt',
-                'email_roles': ['project_admin'],
-                'email_current_user': False,
-            }
-            }
-        ])
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.workflow.tasks.invite_user_to_project.additional_actions": [
+                {'operation': 'append', 'value': "SendAdditionalEmailAction"},
+            ],
+            "adjutant.workflow.tasks.invite_user_to_project.emails": [
+                {'operation': 'update', 'value': {
+                    "initial": None, "token": {"subject": "invite_user_to_project_token"}}},
+            ],
+            "adjutant.workflow.tasks.invite_user_to_project.actions": [
+                {'operation': 'update', 'value': {
+                    "SendAdditionalEmailAction": {
+                        "prepare": {
+                            'subject': 'invite_user_to_project_additional',
+                            'template': 'update_user_email_started.txt',
+                            'email_roles': ['project_admin'],
+                        }
+                    }
+                }},
+            ],
+        })
     def test_additional_emails_role_no_email(self):
         """
         Tests that setting email roles to something that has no people to
@@ -1169,7 +1272,7 @@ class DelegateAPITests(AdjutantAPITestCase):
 
         assignment = fake_clients.FakeRoleAssignment(
             scope={'project': {'id': project.id}},
-            role_name="_member_",
+            role_name="member",
             user={'id': user.id}
         )
 
@@ -1180,14 +1283,14 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
 
         data = {'email': "new_test@example.com",
-                'roles': ['_member_']}
+                'roles': ['member']}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(response.data, {'notes': ['task created']})
@@ -1204,22 +1307,27 @@ class DelegateAPITests(AdjutantAPITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @modify_dict_settings(
-        TASK_SETTINGS=[
-            {'key_list': ['invite_user_to_project', 'additional_actions'],
-             'operation': 'override',
-             'value': ['SendAdditionalEmailAction']},
-            {'key_list': ['invite_user_to_project', 'action_settings',
-                          'SendAdditionalEmailAction', 'initial'],
-             'operation': 'update',
-             'value':{
-                'subject': 'invite_user_to_project_additional',
-                'template': 'update_user_email_started.txt',
-                'email_additional_addresses': ['admin@example.com'],
-                'email_current_user': False,
-            }
-            }
-        ])
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.workflow.tasks.invite_user_to_project.additional_actions": [
+                {'operation': 'append', 'value': "SendAdditionalEmailAction"},
+            ],
+            "adjutant.workflow.tasks.invite_user_to_project.emails": [
+                {'operation': 'update', 'value': {"initial": None}},
+            ],
+            "adjutant.workflow.tasks.invite_user_to_project.actions": [
+                {'operation': 'update', 'value': {
+                    "SendAdditionalEmailAction": {
+                        "prepare": {
+                            'subject': 'invite_user_to_project_additional',
+                            'template': 'update_user_email_started.txt',
+                            'email_additional_addresses': ['admin@example.com'],
+                        }
+                    }
+                }},
+            ],
+        })
     def test_email_additional_addresses(self):
         """
         Tests the sending of additional emails an admin email set in
@@ -1233,7 +1341,7 @@ class DelegateAPITests(AdjutantAPITestCase):
         assignments = [
             fake_clients.FakeRoleAssignment(
                 scope={'project': {'id': project.id}},
-                role_name="_member_",
+                role_name="member",
                 user={'id': user.id}
             ),
             fake_clients.FakeRoleAssignment(
@@ -1250,13 +1358,13 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
 
-        data = {'email': "new_test@example.com", 'roles': ['_member_']}
+        data = {'email': "new_test@example.com", 'roles': ['member']}
         response = self.client.post(url, data, format='json', headers=headers)
 
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
@@ -1278,22 +1386,28 @@ class DelegateAPITests(AdjutantAPITestCase):
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    @modify_dict_settings(
-        TASK_SETTINGS=[
-            {'key_list': ['invite_user_to_project', 'additional_actions'],
-             'operation': 'override',
-             'value': ['SendAdditionalEmailAction']},
-            {'key_list': ['invite_user_to_project', 'action_settings',
-                          'SendAdditionalEmailAction', 'initial'],
-             'operation': 'update',
-             'value':{
-                'subject': 'invite_user_to_project_additional',
-                'template': 'update_user_email_started.txt',
-                'email_additional_addresses': ['admin@example.com'],
-                'email_current_user': False,
-            }
-            }
-        ])
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.workflow.tasks.invite_user_to_project.additional_actions": [
+                {'operation': 'append', 'value': "SendAdditionalEmailAction"},
+            ],
+            "adjutant.workflow.tasks.invite_user_to_project.emails": [
+                {'operation': 'update', 'value': {
+                    "initial": None, "token": {"subject": "invite_user_to_project_token"}}},
+            ],
+            "adjutant.workflow.tasks.invite_user_to_project.actions": [
+                {'operation': 'update', 'value': {
+                    "SendAdditionalEmailAction": {
+                        "prepare": {
+                            'subject': 'invite_user_to_project_additional',
+                            'template': 'update_user_email_started.txt',
+                            'email_additional_addresses': ['admin@example.com'],
+                        }
+                    }
+                }},
+            ],
+        })
     def test_email_additional_action_invalid(self):
         """
         The additional email actions should not send an email if the
@@ -1306,12 +1420,12 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        data = {'email': "test@example.com", 'roles': ["_member_"],
+        data = {'email': "test@example.com", 'roles': ["member"],
                 'project_id': 'test_project_id'}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -1339,12 +1453,9 @@ class DelegateAPITests(AdjutantAPITestCase):
 
         new_task = Task.objects.all()[0]
 
-        class_conf = settings.TASK_SETTINGS.get(
-            CreateProjectAndUser.task_type, settings.DEFAULT_TASK_SETTINGS)
-        expected_action_names = (
-            class_conf.get('default_actions', [])
-            or CreateProjectAndUser.default_actions[:])
-        expected_action_names += class_conf.get('additional_actions', [])
+        class_conf = new_task.config
+        expected_action_names = CreateProjectAndUser.default_actions[:]
+        expected_action_names += class_conf.additional_actions
 
         actions = new_task.actions
         observed_action_names = [a.action_name for a in actions]
@@ -1381,7 +1492,13 @@ class DelegateAPITests(AdjutantAPITestCase):
                 "task. See task itself for details."]})
         self.assertEqual(new_notification.task, new_task)
 
-    @override_settings(KEYSTONE={'can_edit_users': False})
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.identity.can_edit_users": [
+                {'operation': 'override', 'value': False},
+            ],
+        })
     def test_user_invite_cant_edit_users(self):
         """
         When can_edit_users is false, and a new user is invited,
@@ -1396,18 +1513,24 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "user",
             'user_id': "test_user_id",
             'authenticated': True
         }
         data = {'username': 'new_user', 'email': "new@example.com",
-                'roles': ["_member_"], 'project_id': project.id}
+                'roles': ["member"], 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.json(), {'errors': ['actions invalid']})
 
-    @override_settings(KEYSTONE={'can_edit_users': False})
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.identity.can_edit_users": [
+                {'operation': 'override', 'value': False},
+            ],
+        })
     def test_user_invite_cant_edit_users_existing_user(self):
         """
         When can_edit_users is false, and a new user is invited,
@@ -1423,18 +1546,24 @@ class DelegateAPITests(AdjutantAPITestCase):
         headers = {
             'project_name': "test_project",
             'project_id': project.id,
-            'roles': "project_admin,_member_,project_mod",
+            'roles': "project_admin,member,project_mod",
             'username': "user",
             'user_id': "test_user_id",
             'authenticated': True
         }
         data = {'username': 'new_user', 'email': "test@example.com",
-                'roles': ["_member_"], 'project_id': project.id}
+                'roles': ["member"], 'project_id': project.id}
         response = self.client.post(url, data, format='json', headers=headers)
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(response.json(), {'notes': ['task created']})
 
-    @override_settings(KEYSTONE={'can_edit_users': False})
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.identity.can_edit_users": [
+                {'operation': 'override', 'value': False},
+            ],
+        })
     def test_project_create_cant_edit_users(self):
         """
         When can_edit_users is false, and a new signup comes in,
@@ -1456,7 +1585,13 @@ class DelegateAPITests(AdjutantAPITestCase):
         actions = [act.get_action() for act in action_models]
         self.assertFalse(all([act.valid for act in actions]))
 
-    @override_settings(KEYSTONE={'can_edit_users': False})
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.identity.can_edit_users": [
+                {'operation': 'override', 'value': False},
+            ],
+        })
     def test_project_create_cant_edit_users_existing_user(self):
         """
         When can_edit_users is false, and a new signup comes in,

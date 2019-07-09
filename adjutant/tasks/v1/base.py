@@ -15,14 +15,101 @@
 import hashlib
 from logging import getLogger
 
-from django.conf import settings
+from confspirator import groups
+from confspirator import fields
 
+from adjutant import actions as adj_actions
 from adjutant.api.models import Task
+from adjutant.config import CONF
 from django.utils import timezone
-from adjutant.api.v1.utils import create_notification
+from adjutant.notifications.utils import create_notification
 from adjutant.tasks.v1.utils import (
     send_stage_email, create_token, handle_task_error)
 from adjutant import exceptions
+
+
+def make_task_config(task_class):
+
+    config_group = groups.DynamicNameConfigGroup()
+    config_group.register_child_config(
+        fields.BoolConfig(
+            "allow_auto_approve",
+            help_text="Override if this task allows auto_approval. "
+                      "Otherwise uses task default.",
+            default=task_class.allow_auto_approve,
+        )
+    )
+    config_group.register_child_config(
+        fields.ListConfig(
+            "additional_actions",
+            help_text="Additional actions to be run as part of the task "
+                      "after default actions.",
+            default=task_class.additional_actions or [],
+        )
+    )
+    config_group.register_child_config(
+        fields.IntConfig(
+            "token_expiry",
+            help_text="Override for the task token expiry. "
+                      "Otherwise uses task default.",
+            default=task_class.token_expiry,
+        )
+    )
+    config_group.register_child_config(
+        fields.DictConfig(
+            "actions",
+            help_text="Action config overrides over the action defaults. "
+                      "See 'adjutant.workflow.action_defaults'.",
+            is_json=True,
+            default=task_class.action_config or {},
+            sample_default={
+                "SomeCustomAction": {
+                    "some_action_setting": "<a-uuid-probably>"
+                }
+            },
+        )
+    )
+    config_group.register_child_config(
+        fields.DictConfig(
+            "emails",
+            help_text="Email config overrides for this task over task defaults."
+                      "See 'adjutant.workflow.emails'.",
+            is_json=True,
+            default=task_class.email_config or {},
+            sample_default={
+                "initial": None,
+                "token": {
+                    "subject": "Some custom subject",
+                },
+            },
+        )
+    )
+    config_group.register_child_config(
+        fields.DictConfig(
+            "notifications",
+            help_text="Notification config overrides for this task over task defaults."
+                      "See 'adjutant.workflow.notifications'.",
+            is_json=True,
+            default=task_class.notification_config or {},
+            sample_default={
+                "standard_handlers": ["EmailNotification"],
+                "error_handlers": ["EmailNotification"],
+                "standard_handler_config": {
+                    "EmailNotification": {
+                        'emails': ['example@example.com'],
+                        'reply': 'no-reply@example.com',
+                    }
+                },
+                "error_handler_config": {
+                    "EmailNotification": {
+                        'emails': ['example@example.com'],
+                        'reply': 'no-reply@example.com',
+                    }
+                },
+            },
+        )
+    )
+    return config_group
 
 
 class BaseTask(object):
@@ -37,23 +124,28 @@ class BaseTask(object):
     logic here, and includes some wrapper logic to help deal with workflows.
     """
 
-    # default values to optionally override
-    duplicate_policy = "cancel"
-    allow_auto_approve = True
-    send_approval_notification = True
-
     # required values in custom task
     task_type = None
     default_actions = None
 
-    # optional values
+    # default values to optionally override in task definition
     deprecated_task_types = None
+    duplicate_policy = "cancel"
+    send_approval_notification = True
+
+    # config defaults for the task (used to generate default config):
+    allow_auto_approve = True
+    additional_actions = None
+    token_expiry = None
+    action_config = None
+    email_config = None
+    notification_config = None
 
     def __init__(self,
                  task_model=None,
                  task_data=None,
                  action_data=None):
-
+        self._config = None
         self.logger = getLogger('adjutant')
 
         if task_model:
@@ -99,7 +191,7 @@ class BaseTask(object):
             actions = self.actions
         else:
             actions = self.default_actions[:]
-            actions += self.settings.get('additional_actions', [])
+            actions += self.config.additional_actions
 
         # instantiate all action serializers and check validity
         valid = True
@@ -110,7 +202,7 @@ class BaseTask(object):
                 action_name = action
 
             action_class, serializer_class = \
-                settings.ACTION_CLASSES[action_name]
+                adj_actions.ACTION_CLASSES[action_name]
 
             if use_existing_actions:
                 action_class = action
@@ -152,7 +244,7 @@ class BaseTask(object):
                     hashable_list.append(
                         action['serializer'].validated_data[field])
                 except KeyError:
-                    if field == "username" and settings.USERNAME_IS_EMAIL:
+                    if field == "username" and CONF.identity.username_is_email:
                         continue
                     else:
                         raise
@@ -188,12 +280,13 @@ class BaseTask(object):
 
     def _create_token(self):
         self.clear_tokens()
-        token = create_token(self.task)
+        token_expiry = self.config.token_expiry or self.token_expiry
+        token = create_token(self.task, token_expiry)
         self.add_note("Token created for task.")
         try:
             # will throw a key error if the token template has not
             # been specified
-            email_conf = self.settings['emails']['token']
+            email_conf = self.config.emails.token
             send_stage_email(self.task, email_conf, token)
         except KeyError as e:
             handle_task_error(e, self.task, error_text='while sending token')
@@ -209,15 +302,18 @@ class BaseTask(object):
         self.task.add_task_note(note)
 
     @property
-    def settings(self):
-        """Get my settings.
+    def config(self):
+        """Get my config.
 
-        Returns a dict of the settings for this task.
+        Returns a dict of the config for this task.
         """
-        try:
-            return settings.TASK_SETTINGS[self.task_type]
-        except KeyError:
-            return settings.DEFAULT_TASK_SETTINGS
+        if self._config is None:
+            try:
+                task_conf = CONF.workflow.tasks[self.task_type]
+            except KeyError:
+                task_conf = {}
+            self._config = CONF.workflow.task_defaults.overlay(task_conf)
+        return self._config
 
     def is_valid(self, internal_message=None):
         self._refresh_actions()
@@ -301,7 +397,7 @@ class BaseTask(object):
                     e, self.task, error_text='while setting up task')
 
         # send initial confirmation email:
-        email_conf = self.settings.get('emails', {}).get('initial', None)
+        email_conf = self.config.emails.initial
         send_stage_email(self.task, email_conf)
 
         approve_list = [act.auto_approve for act in self.actions]
@@ -316,8 +412,8 @@ class BaseTask(object):
         else:
             can_auto_approve = False
 
-        if self.settings.get('allow_auto_approve') is not None:
-            allow_auto_approve = self.settings.get('allow_auto_approve')
+        if self.config.allow_auto_approve is not None:
+            allow_auto_approve = self.config.allow_auto_approve
         else:
             allow_auto_approve = self.allow_auto_approve
 
@@ -427,8 +523,7 @@ class BaseTask(object):
             token.delete()
 
         # Sending confirmation email:
-        email_conf = self.settings.get(
-            'emails', {}).get('completed', None)
+        email_conf = self.config.emails.completed
         send_stage_email(self.task, email_conf)
 
     def cancel(self):

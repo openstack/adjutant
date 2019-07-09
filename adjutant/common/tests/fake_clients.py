@@ -14,9 +14,9 @@
 
 from uuid import uuid4
 
-from django.conf import settings
-
 import mock
+
+from adjutant.config import CONF
 
 
 identity_cache = {}
@@ -102,7 +102,6 @@ def setup_identity_cache(projects=None, users=None, role_assignments=None,
                          credentials=None, extra_roles=None):
     if extra_roles is None:
         extra_roles = []
-
     if not projects:
         projects = []
     if not users:
@@ -125,7 +124,7 @@ def setup_identity_cache(projects=None, users=None, role_assignments=None,
     users.append(admin_user)
 
     roles = [
-        FakeRole(name="_member_"),
+        FakeRole(name="member"),
         FakeRole(name="admin"),
         FakeRole(name="project_admin"),
         FakeRole(name="project_mod"),
@@ -164,7 +163,7 @@ class FakeManager(object):
     def __init__(self):
         # TODO(adriant): decide if we want to have some function calls
         # throw errors if this is false.
-        self.can_edit_users = settings.KEYSTONE.get('can_edit_users', True)
+        self.can_edit_users = CONF.identity.can_edit_users
 
     def _project_from_id(self, project):
         if isinstance(project, FakeProject):
@@ -482,6 +481,31 @@ class FakeManager(object):
         for cred in found:
             identity_cache['credentials'].remove(cred)
 
+    # TODO(adriant): Move this to a BaseIdentityManager class when
+    #                it exists.
+    def get_manageable_roles(self, user_roles=None):
+        """Get roles which can be managed
+
+        Given a list of user role names, returns a list of names
+        that the user is allowed to manage.
+
+        If user_roles is not given, returns all possible roles.
+        """
+        roles_mapping = CONF.identity.role_mapping
+        if user_roles is None:
+            all_roles = []
+            for options in roles_mapping.values():
+                all_roles += options
+            return list(set(all_roles))
+
+        # merge mapping lists to form a flat permitted roles list
+        manageable_role_names = [mrole for role_name in user_roles
+                                 if role_name in roles_mapping
+                                 for mrole in roles_mapping[role_name]]
+        # a set has unique items
+        manageable_role_names = set(manageable_role_names)
+        return manageable_role_names
+
 
 class FakeOpenstackClient(object):
     class Quotas(object):
@@ -662,7 +686,7 @@ class FakeOctaviaClient(object):
             self.cache[project_id] = {
                 name: [] for name in self.resource_dict.keys()}
             self.cache[project_id]['quota'] = dict(
-                settings.PROJECT_QUOTA_SIZES['small']['octavia'])
+                CONF.quota.sizes['small']['octavia'])
 
     def __getattr__(self, name):
         # NOTE(amelia): This is out of pure laziness
@@ -748,7 +772,7 @@ def setup_neutron_cache(region, project_id):
     }
 
     neutron_cache[region][project_id]['quota'] = dict(
-        settings.PROJECT_QUOTA_SIZES['small']['neutron'])
+        CONF.quota.sizes['small']['neutron'])
 
 
 def setup_cinder_cache(region, project_id):
@@ -764,7 +788,7 @@ def setup_cinder_cache(region, project_id):
     }
 
     cinder_cache[region][project_id]['quota'] = dict(
-        settings.PROJECT_QUOTA_SIZES['small']['cinder'])
+        CONF.quota.sizes['small']['cinder'])
 
 
 def setup_nova_cache(region, project_id):
@@ -785,7 +809,7 @@ def setup_nova_cache(region, project_id):
         }
     }
     nova_cache[region][project_id]['quota'] = dict(
-        settings.PROJECT_QUOTA_SIZES['small']['nova'])
+        CONF.quota.sizes['small']['nova'])
 
 
 def setup_quota_cache(region_name, project_id, size='small'):
@@ -801,7 +825,7 @@ def setup_quota_cache(region_name, project_id, size='small'):
         }
 
     cinder_cache[region_name][project_id]['quota'] = dict(
-        settings.PROJECT_QUOTA_SIZES[size]['cinder'])
+        CONF.quota.sizes[size]['cinder'])
 
     global nova_cache
     if region_name not in nova_cache:
@@ -813,7 +837,7 @@ def setup_quota_cache(region_name, project_id, size='small'):
         }
 
     nova_cache[region_name][project_id]['quota'] = dict(
-        settings.PROJECT_QUOTA_SIZES[size]['nova'])
+        CONF.quota.sizes[size]['nova'])
 
     global neutron_cache
     if region_name not in neutron_cache:
@@ -825,7 +849,7 @@ def setup_quota_cache(region_name, project_id, size='small'):
         }
 
     neutron_cache[region_name][project_id]['quota'] = dict(
-        settings.PROJECT_QUOTA_SIZES[size]['neutron'])
+        CONF.quota.sizes[size]['neutron'])
 
 
 def setup_mock_caches(region, project_id):

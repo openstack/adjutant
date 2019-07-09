@@ -13,12 +13,14 @@
 #    under the License.
 
 from rest_framework import serializers
-from django.conf import settings
+
+from adjutant.config import CONF
 from adjutant.common import user_store
 
 
-role_options = settings.DEFAULT_ACTION_SETTINGS.get("NewUserAction", {}).get(
-    "allowed_roles", [])
+def get_role_choices():
+    id_manager = user_store.IdentityManager()
+    return id_manager.get_manageable_roles()
 
 
 def get_region_choices():
@@ -37,7 +39,7 @@ class BaseUserNameSerializer(serializers.Serializer):
     def __init__(self, *args, **kwargs):
         super(BaseUserNameSerializer, self).__init__(*args, **kwargs)
 
-        if settings.USERNAME_IS_EMAIL:
+        if CONF.identity.username_is_email:
             self.fields.pop('username')
 
 
@@ -46,11 +48,15 @@ class BaseUserIdSerializer(serializers.Serializer):
 
 
 class NewUserSerializer(BaseUserNameSerializer):
-    roles = serializers.MultipleChoiceField(
-        choices=role_options, default=set)
-    inherited_roles = serializers.MultipleChoiceField(
-        choices=role_options, default=set)
     project_id = serializers.CharField(max_length=64)
+
+    def __init__(self, *args, **kwargs):
+        super(NewUserSerializer, self).__init__(*args, **kwargs)
+        # NOTE(adriant): This overide is mostly in use so that it can be tested
+        self.fields['roles'] = serializers.MultipleChoiceField(
+            choices=get_role_choices(), default=set)
+        self.fields['inherited_roles'] = serializers.MultipleChoiceField(
+            choices=get_role_choices(), default=set)
 
     def validate(self, data):
         if not data['roles'] and not data['inherited_roles']:
@@ -81,12 +87,16 @@ class ResetUserSerializer(BaseUserNameSerializer):
 
 
 class EditUserRolesSerializer(BaseUserIdSerializer):
-    roles = serializers.MultipleChoiceField(
-        choices=role_options, default=set)
-    inherited_roles = serializers.MultipleChoiceField(
-        choices=role_options, default=set)
     remove = serializers.BooleanField(default=False)
     project_id = serializers.CharField(max_length=64)
+
+    def __init__(self, *args, **kwargs):
+        super(EditUserRolesSerializer, self).__init__(*args, **kwargs)
+        # NOTE(adriant): This overide is mostly in use so that it can be tested
+        self.fields['roles'] = serializers.MultipleChoiceField(
+            choices=get_role_choices(), default=set)
+        self.fields['inherited_roles'] = serializers.MultipleChoiceField(
+            choices=get_role_choices(), default=set)
 
     def validate(self, data):
         if not data['roles'] and not data['inherited_roles']:
@@ -139,7 +149,7 @@ class UpdateProjectQuotasSerializer(serializers.Serializer):
         """
         Check that the size exists in the conf.
         """
-        size_list = settings.PROJECT_QUOTA_SIZES.keys()
+        size_list = CONF.quota.sizes.keys()
         if value not in size_list:
             raise serializers.ValidationError("Quota size: %s is not valid"
                                               % value)

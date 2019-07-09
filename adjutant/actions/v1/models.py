@@ -12,10 +12,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.conf import settings
-
 from rest_framework import serializers as drf_serializers
 
+from adjutant import actions
 from adjutant.actions.v1 import serializers
 from adjutant.actions.v1.base import BaseAction
 from adjutant.actions.v1.projects import (
@@ -29,9 +28,10 @@ from adjutant.actions.v1.resources import (
     SetProjectQuotaAction, UpdateProjectQuotasAction)
 from adjutant.actions.v1.misc import SendAdditionalEmailAction
 from adjutant import exceptions
+from adjutant.config.workflow import action_defaults_group as action_config
 
 
-# Update settings dict with tuples in the format:
+# Update ACTION_CLASSES dict with tuples in the format:
 #   (<ActionClass>, <ActionSerializer>)
 def register_action_class(action_class, serializer_class):
     if not issubclass(action_class, BaseAction):
@@ -47,7 +47,14 @@ def register_action_class(action_class, serializer_class):
         )
     data = {}
     data[action_class.__name__] = (action_class, serializer_class)
-    settings.ACTION_CLASSES.update(data)
+    actions.ACTION_CLASSES.update(data)
+    if action_class.config_group:
+        # NOTE(adriant): We copy the config_group before naming it
+        # to avoid cases where a subclass inherits but doesn't extend it
+        setting_group = action_class.config_group.copy()
+        setting_group.set_name(
+            action_class.__name__, reformat_name=False)
+        action_config.register_child_config(setting_group)
 
 
 # Register Project actions:

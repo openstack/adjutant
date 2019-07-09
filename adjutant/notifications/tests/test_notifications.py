@@ -18,64 +18,93 @@ from django.core import mail
 
 from rest_framework import status
 
+from confspirator.tests import utils as conf_utils
+
 from adjutant.api.models import Task, Notification
 from adjutant.common.tests.fake_clients import (
     FakeManager, setup_identity_cache)
-from adjutant.common.tests.utils import (
-    AdjutantAPITestCase, modify_dict_settings)
+from adjutant.common.tests.utils import AdjutantAPITestCase
+from adjutant.config import CONF
+from adjutant import exceptions
 
 
 @mock.patch('adjutant.common.user_store.IdentityManager',
             FakeManager)
+@conf_utils.modify_conf(
+    CONF,
+    operations={
+        "adjutant.workflow.tasks.create_project_and_user.notifications": [
+            {'operation': 'override', 'value': {
+                "standard_handlers": ["EmailNotification"],
+                "error_handlers": ["EmailNotification"],
+                "standard_handler_config": {
+                    "EmailNotification": {
+                        'emails': ['example_notification@example.com'],
+                        'reply': 'no-reply@example.com',
+                    }
+                },
+                "error_handler_config": {
+                    "EmailNotification": {
+                        'emails': ['example_error_notification@example.com'],
+                        'reply': 'no-reply@example.com',
+                    }
+                },
+            }},
+        ],
+    })
 class NotificationTests(AdjutantAPITestCase):
 
-    @modify_dict_settings(TASK_SETTINGS={
-        'key_list': ['create_project', 'notifications'],
-        'operation': 'override',
-        'value': {
-            'EmailNotification': {
-                'standard': {
-                    'emails': ['example@example.com'],
-                    'reply': 'no-reply@example.com',
-                    'template': 'notification.txt'
-                },
-                'error': {
-                    'emails': ['example@example.com'],
-                    'reply': 'no-reply@example.com',
-                    'template': 'notification.txt'
-                }
-            }
-        }
-    })
     def test_new_project_sends_notification(self):
         """
-        Confirm that the email notification engine correctly acknowledges
+        Confirm that the email notification handler correctly acknowledges
         notifications it sends out.
-        """
 
+        This tests standard and error notifications.
+        """
         setup_identity_cache()
 
-        url = "/v1/actions/CreateProjectAndUser"
+        url = "/v1/openstack/sign-up"
         data = {'project_name': "test_project", 'email': "test@example.com"}
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
 
+        new_task = Task.objects.all()[0]
+        self.assertEqual(Notification.objects.count(), 1)
+        self.assertEqual(len(mail.outbox), 2)
+        self.assertEqual(mail.outbox[1].subject, "create_project_and_user notification")
+        self.assertEqual(mail.outbox[1].to, ['example_notification@example.com'])
+
+        notif = Notification.objects.all()[0]
+        self.assertEqual(notif.task.uuid, new_task.uuid)
+        self.assertFalse(notif.error)
+        self.assertTrue(notif.acknowledged)
+
         headers = {
             'project_name': "test_project",
             'project_id': "test_project_id",
-            'roles': "admin,_member_",
+            'roles': "admin,member",
             'username': "test@example.com",
             'user_id': "test_user_id",
             'authenticated': True
         }
-        new_task = Task.objects.all()[0]
         url = "/v1/tasks/" + new_task.uuid
-        response = self.client.post(url, {'approved': True}, format='json',
-                                    headers=headers)
+        with mock.patch(
+            "adjutant.common.tests.fake_clients.FakeManager.find_project"
+        ) as mocked_find:
+            mocked_find.side_effect = exceptions.ServiceUnavailable(
+                "Forced key error for testing."
+            )
+            response = self.client.post(
+                url, {"approved": True}, format="json", headers=headers
+            )
 
-        self.assertEqual(Notification.objects.count(), 1)
+        # should send token email, but no new notification
+        self.assertEqual(Notification.objects.count(), 2)
         self.assertEqual(len(mail.outbox), 3)
+        self.assertEqual(mail.outbox[2].subject, "Error - create_project_and_user notification")
+        self.assertEqual(mail.outbox[2].to, ['example_error_notification@example.com'])
 
-        notif = Notification.objects.all()[0]
+        notif = Notification.objects.all()[1]
         self.assertEqual(notif.task.uuid, new_task.uuid)
+        self.assertTrue(notif.error)
         self.assertTrue(notif.acknowledged)

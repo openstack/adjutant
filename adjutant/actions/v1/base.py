@@ -14,9 +14,9 @@
 
 from logging import getLogger
 
-from django.conf import settings
 from django.utils import timezone
 
+from adjutant.config import CONF
 from adjutant.common.quota import QuotaManager
 from adjutant.common import user_store
 from adjutant.common.utils import str_datetime
@@ -60,6 +60,8 @@ class BaseAction(object):
 
     required = []
 
+    config_group = None
+
     def __init__(self, data, action_model=None, task=None,
                  order=None):
         """
@@ -86,6 +88,11 @@ class BaseAction(object):
             )
             action.save()
             self.action = action
+
+        # NOTE(adriant): override this since we don't need the group
+        #                beyond registration.
+        self.config_group = None
+        self._config = None
 
     @property
     def valid(self):
@@ -136,18 +143,28 @@ class BaseAction(object):
             str(self), note)
 
     @property
-    def settings(self):
-        """Get my settings.
+    def config(self):
+        """Get my config.
 
-        Returns a dict of the settings for this action.
+        Returns a config_group of the config for this action.
         """
+        if self._config is not None:
+            return self._config
+
         try:
-            task_conf = settings.TASK_SETTINGS[self.action.task.task_type]
-            return task_conf['action_settings'].get(
-                self.__class__.__name__, {})
+            action_defaults = CONF.workflow.action_defaults.get(
+                self.__class__.__name__)
         except KeyError:
-            return settings.DEFAULT_ACTION_SETTINGS.get(
-                self.__class__.__name__, {})
+            self._config = {}
+            return self._config
+
+        try:
+            task_conf = CONF.workflow.tasks[self.action.task.task_type]
+            self._config = action_defaults.overlay(
+                task_conf.actions[self.__class__.__name__])
+        except KeyError:
+            self._config = action_defaults
+        return self._config
 
     def prepare(self):
         try:
@@ -266,13 +283,13 @@ class UserMixin(ResourceMixin):
     def _validate_role_permissions(self):
         keystone_user = self.action.task.keystone_user
         # Role permissions check
-        if not self.are_roles_managable(user_roles=keystone_user['roles'],
-                                        requested_roles=self.roles):
+        if not self.are_roles_manageable(user_roles=keystone_user['roles'],
+                                         requested_roles=self.roles):
             self.add_note('User does not have permission to edit role(s).')
             return False
         return True
 
-    def are_roles_managable(self, user_roles=None, requested_roles=None):
+    def are_roles_manageable(self, user_roles=None, requested_roles=None):
         if user_roles is None:
             user_roles = []
         if requested_roles is None:
@@ -280,13 +297,14 @@ class UserMixin(ResourceMixin):
 
         requested_roles = set(requested_roles)
         # blacklist checks
-        blacklist_roles = set(['admin'])
-        if len(blacklist_roles & requested_roles) > 0:
+        blacklisted_roles = set(['admin'])
+        if len(blacklisted_roles & requested_roles) > 0:
             return False
 
-        # user managable role
-        managable_roles = user_store.get_managable_roles(user_roles)
-        intersection = set(managable_roles) & requested_roles
+        # user manageable role
+        id_manager = user_store.IdentityManager()
+        manageable_roles = id_manager.get_manageable_roles(user_roles)
+        intersection = set(manageable_roles) & requested_roles
         # if all requested roles match, we can proceed
         return intersection == requested_roles
 
@@ -457,8 +475,8 @@ class QuotaMixin(ResourceMixin):
     def _usage_greater_than_quota(self, regions):
         quota_manager = QuotaManager(
             self.project_id,
-            size_difference_threshold=self.size_difference_threshold)
-        quota = settings.PROJECT_QUOTA_SIZES.get(self.size, {})
+            size_difference_threshold=self.config.size_difference_threshold)
+        quota = CONF.quota.sizes.get(self.size, {})
         for region in regions:
             current_usage = quota_manager.get_current_usage(region)
             if self._region_usage_greater_than_quota(current_usage, quota):
@@ -498,7 +516,7 @@ class UserNameAction(BaseAction):
     """
 
     def __init__(self, *args, **kwargs):
-        if settings.USERNAME_IS_EMAIL:
+        if CONF.identity.username_is_email:
             # NOTE(amelia): Make a copy to avoid editing it globally.
             self.required = list(self.required)
             try:
