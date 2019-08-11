@@ -15,9 +15,6 @@ Welcome to Adjutant's documentation!
    features
    history
 
-   .. standard task views and actions
-
-
 A basic workflow framework built using Django and Django-Rest-Framework to
 help automate Admin tasks within an OpenStack cluster.
 
@@ -41,22 +38,23 @@ The command ``tox -e venv {your commands}`` can be used and will setup a
 virtual environment with all the required dependencies for you.
 
 For example, running the server on port 5050 can be done with::
-    tox -e venv adjutant-api runserver 0.0.0.0:5050
+
+  tox -e venv adjutant-api runserver 0.0.0.0:5050
 
 
-************************
+***********************
 Client and UI Libraries
-************************
+***********************
 
 Both a commandline/python and a horizon plugin exist for adjutant:
 
-* `python-adjutantclient <https://github.com/openstack/python-adjutantclient>`_
-* `adjutant-ui <https://github.com/openstack/adjutant-ui>`_
+* `python-adjutantclient <https://opendev.org/openstack/python-adjutantclient>`_
+* `adjutant-ui <https://opendev.org/openstack/adjutant-ui>`_
 
 
-************************
+***********************
 Tests and Documentation
-************************
+***********************
 
 Tests and documentation are managed by tox, they can be run simply with the
 command ``tox``.
@@ -77,13 +75,13 @@ the command ``tox -e docs``, these will be placed inside the ``doc/build``
 directory.
 
 
-************************
+************
 Contributing
-************************
+************
 
 Bugs and blueprints for Adjutant, its ui and client are managed `here on
 launchpad. <https://launchpad.net/adjutant>`_
 
 Changes should be submitted through the OpenStack gerrit, the guide for
 contributing to OpenStack projects is
-`here <https://docs.openstack.org/contributor-guide/>`_ .
+`here <https://docs.openstack.org/contributor/>`_ .
