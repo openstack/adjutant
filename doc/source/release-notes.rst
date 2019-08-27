@@ -96,4 +96,5 @@ note. We can iterate on the content and application of the release note during
 the review process.
 
 For more information on how and when to create release notes, see the
-`project-team-guide <https://docs.openstack.org/project-team-guide/release-management.html#how-to-add-new-release-notes>`_.
+`project-team-guide
+<https://docs.openstack.org/project-team-guide/release-management.html#how-to-add-new-release-notes>`_.

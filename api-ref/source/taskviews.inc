@@ -1,6 +1,6 @@
-************************************
+**********************************
 OpenStack Style TaskView Endpoints
-************************************
+**********************************
 
 A response of 'task created' means that the task requires admin approval and
 a response of 'created token' indicates that the task has been auto-approved

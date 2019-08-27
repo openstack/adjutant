@@ -23,9 +23,9 @@ Tasks can bundle a number of actions and have 3 main steps.
 Depending on the task and the data provided some steps may be skipped.
 
 
-******************
+**************
 Authentication
-******************
+**************
 
 The 'X-Auth-Token' header value should be provided for authentication
 with a valid Keystone token.
@@ -58,7 +58,8 @@ Service Discovery
 ******************
 
 Version Discovery Endpoint
-===========================
+==========================
+
 .. rest_method::  GET /
 
 Unauthenticated.
@@ -83,9 +84,9 @@ Normal response code: 200
 .. include:: taskviews.inc
 
 
-************************************
-Additional API Documentation:
-************************************
+****************************
+Additional API Documentation
+****************************
 
 While in debug mode the service will supply online browsable documentation via
 Django REST Swagger.

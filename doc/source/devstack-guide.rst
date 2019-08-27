@@ -14,7 +14,7 @@ Deploy Devstack
 
 Grab the Devstack repo::
 
-    git clone https://github.com/openstack-dev/devstack.git
+    git clone https://opendev.org/openstack/devstack
 
 
 And then define a basic localrc file with the password set and place that in
@@ -41,7 +41,7 @@ Deploy Adjutant
 
 Grab the Adjutant repo::
 
-    git clone https://github.com/openstack/adjutant.git
+    git clone https://opendev.org/openstack/adjutant
 
 Then you'll want to setup a virtual environment::
 
@@ -236,7 +236,7 @@ id you can see some details about it::
 Setting Up Adjutant on Horizon
 **********************************
 Adjutant has a Horizon UI plugin, the code and setup instructions for it can
-be found `here <https://github.com/openstack/adjutant-ui>`_
+be found `here <https://opendev.org/openstack/adjutant-ui>`_.
 
 If you do set this up, you will want to edit the default Adjutant conf to so
 that the TOKEN_SUBMISSION_URL is correctly set to point at your Horizon.

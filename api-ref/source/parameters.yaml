@@ -43,18 +43,6 @@ filters:
     in: query
     required: false
     type: dictionary
-region:
-    description: |
-        Region to perform actions in.
-    in: query
-    required: true
-    type: string
-setup_network:
-    description: |
-        Whether or not to setup a default network for a new project
-    in: query
-    required: true
-    type: boolean
 page:
     description: |
         Page number to access, starts at and defaults to 1.
@@ -67,6 +55,18 @@ project_name:
     in: query
     required: true
     type: string
+region:
+    description: |
+        Region to perform actions in.
+    in: query
+    required: true
+    type: string
+setup_network:
+    description: |
+        Whether or not to setup a default network for a new project
+    in: query
+    required: true
+    type: boolean
 tasks_per_page:
     description: |
         Limit on the tasks viewed on each page.
