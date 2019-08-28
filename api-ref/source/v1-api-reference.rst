@@ -1,6 +1,6 @@
-#######################
-Version 1 API reference
-#######################
+###################################
+Admin Logic Version 1 API reference
+###################################
 
 This is the reference for Adjutant when it is using the default configuration.
 Different deployments may exclude certain task views or include their own

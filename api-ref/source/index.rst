@@ -1,6 +1,6 @@
-================================================
-Welcome to Adjutant API Reference documentation!
-================================================
+=======================================================
+Welcome to the Admin-Logic API Reference documentation!
+=======================================================
 
 .. toctree::
    :maxdepth: 2
