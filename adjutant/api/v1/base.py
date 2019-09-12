@@ -20,6 +20,8 @@ from adjutant.config import CONF
 class BaseDelegateAPI(APIViewWithLogger):
     """Base Class for Adjutant's deployer configurable APIs."""
 
+    url = None
+
     config_group = None
 
     def __init__(self, *args, **kwargs):

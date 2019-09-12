@@ -201,17 +201,16 @@ class BaseTask(object):
             else:
                 action_name = action
 
-            action_class, serializer_class = \
-                adj_actions.ACTION_CLASSES[action_name]
+            action_class = adj_actions.ACTION_CLASSES[action_name]
 
             if use_existing_actions:
                 action_class = action
 
             # instantiate serializer class
-            if not serializer_class:
+            if not action_class.serializer:
                 raise exceptions.SerializerMissingException(
                     "No serializer defined for action %s" % action_name)
-            serializer = serializer_class(data=action_data)
+            serializer = action_class.serializer(data=action_data)
 
             action_serializer_list.append({
                 'name': action_name,

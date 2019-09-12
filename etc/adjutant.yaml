@@ -9,9 +9,6 @@ django:
   # The Django allowed hosts
   allowed_hosts:
     - '*'
-  # List
-  # A list of additional django apps.
-  # additional_apps:
   # Dict
   # Django databases config.
   databases:
@@ -272,11 +269,6 @@ workflow:
       # List
       # Roles which those users should get.
       # default_roles:
-    ResetUserPasswordAction:
-      # List
-      # Users with these roles cannot reset their passwords.
-      blacklisted_roles:
-        - admin
     NewDefaultNetworkAction:
       region_defaults:
         # String
@@ -341,6 +333,11 @@ workflow:
       # Integer
       # The allowed number of days between auto approved quota changes.
       days_between_autoapprove: 30
+    ResetUserPasswordAction:
+      # List
+      # Users with these roles cannot reset their passwords.
+      blacklisted_roles:
+        - admin
     SendAdditionalEmailAction:
       prepare:
         # String

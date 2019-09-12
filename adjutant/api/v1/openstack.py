@@ -30,6 +30,8 @@ from adjutant.config import CONF
 
 class UserList(tasks.InviteUser):
 
+    url = r'^openstack/users/?$'
+
     config_group = groups.DynamicNameConfigGroup(
         children=[
             fields.ListConfig(
@@ -168,6 +170,8 @@ class UserList(tasks.InviteUser):
 
 class UserDetail(BaseDelegateAPI):
 
+    url = r'^openstack/users/(?P<user_id>\w+)/?$'
+
     config_group = groups.DynamicNameConfigGroup(
         children=[
             fields.ListConfig(
@@ -244,6 +248,8 @@ class UserDetail(BaseDelegateAPI):
 
 class UserRoles(BaseDelegateAPI):
 
+    url = r'^openstack/users/(?P<user_id>\w+)/roles/?$'
+
     config_group = groups.DynamicNameConfigGroup(
         children=[
             fields.ListConfig(
@@ -317,6 +323,8 @@ class UserRoles(BaseDelegateAPI):
 
 class RoleList(BaseDelegateAPI):
 
+    url = r'^openstack/roles/?$'
+
     @utils.mod_or_admin
     def get(self, request):
         """Returns a list of roles that may be managed for this project"""
@@ -343,6 +351,8 @@ class UserResetPassword(tasks.ResetPassword):
     ---
     """
 
+    url = r'^openstack/users/password-reset/?$'
+
     pass
 
 
@@ -352,6 +362,8 @@ class UserUpdateEmail(tasks.UpdateEmail):
     ---
     """
 
+    url = r'^openstack/users/email-update/?$'
+
     pass
 
 
@@ -359,6 +371,8 @@ class SignUp(tasks.CreateProjectAndUser):
     """
     The openstack endpoint for signups.
     """
+
+    url = r'^openstack/sign-up/?$'
 
     pass
 
@@ -368,6 +382,8 @@ class UpdateProjectQuotas(BaseDelegateAPI):
     The OpenStack endpoint to update the quota of a project in
     one or more regions
     """
+
+    url = r'^openstack/quotas/?$'
 
     task_type = "update_quota"
 

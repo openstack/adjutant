@@ -29,6 +29,8 @@ from adjutant.api.v1.base import BaseDelegateAPI
 
 class CreateProjectAndUser(BaseDelegateAPI):
 
+    url = r'^actions/CreateProjectAndUser/?$'
+
     config_group = groups.DynamicNameConfigGroup(
         children=[
             fields.StrConfig(
@@ -83,6 +85,8 @@ class CreateProjectAndUser(BaseDelegateAPI):
 
 class InviteUser(BaseDelegateAPI):
 
+    url = r'^actions/InviteUser/?$'
+
     task_type = "invite_user_to_project"
 
     @utils.mod_or_admin
@@ -117,6 +121,8 @@ class InviteUser(BaseDelegateAPI):
 
 
 class ResetPassword(BaseDelegateAPI):
+
+    url = r'^actions/ResetPassword/?$'
 
     task_type = "reset_user_password"
 
@@ -160,6 +166,8 @@ class ResetPassword(BaseDelegateAPI):
 
 class EditUser(BaseDelegateAPI):
 
+    url = r'^actions/EditUser/?$'
+
     task_type = "edit_user_roles"
 
     @utils.mod_or_admin
@@ -179,6 +187,9 @@ class EditUser(BaseDelegateAPI):
 
 
 class UpdateEmail(BaseDelegateAPI):
+
+    url = r'^actions/UpdateEmail/?$'
+
     task_type = "update_user_email"
 
     @utils.authenticated

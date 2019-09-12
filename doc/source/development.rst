@@ -72,7 +72,7 @@ Actions themselves can also effectively do anything within the scope of those
 three stages, and there is even the ability to chain multiple actions together,
 and pass data along to other actions.
 
-Details for adding task and actions can be found on the :doc:`plugins`
+Details for adding task and actions can be found on the :doc:`feature-sets`
 page.
 
 

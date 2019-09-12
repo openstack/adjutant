@@ -80,7 +80,7 @@ class NewProjectWithUserSerializer(BaseUserNameSerializer):
     project_name = serializers.CharField(max_length=64)
 
 
-class ResetUserSerializer(BaseUserNameSerializer):
+class ResetUserPasswordSerializer(BaseUserNameSerializer):
     domain_name = serializers.CharField(max_length=64, default='Default')
     # override domain_id so serializer doesn't set it up.
     domain_id = None

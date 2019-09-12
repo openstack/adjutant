@@ -20,7 +20,8 @@ from rest_framework import status
 
 from confspirator.tests import utils as conf_utils
 
-from adjutant.api.models import Task, Notification
+from adjutant.api.models import Notification
+from adjutant.tasks.models import Task
 from adjutant.common.tests.fake_clients import (
     FakeManager, setup_identity_cache)
 from adjutant.common.tests.utils import AdjutantAPITestCase

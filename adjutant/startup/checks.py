@@ -1,4 +1,16 @@
-from django.apps import AppConfig
+# Copyright (C) 2019 Catalyst Cloud Ltd
+#
+#    Licensed under the Apache License, Version 2.0 (the "License"); you may
+#    not use this file except in compliance with the License. You may obtain
+#    a copy of the License at
+#
+#         http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+#    License for the specific language governing permissions and limitations
+#    under the License.
 
 from adjutant.config import CONF
 from adjutant import actions, api, tasks
@@ -34,22 +46,3 @@ def check_configured_actions():
     if missing_actions:
         raise ActionNotRegistered(
             "Configured actions are unregistered: %s" % missing_actions)
-
-
-class StartUpConfig(AppConfig):
-    name = "adjutant.startup"
-
-    def ready(self):
-        """A pre-startup function for the api
-
-        Code run here will occur before the API is up and active but after
-        all models have been loaded.
-
-        Useful for any start up checks.
-        """
-
-        # First check that all expect DelegateAPIs are present
-        check_expected_delegate_apis()
-
-        # Now check if all the actions those views expecte are present.
-        check_configured_actions()

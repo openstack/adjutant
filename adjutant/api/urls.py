@@ -12,24 +12,23 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.apps import apps
 from django.conf.urls import url, include
 from django.conf import settings
 
 from rest_framework_swagger.views import get_swagger_view
 
 from adjutant.api import views
+from adjutant.api.views import build_version_details
 from adjutant.api.v1 import views as views_v1
 
 urlpatterns = [
     url(r'^$', views.VersionView.as_view()),
 ]
 
-# NOTE(adriant): This may not be the best approach, but it does work. Will
-# gladly accept a cleaner alternative if it presents itself.
-if apps.is_installed('adjutant.api.v1'):
-    urlpatterns.append(url(r'^v1/?$', views_v1.V1VersionEndpoint.as_view()))
-    urlpatterns.append(url(r'^v1/', include('adjutant.api.v1.urls')))
+# NOTE(adriant): make this conditional once we have a v2.
+build_version_details('1.0', 'CURRENT', relative_endpoint='v1/')
+urlpatterns.append(url(r'^v1/?$', views_v1.V1VersionEndpoint.as_view()))
+urlpatterns.append(url(r'^v1/', include('adjutant.api.v1.urls')))
 
 
 if settings.DEBUG:

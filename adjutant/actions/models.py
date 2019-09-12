@@ -46,5 +46,5 @@ class Action(models.Model):
     def get_action(self):
         """Returns self as the appropriate action wrapper type."""
         data = self.action_data
-        return actions.ACTION_CLASSES[self.action_name][0](
+        return actions.ACTION_CLASSES[self.action_name](
             data=data, action_model=self)

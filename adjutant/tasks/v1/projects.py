@@ -18,7 +18,7 @@ from adjutant.tasks.v1.base import BaseTask
 class CreateProjectAndUser(BaseTask):
     duplicate_policy = "block"
     task_type = "create_project_and_user"
-    deprecated_task_types = ['create_project']
+    deprecated_task_types = ['create_project', 'signup']
     default_actions = [
         "NewProjectWithUserAction",
     ]

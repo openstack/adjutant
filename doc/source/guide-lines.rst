@@ -9,9 +9,9 @@ Adjutant is a service to let cloud providers build workflow around certain
 actions, or to build smaller APIs around existing things in OpenStack. Or even
 APIs to integrate with OpenStack, but do actions in external systems.
 
-Ultimately Adjutant is a Django project with a few limitations, and the plugin
-system probably exposes too much extra functionality which can be added by a
-plugin. Some of this we plan to cut down, and throw in some explicitly defined
+Ultimately Adjutant is a Django project with a few limitations, and the feature
+set system probably exposes too much extra functionality which can be added.
+Some of this we plan to cut down, and throw in some explicitly defined
 limitations, but even with the planned limitations the framework will always
 be very flexible.
 
@@ -58,14 +58,14 @@ wrappers or supplementary logic around existing OpenStack APIs and features.
 
 .. note::
 
-  If an action, task, or API doesn't fit in core, it may fit in a plugin,
-  potentially even one that is maintained by the core team. If a feature isn't
+  If an action, task, or API doesn't fit in core, it may fit in a external feature
+  set, potentially even one that is maintained by the core team. If a feature isn't
   yet present in OpenStack that we can build in Adjutant quickly, we can do so
-  as a semi-official plugin with the knowledge that we plan to deprecate that
+  as a semi-official feature set with the knowledge that we plan to deprecate that
   feature when it becomes present in OpenStack proper. In addition this process
   allows us to potentially allow providers to expose a variant of the feature
   if they are running older versions of OpenStack that don't entirely support
-  it, but Adjutant could via the plugin mechanism. This gives us a large amount
+  it, but Adjutant could via the feature set mechanism. This gives us a large amount
   of flexibility, while ensuring we aren't reinventing the wheel.
 
 
@@ -97,7 +97,7 @@ clean, and the changes auditable.
 
 .. warning::
 
-  Anyone writing API plugins that break the above convention will not be
+  Anyone writing feature sets that break the above convention will not be
   supported. We may help and encourage you to move to using the underlying
   workflows, but the core team won't help you troubleshoot any logic that isn't
   in the right place.

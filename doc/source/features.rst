@@ -11,9 +11,10 @@ handles.
 Adjutant does have default implementations of workflows and the APIs for
 them. These are in part meant to be workflow that is applicable to any cloud,
 but also example implementations, as well as actions that could potentially be
-reused in deployer specific workflow in their own plugins. If anything could
-be considered a feature, it potentially could be these. The plan is to add many
-of these, which any cloud can use out of the box, or augment as needed.
+reused in deployer specific workflow in their own feature sets. If anything
+could be considered a feature, it potentially could be these. The plan is to
+add many of these, which any cloud can use out of the box, or augment as
+needed.
 
 To enable these they must be added to `ACTIVE_DELEGATE_APIS` in the conf file.
 

@@ -20,6 +20,7 @@ from confspirator import groups
 from confspirator import fields
 
 from adjutant.actions.v1.base import BaseAction, ProjectMixin, QuotaMixin
+from adjutant.actions.v1 import serializers
 from adjutant.actions.utils import validate_steps
 from adjutant.common import openstack_clients, user_store
 from adjutant.api import models
@@ -39,6 +40,8 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
         'project_id',
         'region',
     ]
+
+    serializer = serializers.NewDefaultNetworkSerializer
 
     config_group = groups.DynamicNameConfigGroup(
         children=[
@@ -232,6 +235,8 @@ class NewProjectDefaultNetworkAction(NewDefaultNetworkAction):
         'region',
     ]
 
+    serializer = serializers.NewProjectDefaultNetworkSerializer
+
     def _pre_validate(self):
         # Note: Don't check project here as it doesn't exist yet.
         self.action.valid = validate_steps([
@@ -265,6 +270,8 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
         'project_id',
         'regions',
     ]
+
+    serializer = serializers.UpdateProjectQuotasSerializer
 
     config_group = groups.DynamicNameConfigGroup(
         children=[
@@ -428,6 +435,8 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
 class SetProjectQuotaAction(UpdateProjectQuotasAction):
     """ Updates quota for a given project to a configured quota level """
     required = []
+
+    serializer = serializers.SetProjectQuotaSerializer
 
     config_group = UpdateProjectQuotasAction.config_group.extend(
         children=[

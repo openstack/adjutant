@@ -12,7 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from confspirator import groups
+import pkg_resources
 
 
-config_group = groups.ConfigGroup("plugin")
+def load_feature_sets():
+    for entry_point in pkg_resources.iter_entry_points('adjutant.feature_sets'):
+        feature_set = entry_point.load()
+        feature_set().load()

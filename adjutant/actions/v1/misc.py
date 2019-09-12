@@ -19,6 +19,7 @@ from confspirator import fields
 from confspirator import types
 
 from adjutant.actions.v1.base import BaseAction
+from adjutant.actions.v1 import serializers
 from adjutant.actions.utils import send_email
 from adjutant.common import user_store
 from adjutant.common import constants
@@ -94,6 +95,8 @@ def _build_default_email_group(group_name):
 
 
 class SendAdditionalEmailAction(BaseAction):
+
+    serializer = serializers.SendAdditionalEmailSerializer
 
     config_group = groups.DynamicNameConfigGroup(
         children=[

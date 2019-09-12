@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from logging import getLogger
 from smtplib import SMTPException
 
 from django.core.mail import EmailMultiAlternatives
@@ -25,56 +24,11 @@ from confspirator import types
 
 from adjutant.config import CONF
 from adjutant.common import constants
-from adjutant import notifications
 from adjutant.api.models import Notification
-from adjutant import exceptions
-from adjutant.config.notification import handler_defaults_group
+from adjutant.notifications.v1 import base
 
 
-class BaseNotificationHandler(object):
-    """"""
-
-    config_group = None
-
-    def __init__(self):
-        self.logger = getLogger("adjutant")
-
-    def config(self, task, notification):
-        """build config based on conf and defaults
-
-        Will use the Handler defaults, and the overlay them with more
-        specific overrides from the task defaults, and the per task
-        type config.
-        """
-        try:
-            notif_config = CONF.notifications.handler_defaults.get(
-                self.__class__.__name__)
-        except KeyError:
-            # Handler has no config
-            return {}
-
-        task_defaults = task.config.notifications
-
-        try:
-            if notification.error:
-                task_defaults = task_defaults.error_handler_config.get(
-                    self.__class__.__name__)
-            else:
-                task_defaults = task_defaults.standard_handler_config.get(
-                    self.__class__.__name__)
-        except KeyError:
-            task_defaults = {}
-
-        return notif_config.overlay(task_defaults)
-
-    def notify(self, task, notification):
-        return self._notify(task, notification)
-
-    def _notify(self, task, notification):
-        raise NotImplementedError
-
-
-class EmailNotification(BaseNotificationHandler):
+class EmailNotification(base.BaseNotificationHandler):
     """
     Basic email notification handler. Will
     send an email with the given templates.
@@ -186,23 +140,3 @@ class EmailNotification(BaseNotificationHandler):
                 task=notification.task, notes=notes, error=True
             )
             error_notification.save()
-
-
-def register_notification_handler(notification_handler):
-    if not issubclass(notification_handler, BaseNotificationHandler):
-        raise exceptions.InvalidActionClass(
-            "'%s' is not a built off the BaseNotificationHandler class."
-            % notification_handler.__name__
-        )
-    notifications.NOTIFICATION_HANDLERS[
-        notification_handler.__name__
-    ] = notification_handler
-    if notification_handler.config_group:
-        # NOTE(adriant): We copy the config_group before naming it
-        # to avoid cases where a subclass inherits but doesn't extend it
-        setting_group = notification_handler.config_group.copy()
-        setting_group.set_name(notification_handler.__name__, reformat_name=False)
-        handler_defaults_group.register_child_config(setting_group)
-
-
-register_notification_handler(EmailNotification)

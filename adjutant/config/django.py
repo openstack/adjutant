@@ -46,13 +46,6 @@ config_group.register_child_config(
     )
 )
 config_group.register_child_config(
-    fields.ListConfig(
-        "additional_apps",
-        help_text="A list of additional django apps.",
-        default=[]
-    )
-)
-config_group.register_child_config(
     fields.DictConfig(
         "databases",
         help_text="Django databases config.",

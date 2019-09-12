@@ -14,10 +14,10 @@
 
 from uuid import uuid4
 
+from django.utils import timezone
+
 from confspirator import groups
 from confspirator import fields
-
-from django.utils import timezone
 
 from adjutant.config import CONF
 from adjutant.common import user_store
@@ -25,6 +25,7 @@ from adjutant.common.utils import str_datetime
 from adjutant.actions.utils import validate_steps
 from adjutant.actions.v1.base import (
     BaseAction, UserNameAction, UserMixin, ProjectMixin)
+from adjutant.actions.v1 import serializers
 
 
 class NewProjectAction(BaseAction, ProjectMixin, UserMixin):
@@ -40,6 +41,8 @@ class NewProjectAction(BaseAction, ProjectMixin, UserMixin):
         'project_name',
         'description',
     ]
+
+    serializer = serializers.NewProjectSerializer
 
     config_group = groups.DynamicNameConfigGroup(
         children=[
@@ -148,6 +151,8 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
         'username',
         'email'
     ]
+
+    serializer = serializers.NewProjectWithUserSerializer
 
     config_group = groups.DynamicNameConfigGroup(
         children=[
@@ -438,6 +443,8 @@ class AddDefaultUsersToProjectAction(BaseAction, ProjectMixin, UserMixin):
     required = [
         'domain_id',
     ]
+
+    serializer = serializers.AddDefaultUsersToProjectSerializer
 
     config_group = groups.DynamicNameConfigGroup(
         children=[

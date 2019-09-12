@@ -1,0 +1,17 @@
+---
+features:
+  - |
+    Feature sets have been introduced, allowing Adjutant's plugins to be
+    registered via entrypoints, so all that is required to include them
+    is to install them in the same environment. Then which DelegateAPIs
+    are enabled from the feature sets is still controlled by
+    ``adjutant.api.active_delegate_apis``.
+upgrade:
+  - |
+    Plugins that want to work with Adjutant will need to be upgraded to use
+    the new feature set pattern for registrations of Actions, Tasks, DelegateAPIs,
+    and NotificationHandlers.
+deprecations:
+  - |
+    Adjutant's plugin mechanism has entirely changed, making many plugins
+    imcompatible until updated to match the new plugin mechanism.

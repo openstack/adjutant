@@ -60,6 +60,8 @@ class BaseAction(object):
 
     required = []
 
+    serializer = None
+
     config_group = None
 
     def __init__(self, data, action_model=None, task=None,

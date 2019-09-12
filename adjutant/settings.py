@@ -47,11 +47,7 @@ INSTALLED_APPS = (
     'adjutant.api',
     'adjutant.notifications',
     'adjutant.tasks',
-
-    # NOTE(adriant): Until we have v2 options, hardcode our v1s
-    'adjutant.actions.v1',
-    'adjutant.tasks.v1',
-    'adjutant.api.v1',
+    'adjutant.startup',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -122,12 +118,6 @@ if DEBUG:
         'rest_framework.renderers.BrowsableAPIRenderer')
 
 ALLOWED_HOSTS = adj_conf.django.allowed_hosts
-
-_INSTALLED_APPS = list(INSTALLED_APPS) + adj_conf.django.additional_apps
-# NOTE(adriant): Because the order matters, we want this import to be last
-# so the startup checks run after everything is imported.
-_INSTALLED_APPS.append("adjutant.startup")
-INSTALLED_APPS = _INSTALLED_APPS
 
 DATABASES = adj_conf.django.databases
 

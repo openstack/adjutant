@@ -19,6 +19,7 @@ from adjutant.config import CONF
 from adjutant.common import user_store
 from adjutant.actions.v1.base import (
     UserNameAction, UserIdAction, UserMixin, ProjectMixin)
+from adjutant.actions.v1 import serializers
 from adjutant.actions.utils import validate_steps
 
 
@@ -38,6 +39,8 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
         'inherited_roles',
         'domain_id',
     ]
+
+    serializer = serializers.NewUserSerializer
 
     def _validate_target_user(self):
         id_manager = user_store.IdentityManager()
@@ -181,6 +184,8 @@ class ResetUserPasswordAction(UserNameAction, UserMixin):
         'email'
     ]
 
+    serializer = serializers.ResetUserPasswordSerializer
+
     config_group = groups.DynamicNameConfigGroup(
         children=[
             fields.ListConfig(
@@ -266,6 +271,8 @@ class EditUserRolesAction(UserIdAction, ProjectMixin, UserMixin):
         'inherited_roles',
         'remove'
     ]
+
+    serializer = serializers.EditUserRolesSerializer
 
     def _validate_target_user(self):
         # Get target user
@@ -402,6 +409,8 @@ class UpdateUserEmailAction(UserIdAction, UserMixin):
         'user_id',
         'new_email',
     ]
+
+    serializer = serializers.UpdateUserEmailSerializer
 
     def _get_email(self):
         # Sending to new email address

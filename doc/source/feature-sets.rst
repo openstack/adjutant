@@ -1,30 +1,84 @@
-##############################
-Creating Plugins for Adjutant
-##############################
+##################################
+Creating Feature Sets for Adjutant
+##################################
 
-As Adjutant is built on top of Django, we've used parts of Django's installed
-apps system to allow us a plugin mechanism that allows additional actions and
-views to be brought in via external sources. This allows company specific or
-deployer specific changes to easily live outside of the core service and simply
-extend the core service where and when need.
+Adjutant supports the introduction of new Actions, Tasks, and DelegateAPIs
+via additional feature sets. A feature set is a bundle of these elements
+with maybe some feature set specific extra config. This allows company specific
+or deployer specific changes to easily live outside of the core service and
+simply extend the core service where and when need.
 
-An example of such a plugin is here:
-https://github.com/catalyst/adjutant-odoo
+An example of such a plugin is here (although it may not yet be using the new
+'feature set' plugin mechanism):
+https://github.com/catalyst-cloud/adjutant-odoo
+
+
+Once you have all the Actions, Tasks, DelegateAPIs, or Notification Handlers
+that you want to include in a feature set, you register them by making a
+feature set class::
+
+    from adjutant.feature_set import BaseFeatureSet
+
+    from myplugin.actions import MyCustonAction
+    from myplugin.tasks import MyCustonTask
+    from myplugin.apis import MyCustonAPI
+    from myplugin.handlers import MyCustonNotificationHandler
+
+    class MyFeatureSet(BaseFeatureSet):
+
+        actions = [
+            MyCustonAction,
+        ]
+
+        tasks = [
+            MyCustonTask,
+        ]
+
+        delegate_apis = [
+            MyCustonAPI,
+        ]
+
+        notification_handlers = [
+            MyCustonNotificationHandler,
+        ]
+
+
+Then adding it to the library entrypoints::
+
+    adjutant.feature_sets =
+        custom_thing = myplugin.features:MyFeatureSet
+
+
+If you need custom config for your plugin that should be accessible
+and the same across all your Actions, Tasks, APIs, or Notification Handlers
+then you can register config to the feature set itself::
+
+    from confspirator import groups
+
+    ....
+
+    class MyFeatureSet(BaseFeatureSet):
+
+        .....
+
+        config = groups.DynamicNameConfigGroup(
+            children=[
+                fields.StrConfig(
+                    'myconfig',
+                    help_text="Some custom config.",
+                    required=True,
+                    default="Stuff",
+                ),
+            ]
+        )
+
+Which will be accessible via Adjutant's config at:
+``CONF.feature_sets.MyFeatureSet.myconfig``
 
 Building DelegateAPIs
 =====================
 
-New DelegateAPIs should inherit from adjutant.api.v1.base.BaseDelegateAPI
-can be registered as such::
-
-    from adjutant.plugins import register_plugin_delegate_api,
-
-    from myplugin import apis
-
-    register_plugin_delegate_api(r'^my-plugin/some-action/?$', apis.MyAPIView)
-
-A DelegateAPI must both be registered with a valid URL and specified in
-ACTIVE_DELEGATE_APIS in the configuration to be accessible.
+New DelegateAPIs should inherit from ``adjutant.api.v1.base.BaseDelegateAPI``
 
 A new DelegateAPI from a plugin can effectively 'override' a default
 DelegateAPI by registering with the same URL. However it must have
@@ -35,7 +89,9 @@ Examples of DelegateAPIs can be found in adjutant.api.v1.openstack
 
 Minimally they can look like this::
 
-    class NewCreateProject(BaseDelegateAPI):
+    class MyCustomAPI(BaseDelegateAPI):
+
+        url = r'^custom/mycoolstuff/?$'
 
         @utils.authenticated
         def post(self, request):
@@ -48,18 +104,30 @@ admin decorators found in adjutant.api.utils. The request handlers are fairly
 standard django view handlers and can execute any needed code. Additional
 information for the task should be placed in request.data.
 
+You can also add customer config for the DelegateAPI by setting a
+config_group::
+
+    class MyCustomAPI(BaseDelegateAPI):
+
+        url = r'^custom/mycoolstuff/?$'
+
+        config_group = groups.DynamicNameConfigGroup(
+            children=[
+                fields.StrConfig(
+                    'myconfig',
+                    help_text="Some custom config.",
+                    required=True,
+                    default="Stuff",
+                ),
+            ]
+        )
+
 
 Building Tasks
 ==============
 
-Tasks must be derived from adjutant.tasks.v1.base.BaseTask and can be
-registered as such::
-
-     from adjutant.plugins import register_plugin_task
-
-    register_plugin_task(MyPluginTask)
-
-Examples of tasks can be found in `adjutant.tasks.v1`
+Tasks must be derived from ``adjutant.tasks.v1.base.BaseTask``. Examples
+of tasks can be found in ``adjutant.tasks.v1``
 
 Minimally task should define their required fields::
 
@@ -70,21 +138,32 @@ Minimally task should define their required fields::
         ]
         duplicate_policy = "cancel" # default is cancel
 
+Then there are other optional values you can set::
+
+    class My(MyPluginTask):
+        ....
+
+        # previous task_types
+        deprecated_task_types = ['create_project']
+
+        # config defaults for the task (used to generate default config):
+        allow_auto_approve = True
+        additional_actions = None
+        token_expiry = None
+        action_config = None
+        email_config = None
+        notification_config = None
+
 
 Building Actions
 ================
 
-Actions must be derived from adjutant.actions.v1.base.BaseAction and are
-registered alongside their serializer::
-
-    from adjutant.plugins import register_plugin_action
-
-    register_action_class(MyCustomAction, MyCustomActionSerializer)
+Actions must be derived from ``adjutant.actions.v1.base.BaseAction``.
 
 Serializers can inherit from either rest_framework.serializers.Serializer, or
 the current serializers in adjutant.actions.v1.serializers.
 
-Examples of actions can be found in `adjutant.actions.v1`
+Examples of actions can be found in ``adjutant.actions.v1``
 
 Minimally actions should define their required fields and implement 3
 functions::
@@ -95,6 +174,8 @@ functions::
             'user_id',
             'value1',
         ]
+
+        serializer = MyCustomActionSerializer
 
         def _prepare(self):
             # Do some validation here
@@ -109,7 +190,8 @@ functions::
             self.add_note("Submit action performed")
 
 Information set in the action task cache is available in email templates under
-task.cache.value, and the action data is available in action.ActionName.value.
+``task.cache.value``, and the action data is available in
+``action.ActionName.value``.
 
 If a token email is needed to be sent the action should also implement::
 
@@ -132,7 +214,7 @@ are django-rest-framework serializers, but there are also two base serializers
 available in adjutant.actions.v1.serializers, BaseUserNameSerializer and
 BaseUserIdSerializer.
 
-All fields required for an action must be placed through the serializer
+All fields required for an action must be plassed through the serializer
 otherwise they will be inaccessible to the action.
 
 Example::
@@ -154,7 +236,7 @@ Notification Handlers can also be added through a plugin::
 
     class NewNotificationHandler(BaseNotificationHandler):
 
-        settings_group = groups.DynamicNameConfigGroup(
+        config_group = groups.DynamicNameConfigGroup(
             children=[
                 fields.BoolConfig(
                     "do_this_thing",
@@ -168,9 +250,6 @@ Notification Handlers can also be added through a plugin::
             conf = self.settings(task, notification)
             if conf.do_this_thing:
               # do something with the task and notification
-
-
-    register_notification_handler(NewNotificationHandler)
 
 You then need to setup the handler to be used either by default for a task,
 or for a specific task::

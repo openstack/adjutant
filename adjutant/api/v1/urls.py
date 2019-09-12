@@ -33,5 +33,5 @@ for active_view in CONF.api.active_delegate_apis:
     delegate_api = api.DELEGATE_API_CLASSES[active_view]
 
     urlpatterns.append(
-        url(delegate_api['url'], delegate_api['class'].as_view())
+        url(delegate_api.url, delegate_api.as_view())
     )

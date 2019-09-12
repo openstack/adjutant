@@ -9,7 +9,7 @@ Welcome to Adjutant's documentation!
    release-notes
    devstack-guide
    configuration
-   plugins
+   feature-sets
    quota
    guide-lines
    features
