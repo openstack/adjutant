@@ -5,6 +5,9 @@ libffi-dev [platform:dpkg]
 libffi-devel [platform:rpm]
 virtual/libffi [platform:gentoo]
 
+libssl-dev [platform:dpkg]
+openssl-devel [platform:rpm]
+
 libmysqlclient-dev [platform:dpkg]
 mysql-client [platform:dpkg]
 mysql-server [platform:dpkg]
