@@ -154,7 +154,7 @@ class IdentityManager(object):  # pragma: no cover
                     except AttributeError:
                         # Just means the assignment is a group.
                         pass
-            for user_id, user in users.iteritems():
+            for user in users.values():
                 user.roles = list(set(user.roles))
         except ks_exceptions.NotFound:
             return []
