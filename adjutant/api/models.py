@@ -29,7 +29,7 @@ class Token(models.Model):
     UUID token object bound to a task.
     """
 
-    task = models.ForeignKey(Task)
+    task = models.ForeignKey(Task, on_delete=models.CASCADE)
     token = models.CharField(max_length=32, primary_key=True)
     created_on = models.DateTimeField(default=timezone.now)
     expires = models.DateTimeField(db_index=True)
@@ -56,7 +56,7 @@ class Notification(models.Model):
     uuid = models.CharField(max_length=32, default=hex_uuid,
                             primary_key=True)
     notes = JSONField(default={})
-    task = models.ForeignKey(Task)
+    task = models.ForeignKey(Task, on_delete=models.CASCADE)
     error = models.BooleanField(default=False, db_index=True)
     created_on = models.DateTimeField(default=timezone.now)
     acknowledged = models.BooleanField(default=False, db_index=True)

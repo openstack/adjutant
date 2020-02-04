@@ -25,7 +25,7 @@ class Migration(migrations.Migration):
                 ('need_token', models.BooleanField(default=False)),
                 ('order', models.IntegerField()),
                 ('created', models.DateTimeField(default=django.utils.timezone.now)),
-                ('task', models.ForeignKey(to='api.Task')),
+                ('task', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.Task')),
             ],
         ),
     ]

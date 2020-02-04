@@ -17,12 +17,15 @@ from logging import getLogger
 from django.utils import timezone
 
 
-class KeystoneHeaderUnwrapper(object):
+class KeystoneHeaderUnwrapper:
     """
     Middleware to build an easy to use dict of important data from
     what the keystone wsgi middleware gives us.
     """
-    def process_request(self, request):
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
         try:
             token_data = {
                 'project_domain_id': request.META['HTTP_X_PROJECT_DOMAIN_ID'],
@@ -38,12 +41,18 @@ class KeystoneHeaderUnwrapper(object):
             token_data = {}
         request.keystone_user = token_data
 
+        response = self.get_response(request)
+        return response
 
-class TestingHeaderUnwrapper(object):
+
+class TestingHeaderUnwrapper:
     """
     Replacement for the KeystoneHeaderUnwrapper for testing purposes.
     """
-    def process_request(self, request):
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
         try:
             token_data = {
                 # TODO(adriant): follow up patch to update all the test
@@ -65,17 +74,21 @@ class TestingHeaderUnwrapper(object):
             token_data = {}
         request.keystone_user = token_data
 
+        response = self.get_response(request)
+        return response
 
-class RequestLoggingMiddleware(object):
+
+class RequestLoggingMiddleware:
     """
     Middleware to log the requests and responses.
     Will time the duration of a request and log that.
     """
 
-    def __init__(self):
+    def __init__(self, get_response):
+        self.get_response = get_response
         self.logger = getLogger('adjutant')
 
-    def process_request(self, request):
+    def __call__(self, request):
         self.logger.info(
             '(%s) - <%s> %s [%s]',
             timezone.now(),
@@ -85,7 +98,8 @@ class RequestLoggingMiddleware(object):
         )
         request.timer = time()
 
-    def process_response(self, request, response):
+        response = self.get_response(request)
+
         if hasattr(request, 'timer'):
             time_delta = time() - request.timer
         else:

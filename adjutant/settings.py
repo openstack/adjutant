@@ -33,7 +33,6 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 # Application definition
 
 INSTALLED_APPS = (
-    'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -50,23 +49,17 @@ INSTALLED_APPS = (
     'adjutant.startup',
 )
 
-MIDDLEWARE_CLASSES = (
-    'django.contrib.sessions.middleware.SessionMiddleware',
+MIDDLEWARE = (
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.auth.middleware.SessionAuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'adjutant.middleware.KeystoneHeaderUnwrapper',
     'adjutant.middleware.RequestLoggingMiddleware'
 )
 
 if 'test' in sys.argv:
-    # modify MIDDLEWARE_CLASSES
-    MIDDLEWARE_CLASSES = list(MIDDLEWARE_CLASSES)
-    MIDDLEWARE_CLASSES.remove('adjutant.middleware.KeystoneHeaderUnwrapper')
-    MIDDLEWARE_CLASSES.append('adjutant.middleware.TestingHeaderUnwrapper')
+    # modify MIDDLEWARE
+    MIDDLEWARE = list(MIDDLEWARE)
+    MIDDLEWARE.remove('adjutant.middleware.KeystoneHeaderUnwrapper')
+    MIDDLEWARE.append('adjutant.middleware.TestingHeaderUnwrapper')
 
 ROOT_URLCONF = 'adjutant.urls'
 
@@ -97,6 +90,8 @@ TEMPLATES = [
         'NAME': 'include_etc_templates',
     },
 ]
+
+AUTHENTICATION_BACKENDS = []
 
 REST_FRAMEWORK = {
     'EXCEPTION_HANDLER': 'adjutant.api.exception_handler.exception_handler',

@@ -47,12 +47,12 @@ class Migration(migrations.Migration):
                 ('token', models.CharField(max_length=32, serialize=False, primary_key=True)),
                 ('created_on', models.DateTimeField(default=django.utils.timezone.now)),
                 ('expires', models.DateTimeField(db_index=True)),
-                ('task', models.ForeignKey(to='api.Task')),
+                ('task', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.Task')),
             ],
         ),
         migrations.AddField(
             model_name='notification',
             name='task',
-            field=models.ForeignKey(to='api.Task'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.Task'),
         ),
     ]

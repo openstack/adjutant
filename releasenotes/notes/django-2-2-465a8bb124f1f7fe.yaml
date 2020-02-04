@@ -1,0 +1,12 @@
+---
+upgrade:
+  - |
+    Adjutant will now officially only support Python3.6 onwards, and will
+    start introducing features only applicable to that version onwards.
+deprecations:
+  - |
+    Python2 support has been officially deprecated. The code may still be
+    compatible for a bit longer, but we are also switching to Django 2.2,
+    and python2 can no longer be tested. Support for Python less than 3.6
+    has also been deprecated, but may still work for older python3 versions
+    for a little longer, although not officially.

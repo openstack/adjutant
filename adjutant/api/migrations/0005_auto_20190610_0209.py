@@ -7,6 +7,8 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
 
+    atomic = False
+
     dependencies = [
         ('api', '0004_auto_20160929_0317'),
     ]
