@@ -340,7 +340,11 @@ class EditUserRolesAction(UserIdAction, ProjectMixin, UserMixin):
         new_roles_manageable = self.are_roles_manageable(
             self.action.task.keystone_user['roles'], all_roles)
 
-        return new_roles_manageable and current_roles_manageable
+        if new_roles_manageable and current_roles_manageable:
+            self.add_note("All user roles are manageable.")
+            return True
+        self.add_note("Not all user roles are manageable.")
+        return False
 
     def _validate(self):
         self.action.valid = validate_steps([
