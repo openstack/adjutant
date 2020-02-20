@@ -114,6 +114,11 @@ if DEBUG:
 
 ALLOWED_HOSTS = adj_conf.django.allowed_hosts
 
+SECURE_PROXY_SSL_HEADER = (
+    adj_conf.django.secure_proxy_ssl_header,
+    adj_conf.django.secure_proxy_ssl_header_value
+)
+
 DATABASES = adj_conf.django.databases
 
 if adj_conf.django.logging:

@@ -46,6 +46,22 @@ config_group.register_child_config(
     )
 )
 config_group.register_child_config(
+    fields.StrConfig(
+        "secure_proxy_ssl_header",
+        help_text="The header representing a HTTP header/value combination "
+                  "that signifies a request is secure.",
+        default="HTTP_X_FORWARDED_PROTO",
+    )
+)
+config_group.register_child_config(
+    fields.StrConfig(
+        "secure_proxy_ssl_header_value",
+        help_text="The value representing a HTTP header/value combination "
+                  "that signifies a request is secure.",
+        default="https",
+    )
+)
+config_group.register_child_config(
     fields.DictConfig(
         "databases",
         help_text="Django databases config.",
