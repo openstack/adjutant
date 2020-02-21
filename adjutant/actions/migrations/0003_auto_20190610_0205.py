@@ -8,13 +8,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('actions', '0002_action_auto_approve'),
+        ("actions", "0002_action_auto_approve"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='action',
-            name='state',
-            field=models.CharField(default='default', max_length=200),
+            model_name="action",
+            name="state",
+            field=models.CharField(default="default", max_length=200),
         ),
     ]

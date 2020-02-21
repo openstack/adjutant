@@ -33,41 +33,40 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 # Application definition
 
 INSTALLED_APPS = (
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'rest_framework',
-    'rest_framework_swagger',
-
-    'adjutant.commands',
-    'adjutant.actions',
-    'adjutant.api',
-    'adjutant.notifications',
-    'adjutant.tasks',
-    'adjutant.startup',
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "rest_framework",
+    "rest_framework_swagger",
+    "adjutant.commands",
+    "adjutant.actions",
+    "adjutant.api",
+    "adjutant.notifications",
+    "adjutant.tasks",
+    "adjutant.startup",
 )
 
 MIDDLEWARE = (
-    'django.middleware.common.CommonMiddleware',
-    'adjutant.middleware.KeystoneHeaderUnwrapper',
-    'adjutant.middleware.RequestLoggingMiddleware'
+    "django.middleware.common.CommonMiddleware",
+    "adjutant.middleware.KeystoneHeaderUnwrapper",
+    "adjutant.middleware.RequestLoggingMiddleware",
 )
 
-if 'test' in sys.argv:
+if "test" in sys.argv:
     # modify MIDDLEWARE
     MIDDLEWARE = list(MIDDLEWARE)
-    MIDDLEWARE.remove('adjutant.middleware.KeystoneHeaderUnwrapper')
-    MIDDLEWARE.append('adjutant.middleware.TestingHeaderUnwrapper')
+    MIDDLEWARE.remove("adjutant.middleware.KeystoneHeaderUnwrapper")
+    MIDDLEWARE.append("adjutant.middleware.TestingHeaderUnwrapper")
 
-ROOT_URLCONF = 'adjutant.urls'
+ROOT_URLCONF = "adjutant.urls"
 
-WSGI_APPLICATION = 'adjutant.wsgi.application'
+WSGI_APPLICATION = "adjutant.wsgi.application"
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
@@ -75,33 +74,29 @@ USE_L10N = True
 
 USE_TZ = True
 
-STATIC_URL = '/static/'
+STATIC_URL = "/static/"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'APP_DIRS': True,
-        'NAME': 'default',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "APP_DIRS": True,
+        "NAME": "default",
     },
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'APP_DIRS': True,
-        'DIRS': ['/etc/adjutant/templates/'],
-        'NAME': 'include_etc_templates',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "APP_DIRS": True,
+        "DIRS": ["/etc/adjutant/templates/"],
+        "NAME": "include_etc_templates",
     },
 ]
 
 AUTHENTICATION_BACKENDS = []
 
 REST_FRAMEWORK = {
-    'EXCEPTION_HANDLER': 'adjutant.api.exception_handler.exception_handler',
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
-    ],
-    'DEFAULT_PARSER_CLASSES': [
-        'rest_framework.parsers.JSONParser',
-    ],
-    'DEFAULT_PERMISSION_CLASSES': [],
+    "EXCEPTION_HANDLER": "adjutant.api.exception_handler.exception_handler",
+    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer",],
+    "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser",],
+    "DEFAULT_PERMISSION_CLASSES": [],
 }
 
 SECRET_KEY = adj_conf.django.secret_key
@@ -109,14 +104,15 @@ SECRET_KEY = adj_conf.django.secret_key
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = adj_conf.django.debug
 if DEBUG:
-    REST_FRAMEWORK['DEFAULT_RENDERER_CLASSES'].append(
-        'rest_framework.renderers.BrowsableAPIRenderer')
+    REST_FRAMEWORK["DEFAULT_RENDERER_CLASSES"].append(
+        "rest_framework.renderers.BrowsableAPIRenderer"
+    )
 
 ALLOWED_HOSTS = adj_conf.django.allowed_hosts
 
 SECURE_PROXY_SSL_HEADER = (
     adj_conf.django.secure_proxy_ssl_header,
-    adj_conf.django.secure_proxy_ssl_header_value
+    adj_conf.django.secure_proxy_ssl_header_value,
 )
 
 DATABASES = adj_conf.django.databases
@@ -125,30 +121,22 @@ if adj_conf.django.logging:
     LOGGING = adj_conf.django.logging
 else:
     LOGGING = {
-        'version': 1,
-        'disable_existing_loggers': False,
-        'handlers': {
-            'file': {
-                'level': 'INFO',
-                'class': 'logging.FileHandler',
-                'filename': adj_conf.django.log_file,
+        "version": 1,
+        "disable_existing_loggers": False,
+        "handlers": {
+            "file": {
+                "level": "INFO",
+                "class": "logging.FileHandler",
+                "filename": adj_conf.django.log_file,
             },
         },
-        'loggers': {
-            'adjutant': {
-                'handlers': ['file'],
-                'level': 'INFO',
-                'propagate': False,
-            },
-            'django': {
-                'handlers': ['file'],
-                'level': 'INFO',
-                'propagate': False,
-            },
-            'keystonemiddleware': {
-                'handlers': ['file'],
-                'level': 'INFO',
-                'propagate': False,
+        "loggers": {
+            "adjutant": {"handlers": ["file"], "level": "INFO", "propagate": False,},
+            "django": {"handlers": ["file"], "level": "INFO", "propagate": False,},
+            "keystonemiddleware": {
+                "handlers": ["file"],
+                "level": "INFO",
+                "propagate": False,
             },
         },
     }

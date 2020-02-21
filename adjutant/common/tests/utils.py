@@ -19,7 +19,6 @@ from adjutant.common.tests import fake_clients
 
 
 class AdjutantTestCase(TestCase):
-
     def tearDown(self):
         fake_clients.identity_cache.clear()
         fake_clients.neutron_cache.clear()
@@ -28,7 +27,6 @@ class AdjutantTestCase(TestCase):
 
 
 class AdjutantAPITestCase(APITestCase):
-
     def tearDown(self):
         fake_clients.identity_cache.clear()
         fake_clients.neutron_cache.clear()

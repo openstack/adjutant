@@ -57,12 +57,11 @@ class EmailNotification(base.BaseNotificationHandler):
             fields.StrConfig(
                 "template",
                 help_text="Email template for this notification. "
-                          "No template will cause the email not to send.",
+                "No template will cause the email not to send.",
                 default="notification.txt",
             ),
             fields.StrConfig(
-                "html_template",
-                help_text="Email html template for this notification.",
+                "html_template", help_text="Email html template for this notification.",
             ),
         ]
     )

@@ -27,17 +27,17 @@ def require_roles(roles, func, *args, **kwargs):
     """
     request = args[1]
     req_roles = set(roles)
-    if not request.keystone_user.get('authenticated', False):
-        return Response({'errors': ["Credentials incorrect or none given."]},
-                        401)
+    if not request.keystone_user.get("authenticated", False):
+        return Response({"errors": ["Credentials incorrect or none given."]}, 401)
 
-    roles = set(request.keystone_user.get('roles', []))
+    roles = set(request.keystone_user.get("roles", []))
 
     if roles & req_roles:
         return func(*args, **kwargs)
 
-    return Response({'errors': ["Must have one of the following roles: %s" %
-                                list(req_roles)]}, 403)
+    return Response(
+        {"errors": ["Must have one of the following roles: %s" % list(req_roles)]}, 403
+    )
 
 
 @decorator
@@ -47,7 +47,8 @@ def mod_or_admin(func, *args, **kwargs):
     Admin is allowed everything, so is also included.
     """
     return require_roles(
-        {'project_admin', 'project_mod', 'admin'}, func, *args, **kwargs)
+        {"project_admin", "project_mod", "admin"}, func, *args, **kwargs
+    )
 
 
 @decorator
@@ -55,8 +56,7 @@ def project_admin(func, *args, **kwargs):
     """
     endpoints setup with this decorator require the admin/project admin role.
     """
-    return require_roles(
-        {'project_admin', 'admin'}, func, *args, **kwargs)
+    return require_roles({"project_admin", "admin"}, func, *args, **kwargs)
 
 
 @decorator
@@ -64,8 +64,7 @@ def admin(func, *args, **kwargs):
     """
     endpoints setup with this decorator require the admin role.
     """
-    return require_roles(
-        {'admin'}, func, *args, **kwargs)
+    return require_roles({"admin"}, func, *args, **kwargs)
 
 
 @decorator
@@ -74,9 +73,8 @@ def authenticated(func, *args, **kwargs):
     endpoints setup with this decorator require the user to be signed in
     """
     request = args[1]
-    if not request.keystone_user.get('authenticated', False):
-        return Response({'errors': ["Credentials incorrect or none given."]},
-                        401)
+    if not request.keystone_user.get("authenticated", False):
+        return Response({"errors": ["Credentials incorrect or none given."]}, 401)
 
     return func(*args, **kwargs)
 
@@ -87,7 +85,7 @@ def minimal_duration(func, min_time=1, *args, **kwargs):
     Make a function (or API call) take at least some time.
     """
     # doesn't apply during tests
-    if 'test' in sys.argv:
+    if "test" in sys.argv:
         return func(*args, **kwargs)
 
     start = datetime.utcnow()

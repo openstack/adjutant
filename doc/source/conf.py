@@ -30,30 +30,28 @@
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = [
-    'openstackdocstheme'
-]
+extensions = ["openstackdocstheme"]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # openstackdocstheme settings
-repository_name = 'openstack/adjutant'
-html_theme = 'openstackdocs'
+repository_name = "openstack/adjutant"
+html_theme = "openstackdocs"
 use_storyboard = True
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
 # source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+source_suffix = ".rst"
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = "index"
 
 # General information about the project.
-project = u'Adjutant'
-copyright = u'2017, Catalyst IT Ltd'
+project = "Adjutant"
+copyright = "2017, Catalyst IT Ltd"
 
 
 # List of patterns, relative to source directory, that match files and
@@ -62,7 +60,7 @@ copyright = u'2017, Catalyst IT Ltd'
 exclude_patterns = []
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = "sphinx"
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
@@ -93,7 +91,7 @@ todo_include_todos = False
 # -- Options for HTMLHelp output ------------------------------------------
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'Adjutantdoc'
+htmlhelp_basename = "Adjutantdoc"
 
 
 # -- Options for LaTeX output ---------------------------------------------
@@ -102,8 +100,7 @@ htmlhelp_basename = 'Adjutantdoc'
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'Adjutant.tex', u'Adjutant Documentation',
-     u'Catalyst IT Ltd', 'manual'),
+    (master_doc, "Adjutant.tex", "Adjutant Documentation", "Catalyst IT Ltd", "manual"),
 ]
 
 
@@ -111,10 +108,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, 'adjutant', u'Adjutant Documentation',
-     ['Catalyst IT Ltd'], 1)
-]
+man_pages = [(master_doc, "adjutant", "Adjutant Documentation", ["Catalyst IT Ltd"], 1)]
 
 
 # -- Options for Texinfo output -------------------------------------------
@@ -123,7 +117,13 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'Adjutant', u'Adjutant Documentation',
-     'Catalyst IT Ltd', 'Adjutant', 'One line description of project.',
-     'Miscellaneous'),
+    (
+        master_doc,
+        "Adjutant",
+        "Adjutant Documentation",
+        "Catalyst IT Ltd",
+        "Adjutant",
+        "One line description of project.",
+        "Miscellaneous",
+    ),
 ]

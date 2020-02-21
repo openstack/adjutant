@@ -32,35 +32,40 @@ def _build_default_email_group(group_name):
         fields.StrConfig(
             "subject",
             help_text="Email subject for this stage.",
-            default="Openstack Email Notification")
+            default="Openstack Email Notification",
+        )
     )
     email_group.register_child_config(
         fields.StrConfig(
             "from",
             help_text="From email for this stage.",
             regex=constants.EMAIL_WITH_TEMPLATE_REGEX,
-            default="bounce+%(task_uuid)s@example.com")
+            default="bounce+%(task_uuid)s@example.com",
+        )
     )
     email_group.register_child_config(
         fields.StrConfig(
             "reply",
             help_text="Reply-to email for this stage.",
             regex=constants.EMAIL_WITH_TEMPLATE_REGEX,
-            default="no-reply@example.com")
+            default="no-reply@example.com",
+        )
     )
     email_group.register_child_config(
         fields.StrConfig(
             "template",
             help_text="Email template for this stage. "
-                      "No template will cause the email not to send.",
-            default=None)
+            "No template will cause the email not to send.",
+            default=None,
+        )
     )
     email_group.register_child_config(
         fields.StrConfig(
             "html_template",
             help_text="Email html template for this stage. "
-                      "No template will cause the email not to send.",
-            default=None)
+            "No template will cause the email not to send.",
+            default=None,
+        )
     )
     email_group.register_child_config(
         fields.BoolConfig(
@@ -108,24 +113,27 @@ class SendAdditionalEmailAction(BaseAction):
 
     def set_email(self, conf):
         self.emails = set()
-        if conf.get('email_current_user'):
+        if conf.get("email_current_user"):
             self.add_note("Adding the current user's email address")
             if CONF.identity.username_is_email:
-                self.emails.add(self.action.task.keystone_user['username'])
+                self.emails.add(self.action.task.keystone_user["username"])
             else:
                 try:
                     id_manager = user_store.IdentityManager()
                     email = id_manager.get_user(
-                        self.action.task.keystone_user['user_id']).email
+                        self.action.task.keystone_user["user_id"]
+                    ).email
                     self.emails.add(email)
                 except AttributeError:
                     self.add_note("Could not add current user email address")
 
-        if conf.get('email_roles'):
-            roles = set(conf.get('email_roles'))
-            project_id = self.action.task.keystone_user['project_id']
-            self.add_note('Adding email addresses for roles %s in project %s'
-                          % (roles, project_id))
+        if conf.get("email_roles"):
+            roles = set(conf.get("email_roles"))
+            project_id = self.action.task.keystone_user["project_id"]
+            self.add_note(
+                "Adding email addresses for roles %s in project %s"
+                % (roles, project_id)
+            )
 
             id_manager = user_store.IdentityManager()
             users = id_manager.list_users(project_id)
@@ -137,14 +145,14 @@ class SendAdditionalEmailAction(BaseAction):
                     else:
                         self.emails.add(user.email)
 
-        if conf.get('email_task_cache'):
-            task_emails = self.action.task.cache.get('additional_emails', [])
+        if conf.get("email_task_cache"):
+            task_emails = self.action.task.cache.get("additional_emails", [])
             if isinstance(task_emails, six.string_types):
                 task_emails = [task_emails]
             for email in task_emails:
                 self.emails.add(email)
 
-        for email in conf.get('email_additional_addresses'):
+        for email in conf.get("email_additional_addresses"):
             self.emails.add(email)
 
     def _validate(self):
@@ -152,13 +160,13 @@ class SendAdditionalEmailAction(BaseAction):
         self.action.save()
 
     def _prepare(self):
-        self.perform_action('prepare')
+        self.perform_action("prepare")
 
     def _approve(self):
-        self.perform_action('approve')
+        self.perform_action("approve")
 
     def _submit(self, data):
-        self.perform_action('submit')
+        self.perform_action("submit")
 
     def perform_action(self, stage):
         self._validate()
@@ -171,7 +179,7 @@ class SendAdditionalEmailAction(BaseAction):
         email_conf = self.config.get(stage)
 
         # If either of these are false we won't be sending anything.
-        if not email_conf or not email_conf.get('template'):
+        if not email_conf or not email_conf.get("template"):
             return
 
         self.set_email(email_conf)
@@ -188,10 +196,7 @@ class SendAdditionalEmailAction(BaseAction):
             act = action.get_action()
             actions[str(act)] = act
 
-        context = {
-            'task': task,
-            'actions': actions
-        }
+        context = {"task": task, "actions": actions}
 
         result = send_email(self.emails, context, email_conf, task)
 

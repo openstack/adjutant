@@ -22,20 +22,21 @@ class KeystoneHeaderUnwrapper:
     Middleware to build an easy to use dict of important data from
     what the keystone wsgi middleware gives us.
     """
+
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
         try:
             token_data = {
-                'project_domain_id': request.META['HTTP_X_PROJECT_DOMAIN_ID'],
-                'project_name': request.META['HTTP_X_PROJECT_NAME'],
-                'project_id': request.META['HTTP_X_PROJECT_ID'],
-                'roles': request.META['HTTP_X_ROLES'].split(','),
-                'user_domain_id': request.META['HTTP_X_USER_DOMAIN_ID'],
-                'username': request.META['HTTP_X_USER_NAME'],
-                'user_id': request.META['HTTP_X_USER_ID'],
-                'authenticated': request.META['HTTP_X_IDENTITY_STATUS']
+                "project_domain_id": request.META["HTTP_X_PROJECT_DOMAIN_ID"],
+                "project_name": request.META["HTTP_X_PROJECT_NAME"],
+                "project_id": request.META["HTTP_X_PROJECT_ID"],
+                "roles": request.META["HTTP_X_ROLES"].split(","),
+                "user_domain_id": request.META["HTTP_X_USER_DOMAIN_ID"],
+                "username": request.META["HTTP_X_USER_NAME"],
+                "user_id": request.META["HTTP_X_USER_ID"],
+                "authenticated": request.META["HTTP_X_IDENTITY_STATUS"],
             }
         except KeyError:
             token_data = {}
@@ -49,6 +50,7 @@ class TestingHeaderUnwrapper:
     """
     Replacement for the KeystoneHeaderUnwrapper for testing purposes.
     """
+
     def __init__(self, get_response):
         self.get_response = get_response
 
@@ -58,17 +60,18 @@ class TestingHeaderUnwrapper:
                 # TODO(adriant): follow up patch to update all the test
                 # headers to provide domain values.
                 # Default here is just a temporary measure.
-                'project_domain_id':
-                    request.META['headers'].get(
-                        'project_domain_id', 'default'),
-                'project_name': request.META['headers']['project_name'],
-                'project_id': request.META['headers']['project_id'],
-                'roles': request.META['headers']['roles'].split(','),
-                'user_domain_id':
-                    request.META['headers'].get('user_domain_id', 'default'),
-                'username': request.META['headers']['username'],
-                'user_id': request.META['headers']['user_id'],
-                'authenticated': request.META['headers']['authenticated']
+                "project_domain_id": request.META["headers"].get(
+                    "project_domain_id", "default"
+                ),
+                "project_name": request.META["headers"]["project_name"],
+                "project_id": request.META["headers"]["project_id"],
+                "roles": request.META["headers"]["roles"].split(","),
+                "user_domain_id": request.META["headers"].get(
+                    "user_domain_id", "default"
+                ),
+                "username": request.META["headers"]["username"],
+                "user_id": request.META["headers"]["user_id"],
+                "authenticated": request.META["headers"]["authenticated"],
             }
         except KeyError:
             token_data = {}
@@ -86,29 +89,29 @@ class RequestLoggingMiddleware:
 
     def __init__(self, get_response):
         self.get_response = get_response
-        self.logger = getLogger('adjutant')
+        self.logger = getLogger("adjutant")
 
     def __call__(self, request):
         self.logger.info(
-            '(%s) - <%s> %s [%s]',
+            "(%s) - <%s> %s [%s]",
             timezone.now(),
             request.method,
-            request.META['REMOTE_ADDR'],
-            request.get_full_path()
+            request.META["REMOTE_ADDR"],
+            request.get_full_path(),
         )
         request.timer = time()
 
         response = self.get_response(request)
 
-        if hasattr(request, 'timer'):
+        if hasattr(request, "timer"):
             time_delta = time() - request.timer
         else:
             time_delta = -1
         self.logger.info(
-            '(%s) - <%s> [%s] - (%.1fs)',
+            "(%s) - <%s> [%s] - (%.1fs)",
             timezone.now(),
             response.status_code,
             request.get_full_path(),
-            time_delta
+            time_delta,
         )
         return response

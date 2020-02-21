@@ -50,31 +50,34 @@ def _build_default_email_group(
         fields.StrConfig(
             "subject",
             help_text="Default email subject for this stage",
-            default=email_subject)
+            default=email_subject,
+        )
     )
     email_group.register_child_config(
         fields.StrConfig(
-            "from",
-            help_text="Default from email for this stage",
-            default=email_from)
+            "from", help_text="Default from email for this stage", default=email_from
+        )
     )
     email_group.register_child_config(
         fields.StrConfig(
             "reply",
             help_text="Default reply-to email for this stage",
-            default=email_reply)
+            default=email_reply,
+        )
     )
     email_group.register_child_config(
         fields.StrConfig(
             "template",
             help_text="Default email template for this stage",
-            default=email_template)
+            default=email_template,
+        )
     )
     email_group.register_child_config(
         fields.StrConfig(
             "html_template",
             help_text="Default email html template for this stage",
-            default=email_html_template)
+            default=email_html_template,
+        )
     )
     return email_group
 
@@ -123,9 +126,7 @@ _notifications_defaults_group.register_child_config(
         "standard_handlers",
         help_text="Handlers to use for standard notifications.",
         required=True,
-        default=[
-            'EmailNotification',
-        ],
+        default=["EmailNotification",],
     )
 )
 _notifications_defaults_group.register_child_config(
@@ -133,9 +134,7 @@ _notifications_defaults_group.register_child_config(
         "error_handlers",
         help_text="Handlers to use for error notifications.",
         required=True,
-        default=[
-            'EmailNotification',
-        ],
+        default=["EmailNotification",],
     )
 )
 _notifications_defaults_group.register_child_config(
@@ -159,7 +158,7 @@ _notifications_defaults_group.register_child_config(
         "safe_errors",
         help_text="Error types which are safe to acknowledge automatically.",
         required=True,
-        default=['SMTPException'],
+        default=["SMTPException"],
     )
 )
 

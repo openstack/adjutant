@@ -30,15 +30,15 @@ from adjutant.config import CONF
 
 class UserList(tasks.InviteUser):
 
-    url = r'^openstack/users/?$'
+    url = r"^openstack/users/?$"
 
     config_group = groups.DynamicNameConfigGroup(
         children=[
             fields.ListConfig(
-                'blacklisted_roles',
+                "blacklisted_roles",
                 help_text="Users with any of these roles will be hidden from the user list.",
                 default=[],
-                sample_default=['admin']
+                sample_default=["admin"],
             ),
         ]
     )
@@ -51,11 +51,12 @@ class UserList(tasks.InviteUser):
 
         user_list = []
         id_manager = user_store.IdentityManager()
-        project_id = request.keystone_user['project_id']
+        project_id = request.keystone_user["project_id"]
         project = id_manager.get_project(project_id)
 
         can_manage_roles = id_manager.get_manageable_roles(
-            request.keystone_user['roles'])
+            request.keystone_user["roles"]
+        )
 
         active_emails = set()
         for user in id_manager.list_users(project):
@@ -77,20 +78,22 @@ class UserList(tasks.InviteUser):
             if skip:
                 continue
 
-            email = getattr(user, 'email', '')
+            email = getattr(user, "email", "")
             enabled = user.enabled
-            user_status = 'Active' if enabled else 'Account Disabled'
+            user_status = "Active" if enabled else "Account Disabled"
             active_emails.add(email)
-            user_list.append({
-                'id': user.id,
-                'name': user.name,
-                'email': email,
-                'roles': roles,
-                'inherited_roles': inherited_roles,
-                'cohort': 'Member',
-                'status': user_status,
-                'manageable': set(can_manage_roles).issuperset(roles),
-            })
+            user_list.append(
+                {
+                    "id": user.id,
+                    "name": user.name,
+                    "email": email,
+                    "roles": roles,
+                    "inherited_roles": inherited_roles,
+                    "cohort": "Member",
+                    "status": user_status,
+                    "manageable": set(can_manage_roles).issuperset(roles),
+                }
+            )
 
         for user in id_manager.list_inherited_users(project):
             skip = False
@@ -103,25 +106,29 @@ class UserList(tasks.InviteUser):
             if skip:
                 continue
 
-            email = getattr(user, 'email', '')
+            email = getattr(user, "email", "")
             enabled = user.enabled
-            user_status = 'Active' if enabled else 'Account Disabled'
-            user_list.append({'id': user.id,
-                              'name': user.name,
-                              'email': email,
-                              'roles': roles,
-                              'inherited_roles': [],
-                              'cohort': 'Inherited',
-                              'status': user_status,
-                              'manageable': False,
-                              })
+            user_status = "Active" if enabled else "Account Disabled"
+            user_list.append(
+                {
+                    "id": user.id,
+                    "name": user.name,
+                    "email": email,
+                    "roles": roles,
+                    "inherited_roles": [],
+                    "cohort": "Inherited",
+                    "status": user_status,
+                    "manageable": False,
+                }
+            )
 
         # Get my active tasks for this project:
         project_tasks = models.Task.objects.filter(
             project_id=project_id,
             task_type="invite_user_to_project",
             completed=0,
-            cancelled=0)
+            cancelled=0,
+        )
 
         registrations = []
         for task in project_tasks:
@@ -143,7 +150,8 @@ class UserList(tasks.InviteUser):
                 task_data.update(action.action_data)
 
             registrations.append(
-                {'uuid': task.uuid, 'task_data': task_data, 'status': status})
+                {"uuid": task.uuid, "task_data": task_data, "status": status}
+            )
 
         for task in registrations:
             # NOTE(adriant): commenting out for now as it causes more confusion
@@ -151,34 +159,33 @@ class UserList(tasks.InviteUser):
             # measures are in place.
             # if task['task_data']['email'] not in active_emails:
             user = {
-                'id': task['uuid'],
-                'name': task['task_data']['email'],
-                'email': task['task_data']['email'],
-                'roles': task['task_data']['roles'],
-                'inherited_roles':
-                    task['task_data']['inherited_roles'],
-                'cohort': 'Invited',
-                'status': task['status']
+                "id": task["uuid"],
+                "name": task["task_data"]["email"],
+                "email": task["task_data"]["email"],
+                "roles": task["task_data"]["roles"],
+                "inherited_roles": task["task_data"]["inherited_roles"],
+                "cohort": "Invited",
+                "status": task["status"],
             }
             if not CONF.identity.username_is_email:
-                user['name'] = task['task_data']['username']
+                user["name"] = task["task_data"]["username"]
 
             user_list.append(user)
 
-        return Response({'users': user_list})
+        return Response({"users": user_list})
 
 
 class UserDetail(BaseDelegateAPI):
 
-    url = r'^openstack/users/(?P<user_id>\w+)/?$'
+    url = r"^openstack/users/(?P<user_id>\w+)/?$"
 
     config_group = groups.DynamicNameConfigGroup(
         children=[
             fields.ListConfig(
-                'blacklisted_roles',
+                "blacklisted_roles",
                 help_text="User with these roles will return not found.",
                 default=[],
-                sample_default=['admin']
+                sample_default=["admin"],
             ),
         ]
     )
@@ -193,30 +200,34 @@ class UserDetail(BaseDelegateAPI):
         id_manager = user_store.IdentityManager()
         user = id_manager.get_user(user_id)
 
-        no_user = {'errors': ['No user with this id.']}
+        no_user = {"errors": ["No user with this id."]}
         if not user:
             return Response(no_user, status=404)
 
         class_conf = self.config
         blacklisted_roles = class_conf.blacklisted_roles
 
-        project_id = request.keystone_user['project_id']
+        project_id = request.keystone_user["project_id"]
         project = id_manager.get_project(project_id)
 
         roles = [role.name for role in id_manager.get_roles(user, project)]
         roles_blacklisted = set(blacklisted_roles) & set(roles)
         inherited_roles = [
-            role.name for role in id_manager.get_roles(user, project, True)]
-        inherited_roles_blacklisted = (
-            set(blacklisted_roles) & set(inherited_roles))
+            role.name for role in id_manager.get_roles(user, project, True)
+        ]
+        inherited_roles_blacklisted = set(blacklisted_roles) & set(inherited_roles)
 
         if not roles or roles_blacklisted or inherited_roles_blacklisted:
             return Response(no_user, status=404)
-        return Response({'id': user.id,
-                         "username": user.name,
-                         "email": getattr(user, 'email', ''),
-                         'roles': roles,
-                         'inherited_roles': inherited_roles})
+        return Response(
+            {
+                "id": user.id,
+                "username": user.name,
+                "email": getattr(user, "email", ""),
+                "roles": roles,
+                "inherited_roles": inherited_roles,
+            }
+        )
 
     @utils.mod_or_admin
     def delete(self, request, user_id):
@@ -226,37 +237,42 @@ class UserDetail(BaseDelegateAPI):
         """
         id_manager = user_store.IdentityManager()
         user = id_manager.get_user(user_id)
-        project_id = request.keystone_user['project_id']
+        project_id = request.keystone_user["project_id"]
         # NOTE(dale): For now, we only support cancelling pending invites.
         if user:
             return Response(
-                {'errors': [
-                    'Revoking keystone users not implemented. '
-                    'Try removing all roles instead.']},
-                status=501)
+                {
+                    "errors": [
+                        "Revoking keystone users not implemented. "
+                        "Try removing all roles instead."
+                    ]
+                },
+                status=501,
+            )
         project_tasks = models.Task.objects.filter(
             project_id=project_id,
             task_type="invite_user_to_project",
             completed=0,
-            cancelled=0)
+            cancelled=0,
+        )
         for task in project_tasks:
             if task.uuid == user_id:
                 self.task_manager.cancel(task)
-                return Response('Cancelled pending invite task!', status=200)
-        return Response('Not found.', status=404)
+                return Response("Cancelled pending invite task!", status=200)
+        return Response("Not found.", status=404)
 
 
 class UserRoles(BaseDelegateAPI):
 
-    url = r'^openstack/users/(?P<user_id>\w+)/roles/?$'
+    url = r"^openstack/users/(?P<user_id>\w+)/roles/?$"
 
     config_group = groups.DynamicNameConfigGroup(
         children=[
             fields.ListConfig(
-                'blacklisted_roles',
+                "blacklisted_roles",
                 help_text="User with these roles will return not found.",
                 default=[],
-                sample_default=['admin']
+                sample_default=["admin"],
             ),
         ]
     )
@@ -269,11 +285,11 @@ class UserRoles(BaseDelegateAPI):
         id_manager = user_store.IdentityManager()
         user = id_manager.get_user(user_id)
 
-        no_user = {'errors': ['No user with this id.']}
+        no_user = {"errors": ["No user with this id."]}
         if not user:
             return Response(no_user, status=404)
 
-        project_id = request.keystone_user['project_id']
+        project_id = request.keystone_user["project_id"]
         project = id_manager.get_project(project_id)
 
         class_conf = self.config
@@ -282,19 +298,18 @@ class UserRoles(BaseDelegateAPI):
         roles = [role.name for role in id_manager.get_roles(user, project)]
         roles_blacklisted = set(blacklisted_roles) & set(roles)
         inherited_roles = [
-            role.name for role in id_manager.get_roles(user, project, True)]
-        inherited_roles_blacklisted = (
-            set(blacklisted_roles) & set(inherited_roles))
+            role.name for role in id_manager.get_roles(user, project, True)
+        ]
+        inherited_roles_blacklisted = set(blacklisted_roles) & set(inherited_roles)
 
         if not roles or roles_blacklisted or inherited_roles_blacklisted:
             return Response(no_user, status=404)
-        return Response({'roles': roles,
-                         'inherited_roles': inherited_roles})
+        return Response({"roles": roles, "inherited_roles": inherited_roles})
 
     @utils.mod_or_admin
     def put(self, args, **kwargs):
         """ Add user roles to the current project. """
-        kwargs['remove_role'] = False
+        kwargs["remove_role"] = False
         return self._edit_user(args, **kwargs)
 
     @utils.mod_or_admin
@@ -303,34 +318,35 @@ class UserRoles(BaseDelegateAPI):
 
         This only supports Active users
         """
-        kwargs['remove_role'] = True
+        kwargs["remove_role"] = True
         return self._edit_user(args, **kwargs)
 
     def _edit_user(self, request, user_id, remove_role=False, format=None):
         """ Helper function to add or remove roles from a user """
-        request.data['remove'] = remove_role
-        if 'project_id' not in request.data:
-            request.data['project_id'] = request.keystone_user['project_id']
-        request.data['user_id'] = user_id
+        request.data["remove"] = remove_role
+        if "project_id" not in request.data:
+            request.data["project_id"] = request.keystone_user["project_id"]
+        request.data["user_id"] = user_id
 
-        self.logger.info("(%s) - New EditUser %s request." % (
-            timezone.now(), request.method))
+        self.logger.info(
+            "(%s) - New EditUser %s request." % (timezone.now(), request.method)
+        )
 
         self.task_manager.create_from_request(self.task_type, request)
 
-        return Response({'notes': ['task created']}, status=202)
+        return Response({"notes": ["task created"]}, status=202)
 
 
 class RoleList(BaseDelegateAPI):
 
-    url = r'^openstack/roles/?$'
+    url = r"^openstack/roles/?$"
 
     @utils.mod_or_admin
     def get(self, request):
         """Returns a list of roles that may be managed for this project"""
 
         # get roles for this user on the project
-        user_roles = request.keystone_user['roles']
+        user_roles = request.keystone_user["roles"]
 
         id_manager = user_store.IdentityManager()
         manageable_role_names = id_manager.get_manageable_roles(user_roles)
@@ -342,7 +358,7 @@ class RoleList(BaseDelegateAPI):
             if role:
                 manageable_roles.append(role.to_dict())
 
-        return Response({'roles': manageable_roles})
+        return Response({"roles": manageable_roles})
 
 
 class UserResetPassword(tasks.ResetPassword):
@@ -351,7 +367,7 @@ class UserResetPassword(tasks.ResetPassword):
     ---
     """
 
-    url = r'^openstack/users/password-reset/?$'
+    url = r"^openstack/users/password-reset/?$"
 
     pass
 
@@ -362,7 +378,7 @@ class UserUpdateEmail(tasks.UpdateEmail):
     ---
     """
 
-    url = r'^openstack/users/email-update/?$'
+    url = r"^openstack/users/email-update/?$"
 
     pass
 
@@ -372,7 +388,7 @@ class SignUp(tasks.CreateProjectAndUser):
     The openstack endpoint for signups.
     """
 
-    url = r'^openstack/sign-up/?$'
+    url = r"^openstack/sign-up/?$"
 
     pass
 
@@ -383,7 +399,7 @@ class UpdateProjectQuotas(BaseDelegateAPI):
     one or more regions
     """
 
-    url = r'^openstack/quotas/?$'
+    url = r"^openstack/quotas/?$"
 
     task_type = "update_quota"
 
@@ -395,7 +411,7 @@ class UpdateProjectQuotas(BaseDelegateAPI):
             task_type__exact=self.task_type,
             project_id__exact=self.project_id,
             cancelled=0,
-        ).order_by('-created_on')[:self._number_of_returned_tasks]
+        ).order_by("-created_on")[: self._number_of_returned_tasks]
 
         response_tasks = []
 
@@ -409,13 +425,12 @@ class UpdateProjectQuotas(BaseDelegateAPI):
                 task_data.update(action.action_data)
             new_dict = {
                 "id": task.uuid,
-                "regions": task_data['regions'],
-                "size": task_data['size'],
-                "request_user":
-                    task.keystone_user['username'],
+                "regions": task_data["regions"],
+                "size": task_data["size"],
+                "request_user": task.keystone_user["username"],
                 "task_created": task.created_on,
                 "valid": all([a.valid for a in task.actions]),
-                "status": status
+                "status": status,
             }
             response_tasks.append(new_dict)
 
@@ -439,9 +454,9 @@ class UpdateProjectQuotas(BaseDelegateAPI):
         quota_sizes = CONF.quota.sizes
         size_order = CONF.quota.sizes_ascending
 
-        self.project_id = request.keystone_user['project_id']
-        regions = request.query_params.get('regions', None)
-        include_usage = request.query_params.get('include_usage', True)
+        self.project_id = request.keystone_user["project_id"]
+        regions = request.query_params.get("regions", None)
+        include_usage = request.query_params.get("include_usage", True)
 
         if regions:
             regions = regions.split(",")
@@ -456,35 +471,38 @@ class UpdateProjectQuotas(BaseDelegateAPI):
         quota_manager = QuotaManager(self.project_id)
         for region in regions:
             if self.check_region_exists(region):
-                region_quotas.append(quota_manager.get_region_quota_data(
-                    region, include_usage))
+                region_quotas.append(
+                    quota_manager.get_region_quota_data(region, include_usage)
+                )
             else:
-                return Response(
-                    {"ERROR": ['Region: %s is not valid' % region]}, 400)
+                return Response({"ERROR": ["Region: %s is not valid" % region]}, 400)
 
         response_tasks = self.get_active_quota_tasks()
 
-        return Response({'regions': region_quotas,
-                         "quota_sizes": quota_sizes,
-                         "quota_size_order": size_order,
-                         "active_quota_tasks": response_tasks})
+        return Response(
+            {
+                "regions": region_quotas,
+                "quota_sizes": quota_sizes,
+                "quota_size_order": size_order,
+                "active_quota_tasks": response_tasks,
+            }
+        )
 
     @utils.mod_or_admin
     def post(self, request):
 
-        request.data['project_id'] = request.keystone_user['project_id']
-        self.project_id = request.keystone_user['project_id']
+        request.data["project_id"] = request.keystone_user["project_id"]
+        self.project_id = request.keystone_user["project_id"]
 
-        regions = request.data.get('regions', None)
+        regions = request.data.get("regions", None)
 
         if not regions:
             id_manager = user_store.IdentityManager()
             regions = [region.id for region in id_manager.list_regions()]
-            request.data['regions'] = regions
+            request.data["regions"] = regions
 
-        self.logger.info("(%s) - New UpdateProjectQuotas request."
-                         % timezone.now())
+        self.logger.info("(%s) - New UpdateProjectQuotas request." % timezone.now())
 
         self.task_manager.create_from_request(self.task_type, request)
 
-        return Response({'notes': ['task created']}, status=202)
+        return Response({"notes": ["task created"]}, status=202)

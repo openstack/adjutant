@@ -17,8 +17,11 @@ import mock
 from confspirator.tests import utils as conf_utils
 
 from adjutant.actions.v1.users import (
-    EditUserRolesAction, NewUserAction, ResetUserPasswordAction,
-    UpdateUserEmailAction)
+    EditUserRolesAction,
+    NewUserAction,
+    ResetUserPasswordAction,
+    UpdateUserEmailAction,
+)
 from adjutant.api.models import Task
 from adjutant.common.tests import fake_clients
 from adjutant.common.tests.fake_clients import setup_identity_cache
@@ -26,27 +29,33 @@ from adjutant.common.tests.utils import AdjutantTestCase
 from adjutant.config import CONF
 
 
-@mock.patch('adjutant.common.user_store.IdentityManager',
-            fake_clients.FakeManager)
+@mock.patch("adjutant.common.user_store.IdentityManager", fake_clients.FakeManager)
 @conf_utils.modify_conf(
     CONF,
     operations={
         "adjutant.identity.role_mapping": [
-            {'operation': 'override', 'value': {
-                'admin': [
-                    'project_admin', 'project_mod', 'member', 'heat_stack_owner'
-                ],
-                'project_admin': [
-                    'project_mod', 'member', 'heat_stack_owner', 'project_admin',
-                ],
-                'project_mod': [
-                    'member', 'heat_stack_owner', 'project_mod',
-                ],
-            }},
+            {
+                "operation": "override",
+                "value": {
+                    "admin": [
+                        "project_admin",
+                        "project_mod",
+                        "member",
+                        "heat_stack_owner",
+                    ],
+                    "project_admin": [
+                        "project_mod",
+                        "member",
+                        "heat_stack_owner",
+                        "project_admin",
+                    ],
+                    "project_mod": ["member", "heat_stack_owner", "project_mod",],
+                },
+            },
         ],
-    })
+    },
+)
 class UserActionTests(AdjutantTestCase):
-
     def test_new_user(self):
         """
         Test the default case, all valid.
@@ -58,17 +67,18 @@ class UserActionTests(AdjutantTestCase):
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['admin', 'project_mod'],
-                'project_id': project.id,
-                'project_domain_id': 'default',
-            })
+                "roles": ["admin", "project_mod"],
+                "project_id": project.id,
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'email': 'test@example.com',
-            'project_id': project.id,
-            'roles': ['member'],
-            'inherited_roles': [],
-            'domain_id': 'default',
+            "email": "test@example.com",
+            "project_id": project.id,
+            "roles": ["member"],
+            "inherited_roles": [],
+            "domain_id": "default",
         }
 
         action = NewUserAction(data, task=task, order=1)
@@ -79,21 +89,20 @@ class UserActionTests(AdjutantTestCase):
         action.approve()
         self.assertEqual(action.valid, True)
 
-        token_data = {'password': '123456'}
+        token_data = {"password": "123456"}
         action.submit(token_data)
         self.assertEqual(action.valid, True)
-        self.assertEqual(
-            len(fake_clients.identity_cache['new_users']), 1)
+        self.assertEqual(len(fake_clients.identity_cache["new_users"]), 1)
 
         fake_client = fake_clients.FakeManager()
 
         user = fake_client.find_user(name="test@example.com", domain="default")
 
-        self.assertEqual(user.email, 'test@example.com')
-        self.assertEqual(user.password, '123456')
+        self.assertEqual(user.email, "test@example.com")
+        self.assertEqual(user.password, "123456")
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(roles, ['member'])
+        self.assertEqual(roles, ["member"])
 
     def test_new_user_existing(self):
         """
@@ -102,23 +111,25 @@ class UserActionTests(AdjutantTestCase):
         project = fake_clients.FakeProject(name="test_project")
 
         user = fake_clients.FakeUser(
-            name="test@example.com", password="123", email="test@example.com")
+            name="test@example.com", password="123", email="test@example.com"
+        )
 
         setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['admin', 'project_mod'],
-                'project_id': project.id,
-                'project_domain_id': 'default',
-            })
+                "roles": ["admin", "project_mod"],
+                "project_id": project.id,
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'email': 'test@example.com',
-            'project_id': project.id,
-            'roles': ['member'],
-            'inherited_roles': [],
-            'domain_id': 'default',
+            "email": "test@example.com",
+            "project_id": project.id,
+            "roles": ["member"],
+            "inherited_roles": [],
+            "domain_id": "default",
         }
 
         action = NewUserAction(data, task=task, order=1)
@@ -136,7 +147,7 @@ class UserActionTests(AdjutantTestCase):
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(roles, ['member'])
+        self.assertEqual(roles, ["member"])
 
     def test_new_user_disabled(self):
         """
@@ -146,24 +157,28 @@ class UserActionTests(AdjutantTestCase):
         project = fake_clients.FakeProject(name="test_project")
 
         user = fake_clients.FakeUser(
-            name="test@example.com", password="123", email="test@example.com",
-            enabled=False)
+            name="test@example.com",
+            password="123",
+            email="test@example.com",
+            enabled=False,
+        )
 
         setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['admin', 'project_mod'],
-                'project_id': project.id,
-                'project_domain_id': 'default',
-            })
+                "roles": ["admin", "project_mod"],
+                "project_id": project.id,
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'email': 'test@example.com',
-            'project_id': project.id,
-            'roles': ['member'],
-            'inherited_roles': [],
-            'domain_id': 'default',
+            "email": "test@example.com",
+            "project_id": project.id,
+            "roles": ["member"],
+            "inherited_roles": [],
+            "domain_id": "default",
         }
 
         action = NewUserAction(data, task=task, order=1)
@@ -174,21 +189,21 @@ class UserActionTests(AdjutantTestCase):
         action.approve()
         self.assertEqual(action.valid, True)
 
-        token_data = {'password': '123456'}
+        token_data = {"password": "123456"}
         action.submit(token_data)
         self.assertEqual(action.valid, True)
-        self.assertEqual(len(fake_clients.identity_cache['users']), 2)
+        self.assertEqual(len(fake_clients.identity_cache["users"]), 2)
 
         fake_client = fake_clients.FakeManager()
 
         user = fake_client.find_user(name="test@example.com", domain="default")
 
-        self.assertEqual(user.email, 'test@example.com')
-        self.assertEqual(user.password, '123456')
+        self.assertEqual(user.email, "test@example.com")
+        self.assertEqual(user.password, "123456")
         self.assertTrue(user.enabled)
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(roles, ['member'])
+        self.assertEqual(roles, ["member"])
 
     def test_new_user_existing_role(self):
         """
@@ -201,30 +216,33 @@ class UserActionTests(AdjutantTestCase):
         project = fake_clients.FakeProject(name="test_project")
 
         user = fake_clients.FakeUser(
-            name="test@example.com", password="123", email="test@example.com")
+            name="test@example.com", password="123", email="test@example.com"
+        )
 
         assignment = fake_clients.FakeRoleAssignment(
-            scope={'project': {'id': project.id}},
+            scope={"project": {"id": project.id}},
             role_name="member",
-            user={'id': user.id}
+            user={"id": user.id},
         )
 
         setup_identity_cache(
-            projects=[project], users=[user], role_assignments=[assignment])
+            projects=[project], users=[user], role_assignments=[assignment]
+        )
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['admin', 'project_mod'],
-                'project_id': project.id,
-                'project_domain_id': 'default',
-            })
+                "roles": ["admin", "project_mod"],
+                "project_id": project.id,
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'email': 'test@example.com',
-            'project_id': project.id,
-            'roles': ['member'],
-            'inherited_roles': [],
-            'domain_id': 'default',
+            "email": "test@example.com",
+            "project_id": project.id,
+            "roles": ["member"],
+            "inherited_roles": [],
+            "domain_id": "default",
         }
 
         action = NewUserAction(data, task=task, order=1)
@@ -234,7 +252,7 @@ class UserActionTests(AdjutantTestCase):
 
         action.approve()
         self.assertEqual(action.valid, True)
-        self.assertEqual(action.action.state, 'complete')
+        self.assertEqual(action.action.state, "complete")
 
         token_data = {}
         action.submit(token_data)
@@ -243,7 +261,7 @@ class UserActionTests(AdjutantTestCase):
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(roles, ['member'])
+        self.assertEqual(roles, ["member"])
 
     def test_new_user_no_tenant(self):
         """
@@ -254,17 +272,18 @@ class UserActionTests(AdjutantTestCase):
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id',
-                'project_domain_id': 'default',
-            })
+                "roles": ["admin", "project_mod"],
+                "project_id": "test_project_id",
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'email': 'test@example.com',
-            'project_id': 'test_project_id',
-            'roles': ['member'],
-            'inherited_roles': [],
-            'domain_id': 'default',
+            "email": "test@example.com",
+            "project_id": "test_project_id",
+            "roles": ["member"],
+            "inherited_roles": [],
+            "domain_id": "default",
         }
 
         action = NewUserAction(data, task=task, order=1)
@@ -289,23 +308,25 @@ class UserActionTests(AdjutantTestCase):
         project = fake_clients.FakeProject(name="test_project")
 
         user = fake_clients.FakeUser(
-            name="test@example.com", password="123", email="test@example.com")
+            name="test@example.com", password="123", email="test@example.com"
+        )
 
         setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['project_mod'],
-                'project_id': 'test_project_id',
-                'project_domain_id': 'default',
-            })
+                "roles": ["project_mod"],
+                "project_id": "test_project_id",
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'email': 'test@example.com',
-            'project_id': 'test_project_id_1',
-            'roles': ['member'],
-            'inherited_roles': [],
-            'domain_id': 'default',
+            "email": "test@example.com",
+            "project_id": "test_project_id_1",
+            "roles": ["member"],
+            "inherited_roles": [],
+            "domain_id": "default",
         }
 
         action = NewUserAction(data, task=task, order=1)
@@ -323,23 +344,25 @@ class UserActionTests(AdjutantTestCase):
         project = fake_clients.FakeProject(name="test_project")
 
         user = fake_clients.FakeUser(
-            name="test@example.com", password="123", email="test@example.com")
+            name="test@example.com", password="123", email="test@example.com"
+        )
 
         setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['member'],
-                'project_id': project.id,
-                'project_domain_id': 'default',
-            })
+                "roles": ["member"],
+                "project_id": project.id,
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'email': 'test@example.com',
-            'project_id': project.id,
-            'roles': ['member'],
-            'inherited_roles': [],
-            'domain_id': 'default',
+            "email": "test@example.com",
+            "project_id": project.id,
+            "roles": ["member"],
+            "inherited_roles": [],
+            "domain_id": "default",
         }
 
         action = NewUserAction(data, task=task, order=1)
@@ -357,30 +380,33 @@ class UserActionTests(AdjutantTestCase):
         project = fake_clients.FakeProject(name="test_project")
 
         user = fake_clients.FakeUser(
-            name="test@example.com", password="123", email="test@example.com")
+            name="test@example.com", password="123", email="test@example.com"
+        )
 
         assignment = fake_clients.FakeRoleAssignment(
-            scope={'project': {'id': project.id}},
+            scope={"project": {"id": project.id}},
             role_name="member",
-            user={'id': user.id}
+            user={"id": user.id},
         )
 
         setup_identity_cache(
-            projects=[project], users=[user], role_assignments=[assignment])
+            projects=[project], users=[user], role_assignments=[assignment]
+        )
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['project_admin'],
-                'project_id': project.id,
-                'project_domain_id': 'default',
-            })
+                "roles": ["project_admin"],
+                "project_id": project.id,
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'email': 'test@example.com',
-            'project_id': project.id,
-            'roles': ['member'],
-            'inherited_roles': [],
-            'domain_id': 'not_default',
+            "email": "test@example.com",
+            "project_id": project.id,
+            "roles": ["member"],
+            "inherited_roles": [],
+            "domain_id": "not_default",
         }
 
         action = NewUserAction(data, task=task, order=1)
@@ -394,21 +420,22 @@ class UserActionTests(AdjutantTestCase):
         """
 
         user = fake_clients.FakeUser(
-            name="test@example.com", password="gibberish",
-            email="test@example.com")
+            name="test@example.com", password="gibberish", email="test@example.com"
+        )
 
         setup_identity_cache(users=[user])
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id',
-                'project_domain_id': 'default',
-            })
+                "roles": ["admin", "project_mod"],
+                "project_id": "test_project_id",
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'domain_name': 'Default',
-            'email': 'test@example.com',
+            "domain_name": "Default",
+            "email": "test@example.com",
         }
 
         action = ResetUserPasswordAction(data, task=task, order=1)
@@ -419,13 +446,13 @@ class UserActionTests(AdjutantTestCase):
         action.approve()
         self.assertEqual(action.valid, True)
 
-        token_data = {'password': '123456'}
+        token_data = {"password": "123456"}
         action.submit(token_data)
         self.assertEqual(action.valid, True)
 
         self.assertEqual(
-            fake_clients.identity_cache['users'][user.id].password,
-            '123456')
+            fake_clients.identity_cache["users"][user.id].password, "123456"
+        )
 
     def test_reset_user_password_case_insensitive(self):
         """
@@ -435,21 +462,22 @@ class UserActionTests(AdjutantTestCase):
         """
 
         user = fake_clients.FakeUser(
-            name="test@example.com", password="gibberish",
-            email="test@example.com")
+            name="test@example.com", password="gibberish", email="test@example.com"
+        )
 
         setup_identity_cache(users=[user])
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id',
-                'project_domain_id': 'default',
-            })
+                "roles": ["admin", "project_mod"],
+                "project_id": "test_project_id",
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'domain_name': 'Default',
-            'email': 'TEST@example.com',
+            "domain_name": "Default",
+            "email": "TEST@example.com",
         }
 
         action = ResetUserPasswordAction(data, task=task, order=1)
@@ -460,13 +488,13 @@ class UserActionTests(AdjutantTestCase):
         action.approve()
         self.assertEqual(action.valid, True)
 
-        token_data = {'password': '123456'}
+        token_data = {"password": "123456"}
         action.submit(token_data)
         self.assertEqual(action.valid, True)
 
         self.assertEqual(
-            fake_clients.identity_cache['users'][user.id].password,
-            '123456')
+            fake_clients.identity_cache["users"][user.id].password, "123456"
+        )
 
     def test_reset_user_password_no_user(self):
         """
@@ -477,14 +505,15 @@ class UserActionTests(AdjutantTestCase):
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id',
-                'project_domain_id': 'default',
-            })
+                "roles": ["admin", "project_mod"],
+                "project_id": "test_project_id",
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'domain_name': 'Default',
-            'email': 'test@example.com',
+            "domain_name": "Default",
+            "email": "test@example.com",
         }
 
         action = ResetUserPasswordAction(data, task=task, order=1)
@@ -506,25 +535,26 @@ class UserActionTests(AdjutantTestCase):
         project = fake_clients.FakeProject(name="test_project")
 
         user = fake_clients.FakeUser(
-            name="test@example.com", password="123", email="test@example.com")
+            name="test@example.com", password="123", email="test@example.com"
+        )
 
-        setup_identity_cache(
-            projects=[project], users=[user])
+        setup_identity_cache(projects=[project], users=[user])
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['admin', 'project_mod'],
-                'project_id': project.id,
-                'project_domain_id': 'default',
-            })
+                "roles": ["admin", "project_mod"],
+                "project_id": project.id,
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'domain_id': 'default',
-            'user_id': user.id,
-            'project_id': project.id,
-            'roles': ['member', 'project_mod'],
-            'inherited_roles': [],
-            'remove': False
+            "domain_id": "default",
+            "user_id": user.id,
+            "project_id": project.id,
+            "roles": ["member", "project_mod"],
+            "inherited_roles": [],
+            "remove": False,
         }
 
         action = EditUserRolesAction(data, task=task, order=1)
@@ -542,7 +572,7 @@ class UserActionTests(AdjutantTestCase):
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(sorted(roles), sorted(['member', 'project_mod']))
+        self.assertEqual(sorted(roles), sorted(["member", "project_mod"]))
 
     def test_edit_user_roles_add_complete(self):
         """
@@ -551,38 +581,41 @@ class UserActionTests(AdjutantTestCase):
         project = fake_clients.FakeProject(name="test_project")
 
         user = fake_clients.FakeUser(
-            name="test@example.com", password="123", email="test@example.com")
+            name="test@example.com", password="123", email="test@example.com"
+        )
 
         assignments = [
             fake_clients.FakeRoleAssignment(
-                scope={'project': {'id': project.id}},
+                scope={"project": {"id": project.id}},
                 role_name="member",
-                user={'id': user.id}
+                user={"id": user.id},
             ),
             fake_clients.FakeRoleAssignment(
-                scope={'project': {'id': project.id}},
+                scope={"project": {"id": project.id}},
                 role_name="project_mod",
-                user={'id': user.id}
+                user={"id": user.id},
             ),
         ]
 
         setup_identity_cache(
-            projects=[project], users=[user], role_assignments=assignments)
+            projects=[project], users=[user], role_assignments=assignments
+        )
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['admin', 'project_mod'],
-                'project_id': project.id,
-                'project_domain_id': 'default',
-            })
+                "roles": ["admin", "project_mod"],
+                "project_id": project.id,
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'domain_id': 'default',
-            'user_id': user.id,
-            'project_id': project.id,
-            'roles': ['member', 'project_mod'],
-            'inherited_roles': [],
-            'remove': False
+            "domain_id": "default",
+            "user_id": user.id,
+            "project_id": project.id,
+            "roles": ["member", "project_mod"],
+            "inherited_roles": [],
+            "remove": False,
         }
 
         action = EditUserRolesAction(data, task=task, order=1)
@@ -601,7 +634,7 @@ class UserActionTests(AdjutantTestCase):
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(roles, ['member', 'project_mod'])
+        self.assertEqual(roles, ["member", "project_mod"])
 
     def test_edit_user_roles_remove(self):
         """
@@ -611,38 +644,41 @@ class UserActionTests(AdjutantTestCase):
         project = fake_clients.FakeProject(name="test_project")
 
         user = fake_clients.FakeUser(
-            name="test@example.com", password="123", email="test@example.com")
+            name="test@example.com", password="123", email="test@example.com"
+        )
 
         assignments = [
             fake_clients.FakeRoleAssignment(
-                scope={'project': {'id': project.id}},
+                scope={"project": {"id": project.id}},
                 role_name="member",
-                user={'id': user.id}
+                user={"id": user.id},
             ),
             fake_clients.FakeRoleAssignment(
-                scope={'project': {'id': project.id}},
+                scope={"project": {"id": project.id}},
                 role_name="project_mod",
-                user={'id': user.id}
+                user={"id": user.id},
             ),
         ]
 
         setup_identity_cache(
-            projects=[project], users=[user], role_assignments=assignments)
+            projects=[project], users=[user], role_assignments=assignments
+        )
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['admin', 'project_mod'],
-                'project_id': project.id,
-                'project_domain_id': 'default',
-            })
+                "roles": ["admin", "project_mod"],
+                "project_id": project.id,
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'domain_id': 'default',
-            'user_id': user.id,
-            'project_id': project.id,
-            'roles': ['project_mod'],
-            'inherited_roles': [],
-            'remove': True
+            "domain_id": "default",
+            "user_id": user.id,
+            "project_id": project.id,
+            "roles": ["project_mod"],
+            "inherited_roles": [],
+            "remove": True,
         }
 
         action = EditUserRolesAction(data, task=task, order=1)
@@ -660,7 +696,7 @@ class UserActionTests(AdjutantTestCase):
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(roles, ['member'])
+        self.assertEqual(roles, ["member"])
 
     def test_edit_user_roles_remove_complete(self):
         """
@@ -670,31 +706,34 @@ class UserActionTests(AdjutantTestCase):
         project = fake_clients.FakeProject(name="test_project")
 
         user = fake_clients.FakeUser(
-            name="test@example.com", password="123", email="test@example.com")
+            name="test@example.com", password="123", email="test@example.com"
+        )
 
         assignment = fake_clients.FakeRoleAssignment(
-            scope={'project': {'id': project.id}},
+            scope={"project": {"id": project.id}},
             role_name="member",
-            user={'id': user.id}
+            user={"id": user.id},
         )
 
         setup_identity_cache(
-            projects=[project], users=[user], role_assignments=[assignment])
+            projects=[project], users=[user], role_assignments=[assignment]
+        )
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['admin', 'project_mod'],
-                'project_id': project.id,
-                'project_domain_id': 'default',
-            })
+                "roles": ["admin", "project_mod"],
+                "project_id": project.id,
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'domain_id': 'default',
-            'user_id': user.id,
-            'project_id': project.id,
-            'roles': ['project_mod'],
-            'inherited_roles': [],
-            'remove': True
+            "domain_id": "default",
+            "user_id": user.id,
+            "project_id": project.id,
+            "roles": ["project_mod"],
+            "inherited_roles": [],
+            "remove": True,
         }
 
         action = EditUserRolesAction(data, task=task, order=1)
@@ -713,7 +752,7 @@ class UserActionTests(AdjutantTestCase):
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(roles, ['member'])
+        self.assertEqual(roles, ["member"])
 
     def test_edit_user_roles_can_manage_all(self):
         """
@@ -723,38 +762,41 @@ class UserActionTests(AdjutantTestCase):
         project = fake_clients.FakeProject(name="test_project")
 
         user = fake_clients.FakeUser(
-            name="test@example.com", password="123", email="test@example.com")
+            name="test@example.com", password="123", email="test@example.com"
+        )
 
         assignments = [
             fake_clients.FakeRoleAssignment(
-                scope={'project': {'id': project.id}},
+                scope={"project": {"id": project.id}},
                 role_name="member",
-                user={'id': user.id}
+                user={"id": user.id},
             ),
             fake_clients.FakeRoleAssignment(
-                scope={'project': {'id': project.id}},
+                scope={"project": {"id": project.id}},
                 role_name="project_admin",
-                user={'id': user.id}
+                user={"id": user.id},
             ),
         ]
 
         setup_identity_cache(
-            projects=[project], users=[user], role_assignments=assignments)
+            projects=[project], users=[user], role_assignments=assignments
+        )
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['project_mod'],
-                'project_id': project.id,
-                'project_domain_id': 'default',
-            })
+                "roles": ["project_mod"],
+                "project_id": project.id,
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'domain_id': 'default',
-            'user_id': user.id,
-            'project_id': project.id,
-            'roles': ['project_mod'],
-            'inherited_roles': [],
-            'remove': False
+            "domain_id": "default",
+            "user_id": user.id,
+            "project_id": project.id,
+            "roles": ["project_mod"],
+            "inherited_roles": [],
+            "remove": False,
         }
 
         action = EditUserRolesAction(data, task=task, order=1)
@@ -765,7 +807,7 @@ class UserActionTests(AdjutantTestCase):
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(roles, ['member', 'project_admin'])
+        self.assertEqual(roles, ["member", "project_admin"])
 
     def test_edit_user_roles_modified_config(self):
         """
@@ -775,31 +817,34 @@ class UserActionTests(AdjutantTestCase):
         project = fake_clients.FakeProject(name="test_project")
 
         user = fake_clients.FakeUser(
-            name="test@example.com", password="123", email="test@example.com")
+            name="test@example.com", password="123", email="test@example.com"
+        )
 
         assignment = fake_clients.FakeRoleAssignment(
-            scope={'project': {'id': project.id}},
+            scope={"project": {"id": project.id}},
             role_name="project_mod",
-            user={'id': user.id}
+            user={"id": user.id},
         )
 
         setup_identity_cache(
-            projects=[project], users=[user], role_assignments=[assignment])
+            projects=[project], users=[user], role_assignments=[assignment]
+        )
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['project_mod'],
-                'project_id': project.id,
-                'project_domain_id': 'default',
-            })
+                "roles": ["project_mod"],
+                "project_id": project.id,
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'domain_id': 'default',
-            'user_id': user.id,
-            'project_id': project.id,
-            'roles': ['heat_stack_owner'],
-            'inherited_roles': [],
-            'remove': False
+            "domain_id": "default",
+            "user_id": user.id,
+            "project_id": project.id,
+            "roles": ["heat_stack_owner"],
+            "inherited_roles": [],
+            "remove": False,
         }
 
         action = EditUserRolesAction(data, task=task, order=1)
@@ -809,16 +854,16 @@ class UserActionTests(AdjutantTestCase):
 
         # Change config
         with conf_utils.modify_conf(
-                CONF,
-                operations={
-                    "adjutant.identity.role_mapping": [
-                        {'operation': 'update', 'value': {
-                            'project_mod': [
-                                'member', 'project_mod',
-                            ],
-                        }},
-                    ],
-                }):
+            CONF,
+            operations={
+                "adjutant.identity.role_mapping": [
+                    {
+                        "operation": "update",
+                        "value": {"project_mod": ["member", "project_mod",],},
+                    },
+                ],
+            },
+        ):
             action.approve()
             self.assertEqual(action.valid, False)
 
@@ -837,19 +882,26 @@ class UserActionTests(AdjutantTestCase):
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(roles, ['project_mod', 'heat_stack_owner'])
+        self.assertEqual(roles, ["project_mod", "heat_stack_owner"])
 
     @conf_utils.modify_conf(
         CONF,
         operations={
             "adjutant.identity.role_mapping": [
-                {'operation': 'update', 'value': {
-                    'project_mod': [
-                        'member', 'heat_stack_owner', 'project_mod', 'new_role',
-                    ],
-                }},
+                {
+                    "operation": "update",
+                    "value": {
+                        "project_mod": [
+                            "member",
+                            "heat_stack_owner",
+                            "project_mod",
+                            "new_role",
+                        ],
+                    },
+                },
             ],
-        })
+        },
+    )
     def test_edit_user_roles_modified_config_add(self):
         """
         Tests that the role mappings do come from config and a new role
@@ -858,35 +910,38 @@ class UserActionTests(AdjutantTestCase):
         project = fake_clients.FakeProject(name="test_project")
 
         user = fake_clients.FakeUser(
-            name="test@example.com", password="123", email="test@example.com")
+            name="test@example.com", password="123", email="test@example.com"
+        )
 
         assignment = fake_clients.FakeRoleAssignment(
-            scope={'project': {'id': project.id}},
+            scope={"project": {"id": project.id}},
             role_name="project_mod",
-            user={'id': user.id}
+            user={"id": user.id},
         )
 
         setup_identity_cache(
-            projects=[project], users=[user], role_assignments=[assignment])
+            projects=[project], users=[user], role_assignments=[assignment]
+        )
 
         new_role = fake_clients.FakeRole("new_role")
 
-        fake_clients.identity_cache['roles'][new_role.id] = new_role
+        fake_clients.identity_cache["roles"][new_role.id] = new_role
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['project_mod'],
-                'project_id': project.id,
-                'project_domain_id': 'default',
-            })
+                "roles": ["project_mod"],
+                "project_id": project.id,
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'domain_id': 'default',
-            'user_id': user.id,
-            'project_id': project.id,
-            'roles': ['new_role'],
-            'inherited_roles': [],
-            'remove': False
+            "domain_id": "default",
+            "user_id": user.id,
+            "project_id": project.id,
+            "roles": ["new_role"],
+            "inherited_roles": [],
+            "remove": False,
         }
 
         action = EditUserRolesAction(data, task=task, order=1)
@@ -904,16 +959,17 @@ class UserActionTests(AdjutantTestCase):
         fake_client = fake_clients.FakeManager()
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(roles, ['project_mod', 'new_role'])
+        self.assertEqual(roles, ["project_mod", "new_role"])
 
     # Simple positive tests for when USERNAME_IS_EMAIL=False
     @conf_utils.modify_conf(
         CONF,
         operations={
             "adjutant.identity.username_is_email": [
-                {'operation': 'override', 'value': False},
+                {"operation": "override", "value": False},
             ],
-        })
+        },
+    )
     def test_create_user_email_not_username(self):
         """
         Test the default case, all valid.
@@ -926,18 +982,19 @@ class UserActionTests(AdjutantTestCase):
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['admin', 'project_mod'],
-                'project_id': project.id,
-                'project_domain_id': 'default',
-            })
+                "roles": ["admin", "project_mod"],
+                "project_id": project.id,
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'username': 'test_user',
-            'email': 'test@example.com',
-            'project_id': project.id,
-            'roles': ['member'],
-            'inherited_roles': [],
-            'domain_id': 'default',
+            "username": "test_user",
+            "email": "test@example.com",
+            "project_id": project.id,
+            "roles": ["member"],
+            "inherited_roles": [],
+            "domain_id": "default",
         }
 
         action = NewUserAction(data, task=task, order=1)
@@ -948,51 +1005,53 @@ class UserActionTests(AdjutantTestCase):
         action.approve()
         self.assertEqual(action.valid, True)
 
-        token_data = {'password': '123456'}
+        token_data = {"password": "123456"}
         action.submit(token_data)
         self.assertEqual(action.valid, True)
-        self.assertEqual(len(fake_clients.identity_cache['users']), 2)
+        self.assertEqual(len(fake_clients.identity_cache["users"]), 2)
 
         fake_client = fake_clients.FakeManager()
 
         user = fake_client.find_user(name="test_user", domain="default")
 
-        self.assertEqual(user.email, 'test@example.com')
-        self.assertEqual(user.password, '123456')
+        self.assertEqual(user.email, "test@example.com")
+        self.assertEqual(user.password, "123456")
         self.assertTrue(user.enabled)
 
         roles = fake_client._get_roles_as_names(user, project)
-        self.assertEqual(roles, ['member'])
+        self.assertEqual(roles, ["member"])
 
     @conf_utils.modify_conf(
         CONF,
         operations={
             "adjutant.identity.username_is_email": [
-                {'operation': 'override', 'value': False},
+                {"operation": "override", "value": False},
             ],
-        })
+        },
+    )
     def test_reset_user_email_not_username(self):
         """
         Base case, existing user.
         Username not email address
         """
         user = fake_clients.FakeUser(
-            name="test_user", password="gibberish",
-            email="test@example.com")
+            name="test_user", password="gibberish", email="test@example.com"
+        )
 
         setup_identity_cache(users=[user])
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['project_mod'],
-                'project_id': 'test_project_id',
-                'project_domain_id': 'default',
-            })
+                "roles": ["project_mod"],
+                "project_id": "test_project_id",
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'username': "test_user",
-            'domain_name': 'Default',
-            'email': 'test@example.com',
+            "username": "test_user",
+            "domain_name": "Default",
+            "email": "test@example.com",
         }
 
         action = ResetUserPasswordAction(data, task=task, order=1)
@@ -1003,7 +1062,7 @@ class UserActionTests(AdjutantTestCase):
         action.approve()
         self.assertEqual(action.valid, True)
 
-        token_data = {'password': '123456'}
+        token_data = {"password": "123456"}
         action.submit(token_data)
         self.assertEqual(action.valid, True)
 
@@ -1011,16 +1070,17 @@ class UserActionTests(AdjutantTestCase):
 
         user = fake_client.find_user(name="test_user", domain="default")
 
-        self.assertEqual(user.email, 'test@example.com')
-        self.assertEqual(user.password, '123456')
+        self.assertEqual(user.email, "test@example.com")
+        self.assertEqual(user.password, "123456")
 
     @conf_utils.modify_conf(
         CONF,
         operations={
             "adjutant.identity.username_is_email": [
-                {'operation': 'override', 'value': False},
+                {"operation": "override", "value": False},
             ],
-        })
+        },
+    )
     def test_reset_user_password_case_insensitive_not_username(self):
         """
         Existing user, ensure action is case insensitive.
@@ -1028,22 +1088,23 @@ class UserActionTests(AdjutantTestCase):
         USERNAME_IS_EMAIL=False
         """
         user = fake_clients.FakeUser(
-            name="test_USER", password="gibberish",
-            email="test@example.com")
+            name="test_USER", password="gibberish", email="test@example.com"
+        )
 
         setup_identity_cache(users=[user])
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['admin', 'project_mod'],
-                'project_id': 'test_project_id',
-                'project_domain_id': 'default',
-            })
+                "roles": ["admin", "project_mod"],
+                "project_id": "test_project_id",
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'domain_name': 'Default',
-            'username': 'test_USER',
-            'email': 'TEST@example.com',
+            "domain_name": "Default",
+            "username": "test_USER",
+            "email": "TEST@example.com",
         }
 
         action = ResetUserPasswordAction(data, task=task, order=1)
@@ -1054,34 +1115,35 @@ class UserActionTests(AdjutantTestCase):
         action.approve()
         self.assertEqual(action.valid, True)
 
-        token_data = {'password': '123456'}
+        token_data = {"password": "123456"}
         action.submit(token_data)
         self.assertEqual(action.valid, True)
 
         self.assertEqual(
-            fake_clients.identity_cache['users'][user.id].password,
-            '123456')
+            fake_clients.identity_cache["users"][user.id].password, "123456"
+        )
 
     def test_update_email(self):
         """
         Base test case for user updating email address.
         """
         user = fake_clients.FakeUser(
-            name="test@example.com", password="gibberish",
-            email="test@example.com")
+            name="test@example.com", password="gibberish", email="test@example.com"
+        )
 
         setup_identity_cache(users=[user])
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['project_mod'],
-                'project_id': 'test_project_id',
-                'project_domain_id': 'default',
-            })
+                "roles": ["project_mod"],
+                "project_id": "test_project_id",
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'new_email': 'new_test@example.com',
-            'user_id': user.id,
+            "new_email": "new_test@example.com",
+            "user_id": user.id,
         }
 
         action = UpdateUserEmailAction(data, task=task, order=1)
@@ -1092,18 +1154,18 @@ class UserActionTests(AdjutantTestCase):
         action.approve()
         self.assertEqual(action.valid, True)
 
-        token_data = {'confirm': True}
+        token_data = {"confirm": True}
 
         action.submit(token_data)
         self.assertEqual(action.valid, True)
 
         self.assertEqual(
-            fake_clients.identity_cache['users'][user.id].email,
-            'new_test@example.com')
+            fake_clients.identity_cache["users"][user.id].email, "new_test@example.com"
+        )
 
         self.assertEqual(
-            fake_clients.identity_cache['users'][user.id].name,
-            'new_test@example.com')
+            fake_clients.identity_cache["users"][user.id].name, "new_test@example.com"
+        )
 
     def test_update_email_invalid_user(self):
         """
@@ -1113,14 +1175,15 @@ class UserActionTests(AdjutantTestCase):
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['project_mod'],
-                'project_id': 'test_project_id',
-                'project_domain_id': 'default',
-            })
+                "roles": ["project_mod"],
+                "project_id": "test_project_id",
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'new_email': 'new_test@example.com',
-            'user_id': "non_user_id",
+            "new_email": "new_test@example.com",
+            "user_id": "non_user_id",
         }
 
         action = UpdateUserEmailAction(data, task=task, order=1)
@@ -1131,7 +1194,7 @@ class UserActionTests(AdjutantTestCase):
         action.approve()
         self.assertEqual(action.valid, False)
 
-        token_data = {'confirm': True}
+        token_data = {"confirm": True}
 
         action.submit(token_data)
         self.assertEqual(action.valid, False)
@@ -1140,29 +1203,31 @@ class UserActionTests(AdjutantTestCase):
         CONF,
         operations={
             "adjutant.identity.username_is_email": [
-                {'operation': 'override', 'value': False},
+                {"operation": "override", "value": False},
             ],
-        })
+        },
+    )
     def test_update_email_username_not_email(self):
         """
         Test case for a user attempting to update with an invalid email.
         """
         user = fake_clients.FakeUser(
-            name="test_user", password="gibberish",
-            email="test@example.com")
+            name="test_user", password="gibberish", email="test@example.com"
+        )
 
         setup_identity_cache(users=[user])
 
         task = Task.objects.create(
             keystone_user={
-                'roles': ['project_mod'],
-                'project_id': 'test_project_id',
-                'project_domain_id': 'default',
-            })
+                "roles": ["project_mod"],
+                "project_id": "test_project_id",
+                "project_domain_id": "default",
+            }
+        )
 
         data = {
-            'new_email': 'new_testexample.com',
-            'user_id': user.id,
+            "new_email": "new_testexample.com",
+            "user_id": user.id,
         }
 
         action = UpdateUserEmailAction(data, task=task, order=1)
@@ -1173,13 +1238,13 @@ class UserActionTests(AdjutantTestCase):
         action.approve()
         self.assertEqual(action.valid, True)
 
-        action.submit({'confirm': True})
+        action.submit({"confirm": True})
         self.assertEqual(action.valid, True)
 
         self.assertEqual(
-            fake_clients.identity_cache['users'][user.id].email,
-            'new_testexample.com')
+            fake_clients.identity_cache["users"][user.id].email, "new_testexample.com"
+        )
 
         self.assertEqual(
-            fake_clients.identity_cache['users'][user.id].name,
-            'test_user')
+            fake_clients.identity_cache["users"][user.id].name, "test_user"
+        )

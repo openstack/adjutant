@@ -23,9 +23,8 @@ from adjutant.tasks.v1.base import BaseTask
 
 
 class TaskManager(object):
-
     def __init__(self, message=None):
-        self.logger = getLogger('adjutant')
+        self.logger = getLogger("adjutant")
 
     def _get_task_class(self, task_type):
         """Get the task class from the given task_type
@@ -38,8 +37,7 @@ class TaskManager(object):
         except KeyError:
             if task_type in tasks.TASK_CLASSES.values():
                 return task_type
-        raise exceptions.TaskNotRegistered(
-            "Unknown task type: '%s'" % task_type)
+        raise exceptions.TaskNotRegistered("Unknown task type: '%s'" % task_type)
 
     def create_from_request(self, task_type, request):
         task_class = self._get_task_class(task_type)
@@ -65,7 +63,8 @@ class TaskManager(object):
                 task = Task.objects.get(uuid=task)
             except Task.DoesNotExist:
                 raise exceptions.TaskNotFound(
-                    "Task not found with uuid of: '%s'" % task)
+                    "Task not found with uuid of: '%s'" % task
+                )
         if isinstance(task, Task):
             try:
                 return tasks.TASK_CLASSES[task.task_type](task)
@@ -74,11 +73,9 @@ class TaskManager(object):
                 # for older deprecated tasks:
                 raise exceptions.TaskNotRegistered(
                     "Task type '%s' not registered, "
-                    "and used for existing task."
-                    % task.task_type
+                    "and used for existing task." % task.task_type
                 )
-        raise exceptions.TaskNotFound(
-            "Task not found for value of: '%s'" % task)
+        raise exceptions.TaskNotFound("Task not found for value of: '%s'" % task)
 
     def update(self, task, action_data):
         task = self.get(task)

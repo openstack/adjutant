@@ -18,22 +18,22 @@ from adjutant.tasks.v1.base import BaseTask
 class CreateProjectAndUser(BaseTask):
     duplicate_policy = "block"
     task_type = "create_project_and_user"
-    deprecated_task_types = ['create_project', 'signup']
+    deprecated_task_types = ["create_project", "signup"]
     default_actions = [
         "NewProjectWithUserAction",
     ]
 
     email_config = {
-        'initial': {
-            'template': 'create_project_and_user_initial.txt',
-            'subject': 'signup received'
+        "initial": {
+            "template": "create_project_and_user_initial.txt",
+            "subject": "signup received",
         },
-        'token': {
-            'template': 'create_project_and_user_token.txt',
-            'subject': 'signup approved'
+        "token": {
+            "template": "create_project_and_user_token.txt",
+            "subject": "signup approved",
         },
-        'completed': {
-            'template': 'create_project_and_user_completed.txt',
-            'subject': 'signup completed'
-        }
+        "completed": {
+            "template": "create_project_and_user_completed.txt",
+            "subject": "signup completed",
+        },
     }

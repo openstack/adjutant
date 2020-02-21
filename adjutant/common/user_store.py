@@ -82,23 +82,20 @@ class IdentityManager(object):  # pragma: no cover
 
             users = {}
 
-            user_assignments = self.ks_client.role_assignments.list(
-                project=project)
+            user_assignments = self.ks_client.role_assignments.list(project=project)
             for assignment in user_assignments:
                 try:
-                    user = users.get(assignment.user['id'], None)
+                    user = users.get(assignment.user["id"], None)
                     if not user:
-                        user = self.ks_client.users.get(
-                            assignment.user['id'])
+                        user = self.ks_client.users.get(assignment.user["id"])
                         user.roles = []
                         user.inherited_roles = []
                         users[user.id] = user
 
-                    if assignment.scope.get('OS-INHERIT:inherited_to'):
-                        user.inherited_roles.append(
-                            role_dict[assignment.role['id']])
+                    if assignment.scope.get("OS-INHERIT:inherited_to"):
+                        user.inherited_roles.append(role_dict[assignment.role["id"]])
                     else:
-                        user.roles.append(role_dict[assignment.role['id']])
+                        user.roles.append(role_dict[assignment.role["id"]])
                 except AttributeError:
                     # Just means the assignment is a group, so ignore it.
                     pass
@@ -119,22 +116,19 @@ class IdentityManager(object):  # pragma: no cover
             project = self.ks_client.projects.get(project)
             while project.parent_id:
                 project = self.ks_client.projects.get(project.parent_id)
-                user_assignments = self.ks_client.role_assignments.list(
-                    project=project)
+                user_assignments = self.ks_client.role_assignments.list(project=project)
                 for assignment in user_assignments:
-                    if not assignment.scope.get('OS-INHERIT:inherited_to'):
+                    if not assignment.scope.get("OS-INHERIT:inherited_to"):
                         continue
                     try:
-                        user = users.get(
-                            assignment.user['id'], None)
+                        user = users.get(assignment.user["id"], None)
                         if user:
-                            user.roles.append(
-                                role_dict[assignment.role['id']])
+                            user.roles.append(role_dict[assignment.role["id"]])
                         else:
-                            user = self.ks_client.users.get(
-                                assignment.user['id'])
+                            user = self.ks_client.users.get(assignment.user["id"])
                             user.roles = [
-                                role_dict[assignment.role['id']], ]
+                                role_dict[assignment.role["id"]],
+                            ]
                             user.inherited_roles = []
                             users[user.id] = user
                     except AttributeError:
@@ -146,12 +140,18 @@ class IdentityManager(object):  # pragma: no cover
             return []
         return users.values()
 
-    def create_user(self, name, password, email, created_on, domain=None,
-                    default_project=None):
+    def create_user(
+        self, name, password, email, created_on, domain=None, default_project=None
+    ):
 
         user = self.ks_client.users.create(
-            name=name, password=password, domain=domain, email=email,
-            default_project=default_project, created_on=created_on)
+            name=name,
+            password=password,
+            domain=domain,
+            email=email,
+            default_project=default_project,
+            created_on=created_on,
+        )
         return user
 
     def enable_user(self, user):
@@ -182,14 +182,14 @@ class IdentityManager(object):  # pragma: no cover
 
         user_roles = []
         user_assignments = self.ks_client.role_assignments.list(
-            user=user, project=project)
+            user=user, project=project
+        )
         for assignment in user_assignments:
-            if (assignment.scope.get('OS-INHERIT:inherited_to') and not
-                    inherited) or (
-                        inherited and not
-                        assignment.scope.get('OS-INHERIT:inherited_to')):
+            if (assignment.scope.get("OS-INHERIT:inherited_to") and not inherited) or (
+                inherited and not assignment.scope.get("OS-INHERIT:inherited_to")
+            ):
                 continue
-            user_roles.append(role_dict[assignment.role['id']])
+            user_roles.append(role_dict[assignment.role["id"]])
         return user_roles
 
     def get_all_roles(self, user):
@@ -204,8 +204,8 @@ class IdentityManager(object):  # pragma: no cover
         user_assignments = self.ks_client.role_assignments.list(user=user)
         projects = defaultdict(list)
         for assignment in user_assignments:
-            project = assignment.scope['project']['id']
-            projects[project].append(role_dict[assignment.role['id']])
+            project = assignment.scope["project"]["id"]
+            projects[project].append(role_dict[assignment.role["id"]])
 
         return projects
 
@@ -213,8 +213,11 @@ class IdentityManager(object):  # pragma: no cover
         try:
             if inherited:
                 self.ks_client.roles.grant(
-                    role, user=user, project=project,
-                    os_inherit_extension_inherited=inherited)
+                    role,
+                    user=user,
+                    project=project,
+                    os_inherit_extension_inherited=inherited,
+                )
             else:
                 self.ks_client.roles.grant(role, user=user, project=project)
         except ks_exceptions.Conflict:
@@ -224,8 +227,11 @@ class IdentityManager(object):  # pragma: no cover
     def remove_user_role(self, user, role, project, inherited=False):
         if inherited:
             self.ks_client.roles.revoke(
-                role, user=user, project=project,
-                os_inherit_extension_inherited=inherited)
+                role,
+                user=user,
+                project=project,
+                os_inherit_extension_inherited=inherited,
+            )
         else:
             self.ks_client.roles.revoke(role, user=user, project=project)
 
@@ -233,8 +239,7 @@ class IdentityManager(object):  # pragma: no cover
         try:
             # Using a filtered list as find is more efficient than
             # using the client find
-            projects = self.ks_client.projects.list(
-                name=project_name, domain=domain)
+            projects = self.ks_client.projects.list(name=project_name, domain=domain)
             if projects:
                 # NOTE(adriant) project names are unique in a domain so
                 # it is safe to assume filtering on project name and domain
@@ -245,12 +250,11 @@ class IdentityManager(object):  # pragma: no cover
         except ks_exceptions.NotFound:
             return None
 
-    def get_project(self, project_id, subtree_as_ids=False,
-                    parents_as_ids=False):
+    def get_project(self, project_id, subtree_as_ids=False, parents_as_ids=False):
         try:
             project = self.ks_client.projects.get(
-                project_id, subtree_as_ids=subtree_as_ids,
-                parents_as_ids=parents_as_ids)
+                project_id, subtree_as_ids=subtree_as_ids, parents_as_ids=parents_as_ids
+            )
             if parents_as_ids:
                 depth = 1
                 last_root = None
@@ -276,21 +280,31 @@ class IdentityManager(object):  # pragma: no cover
         except ks_exceptions.NotFound:
             return []
 
-    def update_project(self, project, name=None, domain=None, description=None,
-                       enabled=None, **kwargs):
+    def update_project(
+        self, project, name=None, domain=None, description=None, enabled=None, **kwargs
+    ):
         try:
             return self.ks_client.projects.update(
-                project=project, domain=domain, name=name,
-                description=description, enabled=enabled,
-                **kwargs)
+                project=project,
+                domain=domain,
+                name=name,
+                description=description,
+                enabled=enabled,
+                **kwargs,
+            )
         except ks_exceptions.NotFound:
             return None
 
-    def create_project(self, project_name, created_on, parent=None,
-                       domain=None, description=""):
+    def create_project(
+        self, project_name, created_on, parent=None, domain=None, description=""
+    ):
         project = self.ks_client.projects.create(
-            project_name, domain, parent=parent, created_on=created_on,
-            description=description)
+            project_name,
+            domain,
+            parent=parent,
+            created_on=created_on,
+            description=description,
+        )
         return project
 
     def get_domain(self, domain_id):
@@ -321,20 +335,19 @@ class IdentityManager(object):  # pragma: no cover
         return self.ks_client.regions.list(**kwargs)
 
     def list_credentials(self, user_id, cred_type=None):
-        return self.ks_client.credentials.list(
-            user_id=user_id, type=cred_type)
+        return self.ks_client.credentials.list(user_id=user_id, type=cred_type)
 
     def add_credential(self, user, cred_type, blob, project=None):
         return self.ks_client.credentials.create(
-            user=user, type=cred_type, blob=blob, project=project)
+            user=user, type=cred_type, blob=blob, project=project
+        )
 
     def delete_credential(self, credential):
         return self.ks_client.credentials.delete(credential)
 
     def clear_credential_type(self, user_id, cred_type):
         # list credentials of the type for the user
-        credentials = self.ks_client.credentials.list(
-            user_id=user_id, type=cred_type)
+        credentials = self.ks_client.credentials.list(user_id=user_id, type=cred_type)
         for cred in credentials:
             if cred.user_id == user_id and cred.type == cred_type:
                 self.ks_client.credentials.delete(cred)
@@ -357,9 +370,12 @@ class IdentityManager(object):  # pragma: no cover
             return list(set(all_roles))
 
         # merge mapping lists to form a flat permitted roles list
-        manageable_role_names = [mrole for role_name in user_roles
-                                 if role_name in roles_mapping
-                                 for mrole in roles_mapping[role_name]]
+        manageable_role_names = [
+            mrole
+            for role_name in user_roles
+            if role_name in roles_mapping
+            for mrole in roles_mapping[role_name]
+        ]
         # a set has unique items
         manageable_role_names = set(manageable_role_names)
         return manageable_role_names

@@ -19,14 +19,15 @@ from adjutant.exceptions import ActionNotRegistered, DelegateAPINotRegistered
 
 def check_expected_delegate_apis():
     missing_delegate_apis = list(
-        set(CONF.api.active_delegate_apis)
-        - set(api.DELEGATE_API_CLASSES.keys()))
+        set(CONF.api.active_delegate_apis) - set(api.DELEGATE_API_CLASSES.keys())
+    )
 
     if missing_delegate_apis:
         raise DelegateAPINotRegistered(
             message=(
-                "Expected DelegateAPIs are unregistered: %s"
-                % missing_delegate_apis))
+                "Expected DelegateAPIs are unregistered: %s" % missing_delegate_apis
+            )
+        )
 
 
 def check_configured_actions():
@@ -38,11 +39,12 @@ def check_configured_actions():
 
         configured_actions += task_class.default_actions
         configured_actions += CONF.workflow.tasks.get(
-            task_class.task_type).additional_actions
+            task_class.task_type
+        ).additional_actions
 
-    missing_actions = list(
-        set(configured_actions) - set(actions.ACTION_CLASSES.keys()))
+    missing_actions = list(set(configured_actions) - set(actions.ACTION_CLASSES.keys()))
 
     if missing_actions:
         raise ActionNotRegistered(
-            "Configured actions are unregistered: %s" % missing_actions)
+            "Configured actions are unregistered: %s" % missing_actions
+        )

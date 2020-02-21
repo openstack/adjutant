@@ -10,16 +10,13 @@ class Migration(migrations.Migration):
     atomic = False
 
     dependencies = [
-        ('api', '0004_auto_20160929_0317'),
+        ("api", "0004_auto_20160929_0317"),
     ]
 
     operations = [
         migrations.SeparateDatabaseAndState(
             database_operations=[
-                migrations.AlterModelTable(
-                    name='task',
-                    table='tasks_task',
-                ),
+                migrations.AlterModelTable(name="task", table="tasks_task",),
             ],
         ),
     ]

@@ -43,14 +43,13 @@ from adjutant.config.feature_sets import config_group as feature_set_config
 def register_action_class(action_class):
     if not issubclass(action_class, BaseAction):
         raise exceptions.InvalidActionClass(
-            "'%s' is not a built off the BaseAction class."
-            % action_class.__name__
+            "'%s' is not a built off the BaseAction class." % action_class.__name__
         )
     if action_class.serializer and not issubclass(
-            action_class.serializer, drf_serializers.Serializer):
+        action_class.serializer, drf_serializers.Serializer
+    ):
         raise exceptions.InvalidActionSerializer(
-            "serializer for '%s' is not a valid DRF serializer."
-            % action_class.__name__
+            "serializer for '%s' is not a valid DRF serializer." % action_class.__name__
         )
     data = {}
     data[action_class.__name__] = action_class
@@ -59,16 +58,14 @@ def register_action_class(action_class):
         # NOTE(adriant): We copy the config_group before naming it
         # to avoid cases where a subclass inherits but doesn't extend it
         setting_group = action_class.config_group.copy()
-        setting_group.set_name(
-            action_class.__name__, reformat_name=False)
+        setting_group.set_name(action_class.__name__, reformat_name=False)
         action_defaults_group.register_child_config(setting_group)
 
 
 def register_task_class(task_class):
     if not issubclass(task_class, tasks_base.BaseTask):
         raise exceptions.InvalidTaskClass(
-            "'%s' is not a built off the BaseTask class."
-            % task_class.__name__
+            "'%s' is not a built off the BaseTask class." % task_class.__name__
         )
     data = {}
     data[task_class.task_type] = task_class
@@ -78,16 +75,14 @@ def register_task_class(task_class):
     tasks.TASK_CLASSES.update(data)
 
     config_group = tasks_base.make_task_config(task_class)
-    config_group.set_name(
-        task_class.task_type, reformat_name=False)
+    config_group.set_name(task_class.task_type, reformat_name=False)
     tasks_group.register_child_config(config_group)
 
 
 def register_delegate_api_class(api_class):
     if not issubclass(api_class, BaseDelegateAPI):
         raise exceptions.InvalidAPIClass(
-            "'%s' is not a built off the BaseDelegateAPI class."
-            % api_class.__name__
+            "'%s' is not a built off the BaseDelegateAPI class." % api_class.__name__
         )
     data = {}
     data[api_class.__name__] = api_class
@@ -96,8 +91,7 @@ def register_delegate_api_class(api_class):
         # NOTE(adriant): We copy the config_group before naming it
         # to avoid cases where a subclass inherits but doesn't extend it
         setting_group = api_class.config_group.copy()
-        setting_group.set_name(
-            api_class.__name__, reformat_name=False)
+        setting_group.set_name(api_class.__name__, reformat_name=False)
         api_config.register_child_config(setting_group)
 
 
@@ -121,7 +115,8 @@ def register_notification_handler(notification_handler):
 def register_feature_set_config(feature_set_group):
     if not isinstance(feature_set_group, groups.ConfigGroup):
         raise conf_exceptions.InvalidConfigClass(
-            "'%s' is not a valid config group class" % feature_set_group)
+            "'%s' is not a valid config group class" % feature_set_group
+        )
     feature_set_config.register_child_config(feature_set_group)
 
 
@@ -149,7 +144,7 @@ class BaseFeatureSet(object):
     config = None
 
     def __init__(self):
-        self.logger = getLogger('adjutant')
+        self.logger = getLogger("adjutant")
 
     def load(self):
         self.logger.info("Loading feature set: '%s'" % self.__class__.__name__)

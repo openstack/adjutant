@@ -22,7 +22,7 @@ class QuotaManager(object):
     across all services.
     """
 
-    default_size_diff_threshold = .2
+    default_size_diff_threshold = 0.2
 
     class ServiceQuotaHelper(object):
         def set_quota(self, values):
@@ -30,8 +30,7 @@ class QuotaManager(object):
 
     class ServiceQuotaCinderHelper(ServiceQuotaHelper):
         def __init__(self, region_name, project_id):
-            self.client = openstack_clients.get_cinderclient(
-                region=region_name)
+            self.client = openstack_clients.get_cinderclient(region=region_name)
             self.project_id = project_id
 
         def get_quota(self):
@@ -39,39 +38,40 @@ class QuotaManager(object):
 
         def get_usage(self):
             volumes = self.client.volumes.list(
-                search_opts={'all_tenants': 1, 'project_id': self.project_id})
+                search_opts={"all_tenants": 1, "project_id": self.project_id}
+            )
             snapshots = self.client.volume_snapshots.list(
-                search_opts={'all_tenants': 1, 'project_id': self.project_id})
+                search_opts={"all_tenants": 1, "project_id": self.project_id}
+            )
 
             # gigabytesUsed should be a total of volumes and snapshots
-            gigabytes = sum([getattr(volume, 'size', 0) for volume
-                            in volumes])
-            gigabytes += sum([getattr(snap, 'size', 0) for snap
-                             in snapshots])
+            gigabytes = sum([getattr(volume, "size", 0) for volume in volumes])
+            gigabytes += sum([getattr(snap, "size", 0) for snap in snapshots])
 
-            return {'gigabytes': gigabytes,
-                    'volumes': len(volumes),
-                    'snapshots': len(snapshots)
-                    }
+            return {
+                "gigabytes": gigabytes,
+                "volumes": len(volumes),
+                "snapshots": len(snapshots),
+            }
 
     class ServiceQuotaNovaHelper(ServiceQuotaHelper):
         def __init__(self, region_name, project_id):
-            self.client = openstack_clients.get_novaclient(
-                region=region_name)
+            self.client = openstack_clients.get_novaclient(region=region_name)
             self.project_id = project_id
 
         def get_quota(self):
             return self.client.quotas.get(self.project_id).to_dict()
 
         def get_usage(self):
-            nova_usage = self.client.limits.get(
-                tenant_id=self.project_id).to_dict()['absolute']
+            nova_usage = self.client.limits.get(tenant_id=self.project_id).to_dict()[
+                "absolute"
+            ]
             nova_usage_keys = [
-                ('instances', 'totalInstancesUsed'),
-                ('floating_ips', 'totalFloatingIpsUsed'),
-                ('ram', 'totalRAMUsed'),
-                ('cores', 'totalCoresUsed'),
-                ('secuirty_groups', 'totalSecurityGroupsUsed')
+                ("instances", "totalInstancesUsed"),
+                ("floating_ips", "totalFloatingIpsUsed"),
+                ("ram", "totalRAMUsed"),
+                ("cores", "totalCoresUsed"),
+                ("secuirty_groups", "totalSecurityGroupsUsed"),
             ]
 
             nova_usage_dict = {}
@@ -82,53 +82,48 @@ class QuotaManager(object):
 
     class ServiceQuotaNeutronHelper(ServiceQuotaHelper):
         def __init__(self, region_name, project_id):
-            self.client = openstack_clients.get_neutronclient(
-                region=region_name)
+            self.client = openstack_clients.get_neutronclient(region=region_name)
             self.project_id = project_id
 
         def set_quota(self, values):
-            body = {
-                'quota': values
-            }
+            body = {"quota": values}
             self.client.update_quota(self.project_id, body)
 
         def get_usage(self):
-            networks = self.client.list_networks(
-                tenant_id=self.project_id)['networks']
-            routers = self.client.list_routers(
-                tenant_id=self.project_id)['routers']
-            floatingips = self.client.list_floatingips(
-                tenant_id=self.project_id)['floatingips']
-            ports = self.client.list_ports(
-                tenant_id=self.project_id)['ports']
-            subnets = self.client.list_subnets(
-                tenant_id=self.project_id)['subnets']
+            networks = self.client.list_networks(tenant_id=self.project_id)["networks"]
+            routers = self.client.list_routers(tenant_id=self.project_id)["routers"]
+            floatingips = self.client.list_floatingips(tenant_id=self.project_id)[
+                "floatingips"
+            ]
+            ports = self.client.list_ports(tenant_id=self.project_id)["ports"]
+            subnets = self.client.list_subnets(tenant_id=self.project_id)["subnets"]
             security_groups = self.client.list_security_groups(
-                tenant_id=self.project_id)['security_groups']
+                tenant_id=self.project_id
+            )["security_groups"]
             security_group_rules = self.client.list_security_group_rules(
-                tenant_id=self.project_id)['security_group_rules']
+                tenant_id=self.project_id
+            )["security_group_rules"]
 
-            return {'network': len(networks),
-                    'router': len(routers),
-                    'floatingip': len(floatingips),
-                    'port': len(ports),
-                    'subnet': len(subnets),
-                    'secuirty_group': len(security_groups),
-                    'security_group_rule': len(security_group_rules)
-                    }
+            return {
+                "network": len(networks),
+                "router": len(routers),
+                "floatingip": len(floatingips),
+                "port": len(ports),
+                "subnet": len(subnets),
+                "secuirty_group": len(security_groups),
+                "security_group_rule": len(security_group_rules),
+            }
 
         def get_quota(self):
-            return self.client.show_quota(self.project_id)['quota']
+            return self.client.show_quota(self.project_id)["quota"]
 
     class ServiceQuotaOctaviaHelper(ServiceQuotaNeutronHelper):
         def __init__(self, region_name, project_id):
-            self.client = openstack_clients.get_octaviaclient(
-                region=region_name)
+            self.client = openstack_clients.get_octaviaclient(region=region_name)
             self.project_id = project_id
 
         def get_quota(self):
-            project_quota = self.client.quota_show(
-                project_id=self.project_id)
+            project_quota = self.client.quota_show(project_id=self.project_id)
 
             # NOTE(amelia): Instead of returning the default quota if ANY
             #               of the quotas are the default, the endpoint
@@ -137,40 +132,45 @@ class QuotaManager(object):
             for name, quota in project_quota.items():
                 if quota is None:
                     if not default_quota:
-                        default_quota = self.client.quota_defaults_show()[
-                            'quota']
+                        default_quota = self.client.quota_defaults_show()["quota"]
                     project_quota[name] = default_quota[name]
 
             return project_quota
 
         def set_quota(self, values):
-            self.client.quota_set(self.project_id, json={'quota': values})
+            self.client.quota_set(self.project_id, json={"quota": values})
 
         def get_usage(self):
             usage = {}
-            usage['load_balancer'] = len(self.client.load_balancer_list(
-                project_id=self.project_id)['loadbalancers'])
-            usage['listener'] = len(self.client.listener_list(
-                project_id=self.project_id)['listeners'])
+            usage["load_balancer"] = len(
+                self.client.load_balancer_list(project_id=self.project_id)[
+                    "loadbalancers"
+                ]
+            )
+            usage["listener"] = len(
+                self.client.listener_list(project_id=self.project_id)["listeners"]
+            )
 
-            pools = self.client.pool_list(
-                project_id=self.project_id)['pools']
-            usage['pool'] = len(pools)
+            pools = self.client.pool_list(project_id=self.project_id)["pools"]
+            usage["pool"] = len(pools)
 
             members = []
             for pool in pools:
-                members += pool['members']
+                members += pool["members"]
 
-            usage['member'] = len(members)
-            usage['health_monitor'] = len(self.client.health_monitor_list(
-                project_id=self.project_id)['healthmonitors'])
+            usage["member"] = len(members)
+            usage["health_monitor"] = len(
+                self.client.health_monitor_list(project_id=self.project_id)[
+                    "healthmonitors"
+                ]
+            )
             return usage
 
     _quota_updaters = {
-        'cinder': ServiceQuotaCinderHelper,
-        'nova': ServiceQuotaNovaHelper,
-        'neutron': ServiceQuotaNeutronHelper,
-        'octavia': ServiceQuotaOctaviaHelper,
+        "cinder": ServiceQuotaCinderHelper,
+        "nova": ServiceQuotaNovaHelper,
+        "neutron": ServiceQuotaNeutronHelper,
+        "octavia": ServiceQuotaOctaviaHelper,
     }
 
     def __init__(self, project_id, size_difference_threshold=None):
@@ -182,24 +182,23 @@ class QuotaManager(object):
 
         quota_services = dict(CONF.quota.services)
 
-        all_regions = quota_services.pop('*', None)
+        all_regions = quota_services.pop("*", None)
         if all_regions:
             self.default_helpers = {}
             for service in all_regions:
                 if service in self._quota_updaters:
-                    self.default_helpers[service] = \
-                        self._quota_updaters[service]
+                    self.default_helpers[service] = self._quota_updaters[service]
 
         for region, services in quota_services.items():
             self.helpers[region] = {}
             for service in services:
                 if service in self._quota_updaters:
-                    self.helpers[region][service] = \
-                        self._quota_updaters[service]
+                    self.helpers[region][service] = self._quota_updaters[service]
 
         self.project_id = project_id
-        self.size_diff_threshold = (size_difference_threshold
-                                    or self.default_size_diff_threshold)
+        self.size_diff_threshold = (
+            size_difference_threshold or self.default_size_diff_threshold
+        )
 
     def get_current_region_quota(self, region_id):
         current_quota = {}
@@ -239,7 +238,8 @@ class QuotaManager(object):
                         match_percentages.append(0.0)
             # Calculate the average of how much it matches the setting
             difference = abs(
-                (sum(match_percentages) / float(len(match_percentages))) - 1)
+                (sum(match_percentages) / float(len(match_percentages))) - 1
+            )
 
             quota_differences[size] = difference
 
@@ -253,15 +253,14 @@ class QuotaManager(object):
 
         quota_differences_pruned = {}
         for size, difference in quota_differences.items():
-            if (difference <= diff_threshold):
+            if difference <= diff_threshold:
                 quota_differences_pruned[size] = difference
 
         if len(quota_differences_pruned) > 0:
-            return min(
-                quota_differences_pruned, key=quota_differences_pruned.get)
+            return min(quota_differences_pruned, key=quota_differences_pruned.get)
         # If we don't get a match return custom which means the project will
         # need admin approval for any change
-        return 'custom'
+        return "custom"
 
     def get_quota_change_options(self, quota_size):
         """ Get's the pre-approved quota change options for a given size """
@@ -294,14 +293,14 @@ class QuotaManager(object):
         change_options = self.get_quota_change_options(current_quota_size)
 
         region_data = {
-            'region': region_id,
+            "region": region_id,
             "current_quota": current_quota,
             "current_quota_size": current_quota_size,
             "quota_change_options": change_options,
         }
 
         if include_usage:
-            region_data['current_usage'] = self.get_current_usage(region_id)
+            region_data["current_usage"] = self.get_current_usage(region_id)
 
         return region_data
 
@@ -317,11 +316,11 @@ class QuotaManager(object):
     def set_region_quota(self, region_id, quota_dict):
         notes = []
         for service_name, values in quota_dict.items():
-            updater_class = self.helpers.get(
-                region_id, self.default_helpers).get(service_name)
+            updater_class = self.helpers.get(region_id, self.default_helpers).get(
+                service_name
+            )
             if not updater_class:
-                notes.append("No quota updater found for %s. Ignoring" %
-                             service_name)
+                notes.append("No quota updater found for %s. Ignoring" % service_name)
                 continue
 
             service_helper = updater_class(region_id, self.project_id)

@@ -27,11 +27,11 @@ from adjutant.common.tests.utils import AdjutantTestCase
 from adjutant.config import CONF
 
 default_email_conf = {
-    'from': "adjutant@example.com",
-    'reply': 'adjutant@example.com',
-    'template': 'initial.txt',
-    'html_template': 'completed.txt',
-    'subject': 'additional email'
+    "from": "adjutant@example.com",
+    "reply": "adjutant@example.com",
+    "template": "initial.txt",
+    "html_template": "completed.txt",
+    "subject": "additional email",
 }
 
 
@@ -40,22 +40,15 @@ class FailEmail(mock.MagicMock):
         raise SMTPException
 
 
-@mock.patch('adjutant.common.user_store.IdentityManager',
-            FakeManager)
+@mock.patch("adjutant.common.user_store.IdentityManager", FakeManager)
 class MiscActionTests(AdjutantTestCase):
-
     def test_send_email(self):
         # include html template
         to_address = "test@example.com"
 
-        task = Task.objects.create(
-            keystone_user={}
-        )
+        task = Task.objects.create(keystone_user={})
 
-        context = {
-            'task': task,
-            'actions': ["action_1", "action_2"]
-        }
+        context = {"task": task, "actions": ["action_1", "action_2"]}
 
         result = send_email(to_address, context, default_email_conf, task)
 
@@ -67,58 +60,53 @@ class MiscActionTests(AdjutantTestCase):
     def test_send_email_no_addresses(self):
         to_address = []
 
-        task = Task.objects.create(
-            keystone_user={}
-        )
+        task = Task.objects.create(keystone_user={})
 
-        context = {
-            'task': task,
-            'actions': ["action_1", "action_2"]
-        }
+        context = {"task": task, "actions": ["action_1", "action_2"]}
 
         result = send_email(to_address, context, default_email_conf, task)
         self.assertEqual(result, None)
         self.assertEqual(len(mail.outbox), 0)
 
-    @mock.patch('adjutant.actions.utils.EmailMultiAlternatives',
-                FailEmail)
+    @mock.patch("adjutant.actions.utils.EmailMultiAlternatives", FailEmail)
     @conf_utils.modify_conf(
         CONF,
         operations={
             "adjutant.workflow.action_defaults.SendAdditionalEmailAction.approve": [
-                {'operation': 'overlay', 'value': {
-                    'email_task_cache': True,
-                    'subject': 'Email Subject',
-                    'template': 'token.txt'
-                }},
+                {
+                    "operation": "overlay",
+                    "value": {
+                        "email_task_cache": True,
+                        "subject": "Email Subject",
+                        "template": "token.txt",
+                    },
+                },
             ],
-        })
+        },
+    )
     def test_send_additional_email_fail(self):
         """
         Tests that a failure to send an additional email doesn't cause
         it to become invalid or break.
         """
 
-        task = Task.objects.create(
-            keystone_user={},
-            task_type='edit_roles',
-        )
+        task = Task.objects.create(keystone_user={}, task_type="edit_roles",)
 
         action = SendAdditionalEmailAction({}, task=task, order=1)
 
         action.prepare()
         self.assertEqual(action.valid, True)
 
-        task.cache["additional_emails"] = ["thisguy@righthere.com",
-                                           "nope@example.com"]
+        task.cache["additional_emails"] = ["thisguy@righthere.com", "nope@example.com"]
 
         action.approve()
         self.assertEqual(action.valid, True)
 
         self.assertEqual(len(mail.outbox), 0)
         self.assertTrue(
-            "Unable to send additional email. Stage: approve" in
-            action.action.task.action_notes['SendAdditionalEmailAction'][1])
+            "Unable to send additional email. Stage: approve"
+            in action.action.task.action_notes["SendAdditionalEmailAction"][1]
+        )
 
         action.submit({})
         self.assertEqual(action.valid, True)
@@ -127,37 +115,39 @@ class MiscActionTests(AdjutantTestCase):
         CONF,
         operations={
             "adjutant.workflow.action_defaults.SendAdditionalEmailAction.approve": [
-                {'operation': 'overlay', 'value': {
-                    'email_task_cache': True,
-                    'subject': 'Email Subject',
-                    'template': 'token.txt'
-                }},
+                {
+                    "operation": "overlay",
+                    "value": {
+                        "email_task_cache": True,
+                        "subject": "Email Subject",
+                        "template": "token.txt",
+                    },
+                },
             ],
-        })
+        },
+    )
     def test_send_additional_email_task_cache(self):
         """
         Tests sending an additional email with the address placed in the
         task cache.
         """
 
-        task = Task.objects.create(
-            keystone_user={}
-        )
+        task = Task.objects.create(keystone_user={})
 
         action = SendAdditionalEmailAction({}, task=task, order=1)
 
         action.prepare()
         self.assertEqual(action.valid, True)
 
-        task.cache["additional_emails"] = ["thisguy@righthere.com",
-                                           "nope@example.com"]
+        task.cache["additional_emails"] = ["thisguy@righthere.com", "nope@example.com"]
 
         action.approve()
         self.assertEqual(action.valid, True)
 
         self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(set(mail.outbox[0].to),
-                         set(["thisguy@righthere.com", "nope@example.com"]))
+        self.assertEqual(
+            set(mail.outbox[0].to), set(["thisguy@righthere.com", "nope@example.com"])
+        )
 
         action.submit({})
         self.assertEqual(action.valid, True)
@@ -167,22 +157,24 @@ class MiscActionTests(AdjutantTestCase):
         CONF,
         operations={
             "adjutant.workflow.action_defaults.SendAdditionalEmailAction.approve": [
-                {'operation': 'overlay', 'value': {
-                    'email_task_cache': True,
-                    'subject': 'Email Subject',
-                    'template': 'token.txt'
-                }},
+                {
+                    "operation": "overlay",
+                    "value": {
+                        "email_task_cache": True,
+                        "subject": "Email Subject",
+                        "template": "token.txt",
+                    },
+                },
             ],
-        })
+        },
+    )
     def test_send_additional_email_task_cache_none_set(self):
         """
         Tests sending an additional email with 'email_task_cache' set but
         no address placed in the task cache.
         """
 
-        task = Task.objects.create(
-            keystone_user={}
-        )
+        task = Task.objects.create(keystone_user={})
 
         action = SendAdditionalEmailAction({}, task=task, order=1)
 
@@ -201,23 +193,24 @@ class MiscActionTests(AdjutantTestCase):
         CONF,
         operations={
             "adjutant.workflow.action_defaults.SendAdditionalEmailAction.approve": [
-                {'operation': 'overlay', 'value': {
-                    'email_additional_addresses': [
-                        'anadminwhocares@example.com'],
-                    'subject': 'Email Subject',
-                    'template': 'token.txt'
-                }},
+                {
+                    "operation": "overlay",
+                    "value": {
+                        "email_additional_addresses": ["anadminwhocares@example.com"],
+                        "subject": "Email Subject",
+                        "template": "token.txt",
+                    },
+                },
             ],
-        })
+        },
+    )
     def test_send_additional_email_email_in_config(self):
         """
         Tests sending an additional email with the address placed in the
         task cache.
         """
 
-        task = Task.objects.create(
-            keystone_user={}
-        )
+        task = Task.objects.create(keystone_user={})
 
         action = SendAdditionalEmailAction({}, task=task, order=1)
 
@@ -228,8 +221,7 @@ class MiscActionTests(AdjutantTestCase):
         self.assertEqual(action.valid, True)
 
         self.assertEqual(len(mail.outbox), 1)
-        self.assertEqual(mail.outbox[0].to,
-                         ["anadminwhocares@example.com"])
+        self.assertEqual(mail.outbox[0].to, ["anadminwhocares@example.com"])
 
         action.submit({})
         self.assertEqual(action.valid, True)

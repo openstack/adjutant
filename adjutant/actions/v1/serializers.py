@@ -32,7 +32,8 @@ class BaseUserNameSerializer(serializers.Serializer):
     """
     A serializer where the user is identified by username/email.
     """
-    domain_id = serializers.CharField(max_length=64, default='default')
+
+    domain_id = serializers.CharField(max_length=64, default="default")
     username = serializers.CharField(max_length=255)
     email = serializers.EmailField()
 
@@ -40,7 +41,7 @@ class BaseUserNameSerializer(serializers.Serializer):
         super(BaseUserNameSerializer, self).__init__(*args, **kwargs)
 
         if CONF.identity.username_is_email:
-            self.fields.pop('username')
+            self.fields.pop("username")
 
 
 class BaseUserIdSerializer(serializers.Serializer):
@@ -53,35 +54,36 @@ class NewUserSerializer(BaseUserNameSerializer):
     def __init__(self, *args, **kwargs):
         super(NewUserSerializer, self).__init__(*args, **kwargs)
         # NOTE(adriant): This overide is mostly in use so that it can be tested
-        self.fields['roles'] = serializers.MultipleChoiceField(
-            choices=get_role_choices(), default=set)
-        self.fields['inherited_roles'] = serializers.MultipleChoiceField(
-            choices=get_role_choices(), default=set)
+        self.fields["roles"] = serializers.MultipleChoiceField(
+            choices=get_role_choices(), default=set
+        )
+        self.fields["inherited_roles"] = serializers.MultipleChoiceField(
+            choices=get_role_choices(), default=set
+        )
 
     def validate(self, data):
-        if not data['roles'] and not data['inherited_roles']:
+        if not data["roles"] and not data["inherited_roles"]:
             raise serializers.ValidationError(
-                "Must supply either 'roles' or 'inherited_roles', or both.")
+                "Must supply either 'roles' or 'inherited_roles', or both."
+            )
 
         return data
 
 
 class NewProjectSerializer(serializers.Serializer):
-    parent_id = serializers.CharField(
-        max_length=64, default=None, allow_null=True)
+    parent_id = serializers.CharField(max_length=64, default=None, allow_null=True)
     project_name = serializers.CharField(max_length=64)
-    domain_id = serializers.CharField(max_length=64, default='default')
+    domain_id = serializers.CharField(max_length=64, default="default")
     description = serializers.CharField(default="", allow_blank=True)
 
 
 class NewProjectWithUserSerializer(BaseUserNameSerializer):
-    parent_id = serializers.CharField(
-        max_length=64, default=None, allow_null=True)
+    parent_id = serializers.CharField(max_length=64, default=None, allow_null=True)
     project_name = serializers.CharField(max_length=64)
 
 
 class ResetUserPasswordSerializer(BaseUserNameSerializer):
-    domain_name = serializers.CharField(max_length=64, default='Default')
+    domain_name = serializers.CharField(max_length=64, default="Default")
     # override domain_id so serializer doesn't set it up.
     domain_id = None
 
@@ -93,15 +95,18 @@ class EditUserRolesSerializer(BaseUserIdSerializer):
     def __init__(self, *args, **kwargs):
         super(EditUserRolesSerializer, self).__init__(*args, **kwargs)
         # NOTE(adriant): This overide is mostly in use so that it can be tested
-        self.fields['roles'] = serializers.MultipleChoiceField(
-            choices=get_role_choices(), default=set)
-        self.fields['inherited_roles'] = serializers.MultipleChoiceField(
-            choices=get_role_choices(), default=set)
+        self.fields["roles"] = serializers.MultipleChoiceField(
+            choices=get_role_choices(), default=set
+        )
+        self.fields["inherited_roles"] = serializers.MultipleChoiceField(
+            choices=get_role_choices(), default=set
+        )
 
     def validate(self, data):
-        if not data['roles'] and not data['inherited_roles']:
+        if not data["roles"] and not data["inherited_roles"]:
             raise serializers.ValidationError(
-                "Must supply either 'roles' or 'inherited_roles', or both.")
+                "Must supply either 'roles' or 'inherited_roles', or both."
+            )
 
         return data
 
@@ -118,7 +123,7 @@ class NewProjectDefaultNetworkSerializer(serializers.Serializer):
 
 
 class AddDefaultUsersToProjectSerializer(serializers.Serializer):
-    domain_id = serializers.CharField(max_length=64, default='default')
+    domain_id = serializers.CharField(max_length=64, default="default")
 
 
 class SetProjectQuotaSerializer(serializers.Serializer):
@@ -142,8 +147,9 @@ class UpdateProjectQuotasSerializer(serializers.Serializer):
         # NOTE(amelia): This overide is mostly in use so that it can be tested
         # However it does take into account the improbable edge case that the
         # regions have changed since the server was last started
-        self.fields['regions'] = serializers.MultipleChoiceField(
-            choices=get_region_choices())
+        self.fields["regions"] = serializers.MultipleChoiceField(
+            choices=get_region_choices()
+        )
 
     def validate_size(self, value):
         """
@@ -151,6 +157,5 @@ class UpdateProjectQuotasSerializer(serializers.Serializer):
         """
         size_list = CONF.quota.sizes.keys()
         if value not in size_list:
-            raise serializers.ValidationError("Quota size: %s is not valid"
-                                              % value)
+            raise serializers.ValidationError("Quota size: %s is not valid" % value)
         return value

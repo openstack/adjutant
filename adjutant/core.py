@@ -36,28 +36,23 @@ class AdjutantCore(BaseFeatureSet):
         project_actions.NewProjectWithUserAction,
         project_actions.NewProjectAction,
         project_actions.AddDefaultUsersToProjectAction,
-
         resource_actions.NewDefaultNetworkAction,
         resource_actions.NewProjectDefaultNetworkAction,
         resource_actions.SetProjectQuotaAction,
         resource_actions.UpdateProjectQuotasAction,
-
         user_actions.NewUserAction,
         user_actions.ResetUserPasswordAction,
         user_actions.EditUserRolesAction,
         user_actions.UpdateUserEmailAction,
-
         misc_actions.SendAdditionalEmailAction,
     ]
 
     tasks = [
         project_tasks.CreateProjectAndUser,
-
         user_tasks.EditUserRoles,
         user_tasks.InviteUser,
         user_tasks.ResetUserPassword,
         user_tasks.UpdateUserEmail,
-
         resource_tasks.UpdateProjectQuotas,
     ]
 
@@ -67,7 +62,6 @@ class AdjutantCore(BaseFeatureSet):
         task_apis.ResetPassword,
         task_apis.EditUser,
         task_apis.UpdateEmail,
-
         openstack_apis.UserList,
         openstack_apis.UserDetail,
         openstack_apis.UserRoles,

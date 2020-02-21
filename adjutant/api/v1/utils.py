@@ -31,7 +31,7 @@ def parse_filters(func, *args, **kwargs):
     BE AWARE! WILL NOT WORK UNLESS POSITIONAL ARGUMENT 3 IS FILTERS!
     """
     request = args[1]
-    filters = request.query_params.get('filters', None)
+    filters = request.query_params.get("filters", None)
 
     if not filters:
         return func(*args, **kwargs)
@@ -40,14 +40,16 @@ def parse_filters(func, *args, **kwargs):
         filters = json.loads(filters)
         for field, operations in filters.items():
             for operation, value in operations.items():
-                cleaned_filters['%s__%s' % (field, operation)] = value
+                cleaned_filters["%s__%s" % (field, operation)] = value
     except (ValueError, AttributeError):
         return Response(
-            {'errors': [
-                "Filters incorrectly formatted. Required format: "
-                "{'filters': {'fieldname': { 'operation': 'value'}}"
-            ]},
-            status=400
+            {
+                "errors": [
+                    "Filters incorrectly formatted. Required format: "
+                    "{'filters': {'fieldname': { 'operation': 'value'}}"
+                ]
+            },
+            status=400,
         )
 
     try:
@@ -57,4 +59,4 @@ def parse_filters(func, *args, **kwargs):
         args[2] = cleaned_filters
         return func(*args, **kwargs)
     except FieldError as e:
-        return Response({'errors': [str(e)]}, status=400)
+        return Response({"errors": [str(e)]}, status=400)

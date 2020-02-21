@@ -49,7 +49,7 @@ config_group.register_child_config(
     fields.StrConfig(
         "secure_proxy_ssl_header",
         help_text="The header representing a HTTP header/value combination "
-                  "that signifies a request is secure.",
+        "that signifies a request is secure.",
         default="HTTP_X_FORWARDED_PROTO",
     )
 )
@@ -57,7 +57,7 @@ config_group.register_child_config(
     fields.StrConfig(
         "secure_proxy_ssl_header_value",
         help_text="The value representing a HTTP header/value combination "
-                  "that signifies a request is secure.",
+        "that signifies a request is secure.",
         default="https",
     )
 )
@@ -83,7 +83,7 @@ config_group.register_child_config(
     fields.StrConfig(
         "log_file",
         help_text="The name and location of the Adjutant log file, "
-                  "superceded by 'adjutant.django.logging'.",
+        "superceded by 'adjutant.django.logging'.",
         default="adjutant.log",
     )
 )

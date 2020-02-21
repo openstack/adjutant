@@ -38,14 +38,14 @@ application = get_wsgi_application()
 # the Keystone Auth Middleware.
 conf = {
     "auth_plugin": "password",
-    'username': CONF.identity.auth.username,
-    'password': CONF.identity.auth.password,
-    'project_name': CONF.identity.auth.project_name,
+    "username": CONF.identity.auth.username,
+    "password": CONF.identity.auth.password,
+    "project_name": CONF.identity.auth.project_name,
     "project_domain_id": CONF.identity.auth.project_domain_id,
     "user_domain_id": CONF.identity.auth.user_domain_id,
     "auth_url": CONF.identity.auth.auth_url,
-    'delay_auth_decision': True,
-    'include_service_catalog': False,
-    'token_cache_time': CONF.identity.token_cache_time,
+    "delay_auth_decision": True,
+    "include_service_catalog": False,
+    "token_cache_time": CONF.identity.token_cache_time,
 }
 application = AuthProtocol(application, conf)

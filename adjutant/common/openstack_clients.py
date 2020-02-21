@@ -56,38 +56,25 @@ def get_auth_session():
 
 
 def get_keystoneclient(version=DEFAULT_IDENTITY_VERSION):
-    return ks_client.Client(
-        version,
-        session=get_auth_session())
+    return ks_client.Client(version, session=get_auth_session())
 
 
 def get_neutronclient(region):
     # always returns neutron client v2
-    return neutronclient.Client(
-        session=get_auth_session(),
-        region_name=region)
+    return neutronclient.Client(session=get_auth_session(), region_name=region)
 
 
 def get_novaclient(region, version=DEFAULT_COMPUTE_VERSION):
-    return novaclient.Client(
-        version,
-        session=get_auth_session(),
-        region_name=region)
+    return novaclient.Client(version, session=get_auth_session(), region_name=region)
 
 
 def get_cinderclient(region, version=DEFAULT_VOLUME_VERSION):
-    return cinderclient.Client(
-        version,
-        session=get_auth_session(),
-        region_name=region)
+    return cinderclient.Client(version, session=get_auth_session(), region_name=region)
 
 
 def get_octaviaclient(region):
     ks = get_keystoneclient()
 
-    service = ks.services.list(name='octavia')[0]
-    endpoint = ks.endpoints.list(service=service,
-                                 region=region, interface='public')[0]
-    return octavia.OctaviaAPI(
-        session=get_auth_session(),
-        endpoint=endpoint.url)
+    service = ks.services.list(name="octavia")[0]
+    endpoint = ks.endpoints.list(service=service, region=region, interface="public")[0]
+    return octavia.OctaviaAPI(session=get_auth_session(), endpoint=endpoint.url)

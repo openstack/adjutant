@@ -31,8 +31,8 @@ class Task(models.Model):
     Stores the state of the Task and a log for the
     action.
     """
-    uuid = models.CharField(max_length=32, default=hex_uuid,
-                            primary_key=True)
+
+    uuid = models.CharField(max_length=32, default=hex_uuid, primary_key=True)
     hash_key = models.CharField(max_length=64)
 
     # who is this:
@@ -61,13 +61,12 @@ class Task(models.Model):
 
     class Meta:
         indexes = [
-            models.Index(fields=['completed'], name='completed_idx'),
-            models.Index(fields=['project_id', 'uuid']),
-            models.Index(fields=['project_id', 'task_type']),
-            models.Index(fields=['project_id', 'task_type', 'cancelled']),
-            models.Index(fields=[
-                'project_id', 'task_type', 'completed', 'cancelled']),
-            models.Index(fields=['hash_key', 'completed', 'cancelled']),
+            models.Index(fields=["completed"], name="completed_idx"),
+            models.Index(fields=["project_id", "uuid"]),
+            models.Index(fields=["project_id", "task_type"]),
+            models.Index(fields=["project_id", "task_type", "cancelled"]),
+            models.Index(fields=["project_id", "task_type", "completed", "cancelled"]),
+            models.Index(fields=["hash_key", "completed", "cancelled"]),
         ]
 
     def __init__(self, *args, **kwargs):
@@ -89,7 +88,7 @@ class Task(models.Model):
 
     @property
     def actions(self):
-        return self.action_set.order_by('order')
+        return self.action_set.order_by("order")
 
     @property
     def tokens(self):
@@ -102,11 +101,13 @@ class Task(models.Model):
     def to_dict(self):
         actions = []
         for action in self.actions:
-            actions.append({
-                "action_name": action.action_name,
-                "data": action.action_data,
-                "valid": action.valid
-            })
+            actions.append(
+                {
+                    "action_name": action.action_name,
+                    "data": action.action_data,
+                    "valid": action.valid,
+                }
+            )
 
         return {
             "uuid": self.uuid,

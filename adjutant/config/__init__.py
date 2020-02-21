@@ -40,13 +40,13 @@ _old_config_file = "/etc/adjutant/conf.yaml"
 
 _test_mode_commands = [
     # Adjutant commands:
-    'exampleconfig',
+    "exampleconfig",
     # Django commands:
-    'check',
-    'makemigrations',
-    'squashmigrations',
-    'test',
-    'testserver',
+    "check",
+    "makemigrations",
+    "squashmigrations",
+    "test",
+    "testserver",
 ]
 
 
@@ -81,7 +81,11 @@ def _load_config():
                     % conf_file_loc
                 )
 
-    if used_config_loc != conf_file and used_config_loc == _old_config_file and not test_mode:
+    if (
+        used_config_loc != conf_file
+        and used_config_loc == _old_config_file
+        and not test_mode
+    ):
         print(
             "DEPRECATED: Using the old default config location '%s' is deprecated "
             "in favor of '%s', or setting a config location via the environment "

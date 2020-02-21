@@ -27,10 +27,16 @@ octavia_cache = {}
 
 
 class FakeProject(object):
-
-    def __init__(self, name, description="",
-                 domain_id='default', parent_id=None,
-                 enabled=True, is_domain=False, **kwargs):
+    def __init__(
+        self,
+        name,
+        description="",
+        domain_id="default",
+        parent_id=None,
+        enabled=True,
+        is_domain=False,
+        **kwargs,
+    ):
         self.id = uuid4().hex
         self.name = name
         self.description = description
@@ -45,10 +51,15 @@ class FakeProject(object):
 
 
 class FakeUser(object):
-
-    def __init__(self, name, password="123", domain_id='default',
-                 enabled=True, default_project_id=None,
-                 **kwargs):
+    def __init__(
+        self,
+        name,
+        password="123",
+        domain_id="default",
+        enabled=True,
+        default_project_id=None,
+        **kwargs,
+    ):
         self.id = uuid4().hex
         self.name = name
         self.password = password
@@ -62,14 +73,12 @@ class FakeUser(object):
 
 
 class FakeRole(object):
-
     def __init__(self, name):
         self.id = uuid4().hex
         self.name = name
 
 
 class FakeCredential(object):
-
     def __init__(self, user_id, cred_type, blob, project_id=None):
         self.id = uuid4().hex
         self.user_id = user_id
@@ -79,27 +88,28 @@ class FakeCredential(object):
 
 
 class FakeRoleAssignment(object):
-
-    def __init__(self, scope, role=None, role_name=None, user=None,
-                 group=None, inherited=False):
+    def __init__(
+        self, scope, role=None, role_name=None, user=None, group=None, inherited=False
+    ):
         if role:
             self.role = role
         elif role_name:
-            self.role = {'name': role_name}
+            self.role = {"name": role_name}
         else:
             raise AttributeError("must supply 'role' or 'role_name'.")
         self.scope = scope
         self.user = user
         self.group = group
         if inherited:
-            self.scope['OS-INHERIT:inherited_to'] = "projects"
+            self.scope["OS-INHERIT:inherited_to"] = "projects"
 
     def __eq__(self, other):
         return self.__dict__ == other.__dict__
 
 
-def setup_identity_cache(projects=None, users=None, role_assignments=None,
-                         credentials=None, extra_roles=None):
+def setup_identity_cache(
+    projects=None, users=None, role_assignments=None, credentials=None, extra_roles=None
+):
     if extra_roles is None:
         extra_roles = []
     if not projects:
@@ -111,15 +121,17 @@ def setup_identity_cache(projects=None, users=None, role_assignments=None,
     if not credentials:
         credentials = []
 
-    default_domain = FakeProject(
-        name="Default", is_domain=True)
-    default_domain.id = 'default'
+    default_domain = FakeProject(name="Default", is_domain=True)
+    default_domain.id = "default"
 
     projects.append(default_domain)
 
     admin_user = FakeUser(
-        name="admin", password="password", email="admin@example.com",
-        domain_id=default_domain.id)
+        name="admin",
+        password="password",
+        email="admin@example.com",
+        domain_id=default_domain.id,
+    )
 
     users.append(admin_user)
 
@@ -132,34 +144,28 @@ def setup_identity_cache(projects=None, users=None, role_assignments=None,
     ] + extra_roles
 
     region_one = mock.Mock()
-    region_one.id = 'RegionOne'
+    region_one.id = "RegionOne"
 
     region_two = mock.Mock()
-    region_two.id = 'RegionTwo'
+    region_two.id = "RegionTwo"
 
     global identity_cache
 
     identity_cache = {
-        'users': {u.id: u for u in users},
-        'new_users': [],
-        'projects': {p.id: p for p in projects},
-        'new_projects': [],
-        'role_assignments': role_assignments,
-        'new_role_assignments': [],
-        'roles': {r.id: r for r in roles},
-        'regions': {
-            'RegionOne': region_one,
-            'RegionTwo': region_two
-        },
-        'domains': {
-            default_domain.id: default_domain,
-        },
-        'credentials': credentials,
+        "users": {u.id: u for u in users},
+        "new_users": [],
+        "projects": {p.id: p for p in projects},
+        "new_projects": [],
+        "role_assignments": role_assignments,
+        "new_role_assignments": [],
+        "roles": {r.id: r for r in roles},
+        "regions": {"RegionOne": region_one, "RegionTwo": region_two},
+        "domains": {default_domain.id: default_domain,},
+        "credentials": credentials,
     }
 
 
 class FakeManager(object):
-
     def __init__(self):
         # TODO(adriant): decide if we want to have some function calls
         # throw errors if this is false.
@@ -192,34 +198,33 @@ class FakeManager(object):
     def find_user(self, name, domain):
         domain = self._domain_from_id(domain)
         global identity_cache
-        for user in identity_cache['users'].values():
-            if (user.name.lower() == name.lower()
-                    and user.domain_id == domain.id):
+        for user in identity_cache["users"].values():
+            if user.name.lower() == name.lower() and user.domain_id == domain.id:
                 return user
         return None
 
     def get_user(self, user_id):
         global identity_cache
-        return identity_cache['users'].get(user_id, None)
+        return identity_cache["users"].get(user_id, None)
 
     def list_users(self, project):
         project = self._project_from_id(project)
         global identity_cache
         users = {}
 
-        for assignment in identity_cache['role_assignments']:
-            if assignment.scope['project']['id'] == project.id:
+        for assignment in identity_cache["role_assignments"]:
+            if assignment.scope["project"]["id"] == project.id:
 
-                user = users.get(assignment.user['id'])
+                user = users.get(assignment.user["id"])
                 if not user:
-                    user = self.get_user(assignment.user['id'])
+                    user = self.get_user(assignment.user["id"])
                     user.roles = []
                     user.inherited_roles = []
                     users[user.id] = user
 
-                r = self.find_role(assignment.role['name'])
+                r = self.find_role(assignment.role["name"])
 
-                if assignment.scope.get('OS-INHERIT:inherited_to'):
+                if assignment.scope.get("OS-INHERIT:inherited_to"):
                     user.inherited_roles.append(r)
                 else:
                     user.roles.append(r)
@@ -233,34 +238,39 @@ class FakeManager(object):
 
         while project.parent_id:
             project = self._project_from_id(project.parent_id)
-            for assignment in identity_cache['role_assignments']:
-                if assignment.scope['project']['id'] == project.id:
-                    if not assignment.scope.get('OS-INHERIT:inherited_to'):
+            for assignment in identity_cache["role_assignments"]:
+                if assignment.scope["project"]["id"] == project.id:
+                    if not assignment.scope.get("OS-INHERIT:inherited_to"):
                         continue
 
-                    user = users.get(assignment.user['id'])
+                    user = users.get(assignment.user["id"])
                     if not user:
-                        user = self.get_user(assignment.user['id'])
+                        user = self.get_user(assignment.user["id"])
                         user.roles = []
                         user.inherited_roles = []
                         users[user.id] = user
 
-                    r = self.find_role(assignment.role['name'])
+                    r = self.find_role(assignment.role["name"])
 
                     user.roles.append(r)
 
         return users.values()
 
-    def create_user(self, name, password, email, created_on,
-                    domain='default', default_project=None):
+    def create_user(
+        self, name, password, email, created_on, domain="default", default_project=None
+    ):
         domain = self._domain_from_id(domain)
         default_project = self._project_from_id(default_project)
         global identity_cache
         user = FakeUser(
-            name=name, password=password, email=email,
-            domain_id=domain.id, default_project=default_project)
-        identity_cache['users'][user.id] = user
-        identity_cache['new_users'].append(user)
+            name=name,
+            password=password,
+            email=email,
+            domain_id=domain.id,
+            default_project=default_project,
+        )
+        identity_cache["users"][user.id] = user
+        identity_cache["new_users"].append(user)
         return user
 
     def update_user_password(self, user, password):
@@ -285,7 +295,7 @@ class FakeManager(object):
 
     def find_role(self, name):
         global identity_cache
-        for role in identity_cache['roles'].values():
+        for role in identity_cache["roles"].values():
             if role.name == name:
                 return role
         return None
@@ -297,17 +307,20 @@ class FakeManager(object):
 
         roles = []
 
-        for assignment in identity_cache['role_assignments']:
-            if (assignment.user['id'] == user.id
-                    and assignment.scope['project']['id'] == project.id):
+        for assignment in identity_cache["role_assignments"]:
+            if (
+                assignment.user["id"] == user.id
+                and assignment.scope["project"]["id"] == project.id
+            ):
 
-                if (assignment.scope.get('OS-INHERIT:inherited_to') and not
-                        inherited) or (
-                            inherited and not
-                            assignment.scope.get('OS-INHERIT:inherited_to')):
+                if (
+                    assignment.scope.get("OS-INHERIT:inherited_to") and not inherited
+                ) or (
+                    inherited and not assignment.scope.get("OS-INHERIT:inherited_to")
+                ):
                     continue
 
-                r = self.find_role(assignment.role['name'])
+                r = self.find_role(assignment.role["name"])
                 roles.append(r)
 
         return roles
@@ -319,25 +332,21 @@ class FakeManager(object):
         user = self._user_from_id(user)
         global identity_cache
         projects = {}
-        for assignment in identity_cache['role_assignments']:
-            if assignment.user['id'] == user.id:
-                r = self.find_role(assignment.role['name'])
+        for assignment in identity_cache["role_assignments"]:
+            if assignment.user["id"] == user.id:
+                r = self.find_role(assignment.role["name"])
                 try:
-                    projects[assignment.scope['project']['id']].append(r)
+                    projects[assignment.scope["project"]["id"]].append(r)
                 except KeyError:
-                    projects[assignment.scope['project']['id']] = [r]
+                    projects[assignment.scope["project"]["id"]] = [r]
         return projects
 
     def _make_role_assignment(self, user, role, project, inherited=False):
-        scope = {
-            'project': {
-                'id': project.id}}
+        scope = {"project": {"id": project.id}}
         if inherited:
-            scope['OS-INHERIT:inherited_to'] = "projects"
+            scope["OS-INHERIT:inherited_to"] = "projects"
         role_assignment = FakeRoleAssignment(
-            scope=scope,
-            role={"name": role.name},
-            user={'id': user.id},
+            scope=scope, role={"name": role.name}, user={"id": user.id},
         )
         return role_assignment
 
@@ -350,45 +359,51 @@ class FakeManager(object):
 
         global identity_cache
 
-        if role_assignment not in identity_cache['role_assignments']:
-            identity_cache['role_assignments'].append(role_assignment)
-            identity_cache['new_role_assignments'].append(role_assignment)
+        if role_assignment not in identity_cache["role_assignments"]:
+            identity_cache["role_assignments"].append(role_assignment)
+            identity_cache["new_role_assignments"].append(role_assignment)
 
     def remove_user_role(self, user, role, project, inherited=False):
         user = self._user_from_id(user)
         role = self._role_from_id(role)
         project = self._project_from_id(project)
 
-        role_assignment = self._make_role_assignment(user, role, project,
-                                                     inherited=inherited)
+        role_assignment = self._make_role_assignment(
+            user, role, project, inherited=inherited
+        )
 
         global identity_cache
 
-        if role_assignment in identity_cache['role_assignments']:
-            identity_cache['role_assignments'].remove(role_assignment)
+        if role_assignment in identity_cache["role_assignments"]:
+            identity_cache["role_assignments"].remove(role_assignment)
 
     def find_project(self, project_name, domain):
         domain = self._domain_from_id(domain)
         global identity_cache
-        for project in identity_cache['projects'].values():
-            if (project.name.lower() == project_name.lower()
-                    and project.domain_id == domain.id):
+        for project in identity_cache["projects"].values():
+            if (
+                project.name.lower() == project_name.lower()
+                and project.domain_id == domain.id
+            ):
                 return project
         return None
 
-    def get_project(self, project_id, subtree_as_ids=False,
-                    parents_as_ids=False):
+    def get_project(self, project_id, subtree_as_ids=False, parents_as_ids=False):
         global identity_cache
-        project = identity_cache['projects'].get(project_id, None)
+        project = identity_cache["projects"].get(project_id, None)
 
         if subtree_as_ids:
             subtree_list = []
-            prev_layer = [project.id, ]
+            prev_layer = [
+                project.id,
+            ]
             current_layer = True
             while current_layer:
-                current_layer = [s_project.id for s_project in
-                                 identity_cache['projects'].values()
-                                 if project.parent_id in prev_layer]
+                current_layer = [
+                    s_project.id
+                    for s_project in identity_cache["projects"].values()
+                    if project.parent_id in prev_layer
+                ]
                 prev_layer = current_layer
                 subtree_list.append(current_layer)
 
@@ -398,8 +413,8 @@ class FakeManager(object):
             parent_list = []
             parent_id = project.parent_id
             parent_list.append(parent_id)
-            while identity_cache['projects'].get(parent_id, None):
-                parent_id = identity_cache['projects'].get(parent_id, None)
+            while identity_cache["projects"].get(parent_id, None):
+                parent_id = identity_cache["projects"].get(parent_id, None)
                 parent_list.append(parent_id)
 
             project.parent_ids = parent_list
@@ -408,20 +423,23 @@ class FakeManager(object):
 
         return project
 
-    def create_project(self, project_name, created_on, parent=None,
-                       domain='default', description=""):
+    def create_project(
+        self, project_name, created_on, parent=None, domain="default", description=""
+    ):
         parent = self._project_from_id(parent)
         domain = self._domain_from_id(domain)
         global identity_cache
 
         project = FakeProject(
-            name=project_name, created_on=created_on, description=description,
-            domain_id=domain.id
+            name=project_name,
+            created_on=created_on,
+            description=description,
+            domain_id=domain.id,
         )
         if parent:
             project.parent_id = parent.id
-        identity_cache['projects'][project.id] = project
-        identity_cache['new_projects'].append(project)
+        identity_cache["projects"][project.id] = project
+        identity_cache["new_projects"].append(project)
         return project
 
     def update_project(self, project, **kwargs):
@@ -433,27 +451,27 @@ class FakeManager(object):
 
     def find_domain(self, domain_name):
         global identity_cache
-        for domain in identity_cache['domains'].values():
+        for domain in identity_cache["domains"].values():
             if domain.name.lower() == domain_name.lower():
                 return domain
         return None
 
     def get_domain(self, domain_id):
         global identity_cache
-        return identity_cache['domains'].get(domain_id, None)
+        return identity_cache["domains"].get(domain_id, None)
 
     def get_region(self, region_id):
         global identity_cache
-        return identity_cache['regions'].get(region_id, None)
+        return identity_cache["regions"].get(region_id, None)
 
     def list_regions(self):
         global identity_cache
-        return identity_cache['regions'].values()
+        return identity_cache["regions"].values()
 
     def list_credentials(self, user_id, cred_type=None):
         global identity_cache
         found = []
-        for cred in identity_cache['credentials']:
+        for cred in identity_cache["credentials"]:
             if cred.user_id == user_id:
                 if cred_type and cred.type == cred_type:
                     found.append(cred)
@@ -465,21 +483,20 @@ class FakeManager(object):
         global identity_cache
         user = self._user_from_id(user)
         project = self._project_from_id(project)
-        cred = FakeCredential(
-            user_id=user.id, blob=blob, cred_type=cred_type)
+        cred = FakeCredential(user_id=user.id, blob=blob, cred_type=cred_type)
         if project:
             cred.project_id = project.id
-        identity_cache['credentials'].append(cred)
+        identity_cache["credentials"].append(cred)
         return cred
 
     def clear_credential_type(self, user_id, cred_type):
         global identity_cache
         found = []
-        for cred in identity_cache['credentials']:
+        for cred in identity_cache["credentials"]:
             if cred.user_id == user_id and cred.type == cred_type:
                 found.append(cred)
         for cred in found:
-            identity_cache['credentials'].remove(cred)
+            identity_cache["credentials"].remove(cred)
 
     # TODO(adriant): Move this to a BaseIdentityManager class when
     #                it exists.
@@ -499,9 +516,12 @@ class FakeManager(object):
             return list(set(all_roles))
 
         # merge mapping lists to form a flat permitted roles list
-        manageable_role_names = [mrole for role_name in user_roles
-                                 if role_name in roles_mapping
-                                 for mrole in roles_mapping[role_name]]
+        manageable_role_names = [
+            mrole
+            for role_name in user_roles
+            if role_name in roles_mapping
+            for mrole in roles_mapping[role_name]
+        ]
         # a set has unique items
         manageable_role_names = set(manageable_role_names)
         return manageable_role_names
@@ -510,6 +530,7 @@ class FakeManager(object):
 class FakeOpenstackClient(object):
     class Quotas(object):
         """ Stub class for testing quotas """
+
         def __init__(self, service):
             self.service = service
 
@@ -518,7 +539,8 @@ class FakeOpenstackClient(object):
 
         def get(self, project_id):
             return self.QuotaSet(
-                self.service._cache[self.service.region][project_id]['quota'])
+                self.service._cache[self.service.region][project_id]["quota"]
+            )
 
         class QuotaSet(object):
             def __init__(self, data):
@@ -536,58 +558,66 @@ class FakeOpenstackClient(object):
         if self.region not in self._cache:
             self._cache[self.region] = {}
         if project_id not in self._cache[self.region]:
-            self._cache[self.region][project_id] = {
-                'quota': {}
-            }
-        quota = self._cache[self.region][project_id]['quota']
+            self._cache[self.region][project_id] = {"quota": {}}
+        quota = self._cache[self.region][project_id]["quota"]
         quota.update(kwargs)
 
 
 class FakeNeutronClient(object):
-
     def __init__(self, region):
         self.region = region
 
     def create_network(self, body):
         global neutron_cache
-        project_id = body['network']['tenant_id']
-        net = {'network': {'id': 'net_id_%s' % neutron_cache['RegionOne']['i'],
-                           'body': body}}
-        net_id = net['network']['id']
-        neutron_cache['RegionOne'][project_id]['networks'][net_id] = net
-        neutron_cache['RegionOne']['i'] += 1
+        project_id = body["network"]["tenant_id"]
+        net = {
+            "network": {
+                "id": "net_id_%s" % neutron_cache["RegionOne"]["i"],
+                "body": body,
+            }
+        }
+        net_id = net["network"]["id"]
+        neutron_cache["RegionOne"][project_id]["networks"][net_id] = net
+        neutron_cache["RegionOne"]["i"] += 1
         return net
 
     def create_subnet(self, body):
         global neutron_cache
-        project_id = body['subnet']['tenant_id']
-        subnet = {'subnet': {'id': 'subnet_id_%s'
-                             % neutron_cache['RegionOne']['i'],
-                             'body': body}}
-        sub_id = subnet['subnet']['id']
-        neutron_cache['RegionOne'][project_id]['subnets'][sub_id] = subnet
-        neutron_cache['RegionOne']['i'] += 1
+        project_id = body["subnet"]["tenant_id"]
+        subnet = {
+            "subnet": {
+                "id": "subnet_id_%s" % neutron_cache["RegionOne"]["i"],
+                "body": body,
+            }
+        }
+        sub_id = subnet["subnet"]["id"]
+        neutron_cache["RegionOne"][project_id]["subnets"][sub_id] = subnet
+        neutron_cache["RegionOne"]["i"] += 1
         return subnet
 
     def create_router(self, body):
         global neutron_cache
-        project_id = body['router']['tenant_id']
-        router = {'router': {'id': 'router_id_%s'
-                             % neutron_cache['RegionOne']['i'],
-                             'body': body}}
-        router_id = router['router']['id']
-        neutron_cache['RegionOne'][project_id]['routers'][router_id] = router
-        neutron_cache['RegionOne']['i'] += 1
+        project_id = body["router"]["tenant_id"]
+        router = {
+            "router": {
+                "id": "router_id_%s" % neutron_cache["RegionOne"]["i"],
+                "body": body,
+            }
+        }
+        router_id = router["router"]["id"]
+        neutron_cache["RegionOne"][project_id]["routers"][router_id] = router
+        neutron_cache["RegionOne"]["i"] += 1
         return router
 
     def add_interface_router(self, router_id, body):
         global neutron_cache
-        port_id = "port_id_%s" % neutron_cache['RegionOne']['i']
-        neutron_cache['RegionOne']['i'] += 1
+        port_id = "port_id_%s" % neutron_cache["RegionOne"]["i"]
+        neutron_cache["RegionOne"]["i"] += 1
         interface = {
-            'port_id': port_id,
-            'id': router_id,
-            'subnet_id': body['subnet_id']}
+            "port_id": port_id,
+            "id": router_id,
+            "subnet_id": body["subnet_id"],
+        }
         return interface
 
     def update_quota(self, project_id, body):
@@ -597,14 +627,14 @@ class FakeNeutronClient(object):
         if project_id not in neutron_cache[self.region]:
             neutron_cache[self.region][project_id] = {}
 
-        if 'quota' not in neutron_cache[self.region][project_id]:
-            neutron_cache[self.region][project_id]['quota'] = {}
+        if "quota" not in neutron_cache[self.region][project_id]:
+            neutron_cache[self.region][project_id]["quota"] = {}
 
-        quota = neutron_cache[self.region][project_id]['quota']
-        quota.update(body['quota'])
+        quota = neutron_cache[self.region][project_id]["quota"]
+        quota.update(body["quota"])
 
     def show_quota(self, project_id):
-        return {"quota": neutron_cache[self.region][project_id]['quota']}
+        return {"quota": neutron_cache[self.region][project_id]["quota"]}
 
     def list_networks(self, tenant_id):
         return neutron_cache[self.region][tenant_id]
@@ -630,11 +660,13 @@ class FakeNeutronClient(object):
 
 class FakeOctaviaClient(object):
     # {name in client call: name in response}
-    resource_dict = {'load_balancer': 'loadbalancers',
-                     'listener': 'listeners',
-                     'member': 'members',
-                     'pool': 'pools',
-                     'health_monitor': 'healthmonitors'}
+    resource_dict = {
+        "load_balancer": "loadbalancers",
+        "listener": "listeners",
+        "member": "members",
+        "pool": "pools",
+        "health_monitor": "healthmonitors",
+    }
 
     # NOTE(amelia): Using the current octavia client we will get back
     #               dicts for everything, rather than the resources the
@@ -651,15 +683,15 @@ class FakeOctaviaClient(object):
 
     def quota_show(self, project_id):
         self._ensure_project_exists(project_id)
-        quota = self.cache.get(project_id, {}).get('quota', [])
+        quota = self.cache.get(project_id, {}).get("quota", [])
         for item in self.resource_dict:
             if item not in quota:
                 quota[item] = None
-        return {'quota': quota}
+        return {"quota": quota}
 
     def quota_set(self, project_id, json):
         self._ensure_project_exists(project_id)
-        self.cache[project_id]['quota'] = json['quota']
+        self.cache[project_id]["quota"] = json["quota"]
 
     def quota_defaults_show(self):
         return {
@@ -668,7 +700,7 @@ class FakeOctaviaClient(object):
                 "listener": -1,
                 "member": 50,
                 "pool": -1,
-                "health_monitor": -1
+                "health_monitor": -1,
             }
         }
 
@@ -676,29 +708,27 @@ class FakeOctaviaClient(object):
         def action(project_id=None):
             self._ensure_project_exists(project_id)
             resource = self.cache.get(project_id, {}).get(resource_type, [])
-            links_name = resource_type + '_links'
+            links_name = resource_type + "_links"
             resource_name = self.resource_dict[resource_type]
             return {resource_name: resource, links_name: []}
+
         return action
 
     def _ensure_project_exists(self, project_id):
         if project_id not in self.cache:
-            self.cache[project_id] = {
-                name: [] for name in self.resource_dict.keys()}
-            self.cache[project_id]['quota'] = dict(
-                CONF.quota.sizes['small']['octavia'])
+            self.cache[project_id] = {name: [] for name in self.resource_dict.keys()}
+            self.cache[project_id]["quota"] = dict(CONF.quota.sizes["small"]["octavia"])
 
     def __getattr__(self, name):
         # NOTE(amelia): This is out of pure laziness
         global octavia_cache
-        if name[-5:] == '_list' and name[:-5] in self.resource_dict:
+        if name[-5:] == "_list" and name[:-5] in self.resource_dict:
             return self.lister(name[:-5])
         else:
             raise AttributeError
 
 
 class FakeNovaClient(FakeOpenstackClient):
-
     def __init__(self, region):
         global nova_cache
         super(FakeNovaClient, self).__init__(region, nova_cache)
@@ -730,7 +760,7 @@ class FakeCinderClient(FakeOpenstackClient):
 
         def list(self, search_opts=None):
             if search_opts:
-                project_id = search_opts['project_id']
+                project_id = search_opts["project_id"]
                 global cinder_cache
                 return cinder_cache[self.region][project_id][self.key]
 
@@ -739,9 +769,8 @@ class FakeCinderClient(FakeOpenstackClient):
         self.region = region
         self._cache = cinder_cache
         self.quotas = FakeOpenstackClient.Quotas(self)
-        self.volumes = self.FakeResourceGroup(region, 'volumes')
-        self.volume_snapshots = self.FakeResourceGroup(region,
-                                                       'volume_snapshots')
+        self.volumes = self.FakeResourceGroup(region, "volumes")
+        self.volume_snapshots = self.FakeResourceGroup(region, "volume_snapshots")
 
 
 class FakeResource(object):
@@ -755,24 +784,25 @@ class FakeResource(object):
 def setup_neutron_cache(region, project_id):
     global neutron_cache
     if region not in neutron_cache:
-        neutron_cache[region] = {'i': 0}
+        neutron_cache[region] = {"i": 0}
     else:
-        neutron_cache[region]['i'] = 0
+        neutron_cache[region]["i"] = 0
     if project_id not in neutron_cache[region]:
         neutron_cache[region][project_id] = {}
 
     neutron_cache[region][project_id] = {
-        'networks': {},
-        'subnets': {},
-        'routers': {},
-        'security_groups': {},
-        'floatingips': {},
-        'security_group_rules': {},
-        'ports': {},
+        "networks": {},
+        "subnets": {},
+        "routers": {},
+        "security_groups": {},
+        "floatingips": {},
+        "security_group_rules": {},
+        "ports": {},
     }
 
-    neutron_cache[region][project_id]['quota'] = dict(
-        CONF.quota.sizes['small']['neutron'])
+    neutron_cache[region][project_id]["quota"] = dict(
+        CONF.quota.sizes["small"]["neutron"]
+    )
 
 
 def setup_cinder_cache(region, project_id):
@@ -783,12 +813,13 @@ def setup_cinder_cache(region, project_id):
         cinder_cache[region][project_id] = {}
 
     cinder_cache[region][project_id] = {
-        'volumes': [],
-        'volume_snapshots': [],
+        "volumes": [],
+        "volume_snapshots": [],
     }
 
-    cinder_cache[region][project_id]['quota'] = dict(
-        CONF.quota.sizes['small']['cinder'])
+    cinder_cache[region][project_id]["quota"] = dict(
+        CONF.quota.sizes["small"]["cinder"]
+    )
 
 
 def setup_nova_cache(region, project_id):
@@ -800,19 +831,18 @@ def setup_nova_cache(region, project_id):
 
     # Mocking the nova limits api
     nova_cache[region][project_id] = {
-        'absolute': {
+        "absolute": {
             "totalInstancesUsed": 0,
             "totalFloatingIpsUsed": 0,
             "totalRAMUsed": 0,
             "totalCoresUsed": 0,
-            "totalSecurityGroupsUsed": 0
+            "totalSecurityGroupsUsed": 0,
         }
     }
-    nova_cache[region][project_id]['quota'] = dict(
-        CONF.quota.sizes['small']['nova'])
+    nova_cache[region][project_id]["quota"] = dict(CONF.quota.sizes["small"]["nova"])
 
 
-def setup_quota_cache(region_name, project_id, size='small'):
+def setup_quota_cache(region_name, project_id, size="small"):
     """ Sets up the quota cache for a given region and project """
     global cinder_cache
 
@@ -820,36 +850,31 @@ def setup_quota_cache(region_name, project_id, size='small'):
         cinder_cache[region_name] = {}
 
     if project_id not in cinder_cache[region_name]:
-        cinder_cache[region_name][project_id] = {
-            'quota': {}
-        }
+        cinder_cache[region_name][project_id] = {"quota": {}}
 
-    cinder_cache[region_name][project_id]['quota'] = dict(
-        CONF.quota.sizes[size]['cinder'])
+    cinder_cache[region_name][project_id]["quota"] = dict(
+        CONF.quota.sizes[size]["cinder"]
+    )
 
     global nova_cache
     if region_name not in nova_cache:
         nova_cache[region_name] = {}
 
     if project_id not in nova_cache[region_name]:
-        nova_cache[region_name][project_id] = {
-            'quota': {}
-        }
+        nova_cache[region_name][project_id] = {"quota": {}}
 
-    nova_cache[region_name][project_id]['quota'] = dict(
-        CONF.quota.sizes[size]['nova'])
+    nova_cache[region_name][project_id]["quota"] = dict(CONF.quota.sizes[size]["nova"])
 
     global neutron_cache
     if region_name not in neutron_cache:
         neutron_cache[region_name] = {}
 
     if project_id not in neutron_cache[region_name]:
-        neutron_cache[region_name][project_id] = {
-            'quota': {}
-        }
+        neutron_cache[region_name][project_id] = {"quota": {}}
 
-    neutron_cache[region_name][project_id]['quota'] = dict(
-        CONF.quota.sizes[size]['neutron'])
+    neutron_cache[region_name][project_id]["quota"] = dict(
+        CONF.quota.sizes[size]["neutron"]
+    )
 
 
 def setup_mock_caches(region, project_id):

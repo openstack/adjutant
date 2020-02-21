@@ -24,13 +24,14 @@ class Action(models.Model):
     """
     Database model representation of an action.
     """
+
     action_name = models.CharField(max_length=200)
     action_data = JSONField(default={})
     cache = JSONField(default={})
     state = models.CharField(max_length=200, default="default")
     valid = models.BooleanField(default=False)
     need_token = models.BooleanField(default=False)
-    task = models.ForeignKey('tasks.Task', on_delete=models.CASCADE)
+    task = models.ForeignKey("tasks.Task", on_delete=models.CASCADE)
     # NOTE(amelia): Auto approve is technically a ternary operator
     #               If all in a task are None it will not auto approve
     #               However if at least one action has it set to True it
@@ -46,5 +47,4 @@ class Action(models.Model):
     def get_action(self):
         """Returns self as the appropriate action wrapper type."""
         data = self.action_data
-        return actions.ACTION_CLASSES[self.action_name](
-            data=data, action_model=self)
+        return actions.ACTION_CLASSES[self.action_name](data=data, action_model=self)

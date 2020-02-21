@@ -64,15 +64,14 @@ class BaseAction(object):
 
     config_group = None
 
-    def __init__(self, data, action_model=None, task=None,
-                 order=None):
+    def __init__(self, data, action_model=None, task=None, order=None):
         """
         Build itself around an existing database model,
         or build itself and creates a new database model.
         Sets up required data as fields.
         """
 
-        self.logger = getLogger('adjutant')
+        self.logger = getLogger("adjutant")
 
         for field in self.required:
             field_data = data[field]
@@ -86,7 +85,7 @@ class BaseAction(object):
                 action_name=self.__class__.__name__,
                 action_data=data,
                 task=task,
-                order=order
+                order=order,
             )
             action.save()
             self.action = action
@@ -141,8 +140,7 @@ class BaseAction(object):
         now = timezone.now()
         self.logger.info("(%s) - %s" % (now, note))
         note = "%s - (%s)" % (note, now)
-        self.action.task.add_action_note(
-            str(self), note)
+        self.action.task.add_action_note(str(self), note)
 
     @property
     def config(self):
@@ -154,8 +152,7 @@ class BaseAction(object):
             return self._config
 
         try:
-            action_defaults = CONF.workflow.action_defaults.get(
-                self.__class__.__name__)
+            action_defaults = CONF.workflow.action_defaults.get(self.__class__.__name__)
         except KeyError:
             self._config = {}
             return self._config
@@ -163,7 +160,8 @@ class BaseAction(object):
         try:
             task_conf = CONF.workflow.tasks[self.action.task.task_type]
             self._config = action_defaults.overlay(
-                task_conf.actions[self.__class__.__name__])
+                task_conf.actions[self.__class__.__name__]
+            )
         except KeyError:
             self._config = action_defaults
         return self._config
@@ -174,7 +172,8 @@ class BaseAction(object):
         except NotImplementedError:
             self.logger.warning(
                 "DEPRECATED: Action '_pre_approve' stage has been renamed "
-                "to 'prepare'.")
+                "to 'prepare'."
+            )
             return self._pre_approve()
 
     def approve(self):
@@ -183,7 +182,8 @@ class BaseAction(object):
         except NotImplementedError:
             self.logger.warning(
                 "DEPRECATED: Action '_post_approve' stage has been renamed "
-                "to 'prepare'.")
+                "to 'prepare'."
+            )
             return self._post_approve()
 
     def submit(self, token_data):
@@ -208,16 +208,16 @@ class ResourceMixin(object):
     def _validate_keystone_user_project_id(self):
         keystone_user = self.action.task.keystone_user
 
-        if keystone_user['project_id'] != self.project_id:
-            self.add_note('Project id does not match keystone user project.')
+        if keystone_user["project_id"] != self.project_id:
+            self.add_note("Project id does not match keystone user project.")
             return False
         return True
 
     def _validate_keystone_user_domain_id(self):
         keystone_user = self.action.task.keystone_user
 
-        if keystone_user['project_domain_id'] != self.domain_id:
-            self.add_note('Domain id does not match keystone user domain.')
+        if keystone_user["project_domain_id"] != self.domain_id:
+            self.add_note("Domain id does not match keystone user domain.")
             return False
         return True
 
@@ -225,7 +225,7 @@ class ResourceMixin(object):
         id_manager = user_store.IdentityManager()
         domain = id_manager.get_domain(self.domain_id)
         if not domain:
-            self.add_note('Domain does not exist.')
+            self.add_note("Domain does not exist.")
             return False
 
         return True
@@ -234,24 +234,23 @@ class ResourceMixin(object):
         # Handle an edge_case where some actions set their
         # own project_id value.
         if not self.project_id:
-            self.add_note('No project_id given.')
+            self.add_note("No project_id given.")
             return False
 
         # Now actually check the project exists.
         id_manager = user_store.IdentityManager()
         project = id_manager.get_project(self.project_id)
         if not project:
-            self.add_note('Project with id %s does not exist.' %
-                          self.project_id)
+            self.add_note("Project with id %s does not exist." % self.project_id)
             return False
-        self.add_note('Project with id %s exists.' % self.project_id)
+        self.add_note("Project with id %s exists." % self.project_id)
         return True
 
     def _validate_domain_name(self):
         id_manager = user_store.IdentityManager()
         self.domain = id_manager.find_domain(self.domain_name)
         if not self.domain:
-            self.add_note('Domain does not exist.')
+            self.add_note("Domain does not exist.")
             return False
         # also store the domain_id separately for later use
         self.domain_id = self.domain.id
@@ -262,9 +261,9 @@ class ResourceMixin(object):
         id_manager = user_store.IdentityManager()
         v_region = id_manager.get_region(region)
         if not v_region:
-            self.add_note('ERROR: Region: %s does not exist.' % region)
+            self.add_note("ERROR: Region: %s does not exist." % region)
             return False
-        self.add_note('Region: %s exists.' % region)
+        self.add_note("Region: %s exists." % region)
 
         return True
 
@@ -278,16 +277,17 @@ class UserMixin(ResourceMixin):
 
         self.user = id_manager.find_user(self.username, self.domain.id)
         if not self.user:
-            self.add_note('No user present with username')
+            self.add_note("No user present with username")
             return False
         return True
 
     def _validate_role_permissions(self):
         keystone_user = self.action.task.keystone_user
         # Role permissions check
-        if not self.are_roles_manageable(user_roles=keystone_user['roles'],
-                                         requested_roles=self.roles):
-            self.add_note('User does not have permission to edit role(s).')
+        if not self.are_roles_manageable(
+            user_roles=keystone_user["roles"], requested_roles=self.roles
+        ):
+            self.add_note("User does not have permission to edit role(s).")
             return False
         return True
 
@@ -299,7 +299,7 @@ class UserMixin(ResourceMixin):
 
         requested_roles = set(requested_roles)
         # blacklist checks
-        blacklisted_roles = set(['admin'])
+        blacklisted_roles = set(["admin"])
         if len(blacklisted_roles & requested_roles) > 0:
             return False
 
@@ -317,15 +317,16 @@ class UserMixin(ResourceMixin):
     # Mutators
     def grant_roles(self, user, roles, project_id, inherited=False):
         return self._user_roles_edit(
-            user, roles, project_id, remove=False, inherited=inherited)
+            user, roles, project_id, remove=False, inherited=inherited
+        )
 
     def remove_roles(self, user, roles, project_id, inherited=False):
         return self._user_roles_edit(
-            user, roles, project_id, remove=True, inherited=inherited)
+            user, roles, project_id, remove=True, inherited=inherited
+        )
 
     # Helper function to add or remove roles
-    def _user_roles_edit(self, user, roles, project_id, remove=False,
-                         inherited=False):
+    def _user_roles_edit(self, user, roles, project_id, remove=False, inherited=False):
         id_manager = user_store.IdentityManager()
         if not remove:
             action_fn = id_manager.add_user_role
@@ -346,8 +347,9 @@ class UserMixin(ResourceMixin):
                 action_fn(user, role, project_id, inherited=inherited)
         except Exception as e:
             self.add_note(
-                "Error: '%s' while %s the roles: %s on user: %s " %
-                (e, action_string, roles, user))
+                "Error: '%s' while %s the roles: %s on user: %s "
+                % (e, action_string, roles, user)
+            )
             raise
 
     def enable_user(self, user=None):
@@ -358,22 +360,27 @@ class UserMixin(ResourceMixin):
             id_manager.enable_user(user)
         except Exception as e:
             self.add_note(
-                "Error: '%s' while re-enabling user: %s with roles: %s" %
-                (e, self.username, self.roles))
+                "Error: '%s' while re-enabling user: %s with roles: %s"
+                % (e, self.username, self.roles)
+            )
             raise
 
     def create_user(self, password):
         id_manager = user_store.IdentityManager()
         try:
             user = id_manager.create_user(
-                name=self.username, password=password,
-                email=self.email, domain=self.domain_id,
-                created_on=str_datetime(timezone.now()))
+                name=self.username,
+                password=password,
+                email=self.email,
+                domain=self.domain_id,
+                created_on=str_datetime(timezone.now()),
+            )
         except Exception as e:
             # TODO: Narrow the Exceptions caught to a relevant set.
             self.add_note(
-                "Error: '%s' while creating user: %s with roles: %s" %
-                (e, self.username, self.roles))
+                "Error: '%s' while creating user: %s with roles: %s"
+                % (e, self.username, self.roles)
+            )
             raise
         return user
 
@@ -385,8 +392,8 @@ class UserMixin(ResourceMixin):
             id_manager.update_user_password(user, password)
         except Exception as e:
             self.add_note(
-                "Error: '%s' while changing password for user: %s" %
-                (e, self.username))
+                "Error: '%s' while changing password for user: %s" % (e, self.username)
+            )
             raise
 
     def update_email(self, email, user=None):
@@ -397,8 +404,8 @@ class UserMixin(ResourceMixin):
             id_manager.update_user_email(user, email)
         except Exception as e:
             self.add_note(
-                "Error: '%s' while changing email for user: %s" %
-                (e, self.username))
+                "Error: '%s' while changing email for user: %s" % (e, self.username)
+            )
             raise
 
     def update_user_name(self, username, user=None):
@@ -409,8 +416,8 @@ class UserMixin(ResourceMixin):
             id_manager.update_user_name(user, username)
         except Exception as e:
             self.add_note(
-                "Error: '%s' while changing username for user: %s" %
-                (e, self.username))
+                "Error: '%s' while changing username for user: %s" % (e, self.username)
+            )
             raise
 
 
@@ -424,22 +431,18 @@ class ProjectMixin(ResourceMixin):
         if self.parent_id:
             parent = id_manager.get_project(self.parent_id)
             if not parent:
-                self.add_note("Parent id: '%s' does not exist." %
-                              self.parent_id)
+                self.add_note("Parent id: '%s' does not exist." % self.parent_id)
                 return False
         return True
 
     def _validate_project_absent(self):
         id_manager = user_store.IdentityManager()
-        project = id_manager.find_project(
-            self.project_name, self.domain_id)
+        project = id_manager.find_project(self.project_name, self.domain_id)
         if project:
-            self.add_note("Existing project with name '%s'." %
-                          self.project_name)
+            self.add_note("Existing project with name '%s'." % self.project_name)
             return False
 
-        self.add_note("No existing project with name '%s'." %
-                      self.project_name)
+        self.add_note("No existing project with name '%s'." % self.project_name)
         return True
 
     def _create_project(self):
@@ -447,17 +450,20 @@ class ProjectMixin(ResourceMixin):
         description = getattr(self, "description", "")
         try:
             project = id_manager.create_project(
-                self.project_name, created_on=str_datetime(timezone.now()),
-                parent=self.parent_id, domain=self.domain_id,
-                description=description)
+                self.project_name,
+                created_on=str_datetime(timezone.now()),
+                parent=self.parent_id,
+                domain=self.domain_id,
+                description=description,
+            )
         except Exception as e:
             self.add_note(
-                "Error: '%s' while creating project: %s" %
-                (e, self.project_name))
+                "Error: '%s' while creating project: %s" % (e, self.project_name)
+            )
             raise
         # put project_id into action cache:
-        self.action.task.cache['project_id'] = project.id
-        self.set_cache('project_id', project.id)
+        self.action.task.cache["project_id"] = project.id
+        self.set_cache("project_id", project.id)
         self.add_note("New project '%s' created." % project.name)
 
 
@@ -477,7 +483,8 @@ class QuotaMixin(ResourceMixin):
     def _usage_greater_than_quota(self, regions):
         quota_manager = QuotaManager(
             self.project_id,
-            size_difference_threshold=self.config.size_difference_threshold)
+            size_difference_threshold=self.config.size_difference_threshold,
+        )
         quota = CONF.quota.sizes.get(self.size, {})
         for region in regions:
             current_usage = quota_manager.get_current_usage(region)
@@ -500,7 +507,6 @@ class QuotaMixin(ResourceMixin):
 
 
 class UserIdAction(BaseAction):
-
     def _get_target_user(self):
         """
         Gets the target user by id
@@ -522,7 +528,7 @@ class UserNameAction(BaseAction):
             # NOTE(amelia): Make a copy to avoid editing it globally.
             self.required = list(self.required)
             try:
-                self.required.remove('username')
+                self.required.remove("username")
             except ValueError:
                 pass
                 # nothing to remove

@@ -18,36 +18,32 @@ from confspirator import types
 
 
 DEFAULT_QUOTA_SIZES = {
-    'small': {
-        'nova': {
-            'instances': 10,
-            'cores': 20,
-            'ram': 65536,
-            'floating_ips': 10,
-            'fixed_ips': 0,
-            'metadata_items': 128,
-            'injected_files': 5,
-            'injected_file_content_bytes': 10240,
-            'key_pairs': 50,
-            'security_groups': 20,
-            'security_group_rules': 100,
+    "small": {
+        "nova": {
+            "instances": 10,
+            "cores": 20,
+            "ram": 65536,
+            "floating_ips": 10,
+            "fixed_ips": 0,
+            "metadata_items": 128,
+            "injected_files": 5,
+            "injected_file_content_bytes": 10240,
+            "key_pairs": 50,
+            "security_groups": 20,
+            "security_group_rules": 100,
         },
-        'cinder': {
-            'gigabytes': 5000,
-            'snapshots': 50,
-            'volumes': 20,
-        },
-        'neutron': {
-            'floatingip': 10,
-            'network': 3,
-            'port': 50,
-            'router': 3,
-            'security_group': 20,
-            'security_group_rule': 100,
-            'subnet': 3,
+        "cinder": {"gigabytes": 5000, "snapshots": 50, "volumes": 20,},
+        "neutron": {
+            "floatingip": 10,
+            "network": 3,
+            "port": 50,
+            "router": 3,
+            "security_group": 20,
+            "security_group_rule": 100,
+            "subnet": 3,
         },
         "octavia": {
-            'health_monitor': 5,
+            "health_monitor": 5,
             "listener": 1,
             "load_balancer": 1,
             "member": 2,
@@ -55,11 +51,7 @@ DEFAULT_QUOTA_SIZES = {
         },
     },
     "medium": {
-        "cinder": {
-            "gigabytes": 10000,
-            "volumes": 100,
-            "snapshots": 300
-        },
+        "cinder": {"gigabytes": 10000, "volumes": 100, "snapshots": 300},
         "nova": {
             "metadata_items": 128,
             "injected_file_content_bytes": 10240,
@@ -71,7 +63,7 @@ DEFAULT_QUOTA_SIZES = {
             "injected_files": 5,
             "cores": 100,
             "fixed_ips": 0,
-            "security_groups": 50
+            "security_groups": 50,
         },
         "neutron": {
             "security_group_rule": 400,
@@ -80,10 +72,10 @@ DEFAULT_QUOTA_SIZES = {
             "floatingip": 25,
             "security_group": 50,
             "router": 5,
-            "port": 250
+            "port": 250,
         },
         "octavia": {
-            'health_monitor': 50,
+            "health_monitor": 50,
             "listener": 5,
             "load_balancer": 5,
             "member": 5,
@@ -91,11 +83,7 @@ DEFAULT_QUOTA_SIZES = {
         },
     },
     "large": {
-        "cinder": {
-            "gigabytes": 50000,
-            "volumes": 200,
-            "snapshots": 600
-        },
+        "cinder": {"gigabytes": 50000, "volumes": 200, "snapshots": 600},
         "nova": {
             "metadata_items": 128,
             "injected_file_content_bytes": 10240,
@@ -107,7 +95,7 @@ DEFAULT_QUOTA_SIZES = {
             "injected_files": 5,
             "cores": 200,
             "fixed_ips": 0,
-            "security_groups": 100
+            "security_groups": 100,
         },
         "neutron": {
             "security_group_rule": 800,
@@ -116,10 +104,10 @@ DEFAULT_QUOTA_SIZES = {
             "floatingip": 50,
             "security_group": 100,
             "router": 10,
-            "port": 500
+            "port": 500,
         },
         "octavia": {
-            'health_monitor': 100,
+            "health_monitor": 100,
             "listener": 10,
             "load_balancer": 10,
             "member": 10,
@@ -145,16 +133,16 @@ config_group.register_child_config(
     fields.ListConfig(
         "sizes_ascending",
         help_text="An ascending list of all the quota size names, "
-                  "so that Adjutant knows their relative sizes/order.",
-        default=['small', 'medium', 'large'],
+        "so that Adjutant knows their relative sizes/order.",
+        default=["small", "medium", "large"],
     )
 )
 config_group.register_child_config(
     fields.DictConfig(
         "services",
         help_text="A per region definition of what services Adjutant should manage "
-                  "quotas for. '*' means all or default region.",
+        "quotas for. '*' means all or default region.",
         value_type=types.List(),
-        default={'*': ['cinder', 'neutron', 'nova']},
+        default={"*": ["cinder", "neutron", "nova"]},
     )
 )

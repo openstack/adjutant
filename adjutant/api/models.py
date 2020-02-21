@@ -40,7 +40,7 @@ class Token(models.Model):
             "task_type": self.task.task_type,
             "token": self.token,
             "created_on": self.created_on,
-            "expires": self.expires
+            "expires": self.expires,
         }
 
     @property
@@ -53,8 +53,7 @@ class Notification(models.Model):
     Notification linked to a task with some notes.
     """
 
-    uuid = models.CharField(max_length=32, default=hex_uuid,
-                            primary_key=True)
+    uuid = models.CharField(max_length=32, default=hex_uuid, primary_key=True)
     notes = JSONField(default={})
     task = models.ForeignKey(Task, on_delete=models.CASCADE)
     error = models.BooleanField(default=False, db_index=True)
@@ -68,5 +67,5 @@ class Notification(models.Model):
             "task": self.task.uuid,
             "error": self.error,
             "acknowledged": self.acknowledged,
-            "created_on": self.created_on
+            "created_on": self.created_on,
         }

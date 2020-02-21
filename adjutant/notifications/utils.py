@@ -17,11 +17,7 @@ from adjutant.api.models import Notification
 
 
 def create_notification(task, notes, error=False, handlers=True):
-    notification = Notification.objects.create(
-        task=task,
-        notes=notes,
-        error=error
-    )
+    notification = Notification.objects.create(task=task, notes=notes, error=error)
     notification.save()
 
     if not handlers:

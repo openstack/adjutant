@@ -23,7 +23,7 @@ from adjutant import exceptions
 from adjutant.notifications.utils import create_notification
 
 
-LOG = getLogger('adjutant')
+LOG = getLogger("adjutant")
 
 
 def exception_handler(exc, context):
@@ -38,17 +38,17 @@ def exception_handler(exc, context):
 
     if isinstance(exc, exceptions.BaseAPIException):
         if isinstance(exc.message, (list, dict)):
-            data = {'errors': exc.message}
+            data = {"errors": exc.message}
         else:
-            data = {'errors': [exc.message]}
+            data = {"errors": [exc.message]}
         note_data = data
 
         if isinstance(exc, exceptions.TaskActionsFailed):
             if exc.internal_message:
                 if isinstance(exc.internal_message, (list, dict)):
-                    note_data = {'errors': exc.internal_message}
+                    note_data = {"errors": exc.internal_message}
                 else:
-                    note_data = {'errors': [exc.internal_message]}
+                    note_data = {"errors": [exc.internal_message]}
             create_notification(exc.task, note_data, error=True)
 
         LOG.info("(%s) - %s" % (now, exc))

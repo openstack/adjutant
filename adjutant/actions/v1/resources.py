@@ -36,9 +36,9 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
     """
 
     required = [
-        'setup_network',
-        'project_id',
-        'region',
+        "setup_network",
+        "project_id",
+        "region",
     ]
 
     serializer = serializers.NewDefaultNetworkSerializer
@@ -64,23 +64,20 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
                         default="default_router",
                     ),
                     fields.StrConfig(
-                        "public_network",
-                        help_text="ID of the public network.",
+                        "public_network", help_text="ID of the public network.",
                     ),
                     fields.StrConfig(
-                        "subnet_cidr",
-                        help_text="CIDR for the default subnet.",
+                        "subnet_cidr", help_text="CIDR for the default subnet.",
                     ),
                     fields.ListConfig(
-                        "dns_nameservers",
-                        help_text="DNS nameservers for the subnet.",
+                        "dns_nameservers", help_text="DNS nameservers for the subnet.",
                     ),
-                ]
+                ],
             ),
             fields.DictConfig(
                 "regions",
                 help_text="Specific per region config for default network. "
-                          "See 'region_defaults'.",
+                "See 'region_defaults'.",
                 default={},
             ),
         ]
@@ -91,83 +88,86 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
 
     def _validate_region(self):
         if not self.region:
-            self.add_note('ERROR: No region given.')
+            self.add_note("ERROR: No region given.")
             return False
 
         id_manager = user_store.IdentityManager()
         region = id_manager.get_region(self.region)
         if not region:
-            self.add_note('ERROR: Region does not exist.')
+            self.add_note("ERROR: Region does not exist.")
             return False
 
-        self.add_note('Region: %s exists.' % self.region)
+        self.add_note("Region: %s exists." % self.region)
         return True
 
     def _validate(self):
-        self.action.valid = validate_steps([
-            self._validate_region,
-            self._validate_project_id,
-            self._validate_keystone_user_project_id,
-        ])
+        self.action.valid = validate_steps(
+            [
+                self._validate_region,
+                self._validate_project_id,
+                self._validate_keystone_user_project_id,
+            ]
+        )
         self.action.save()
 
     def _create_network(self):
         neutron = openstack_clients.get_neutronclient(region=self.region)
         try:
             region_config = self.config.regions[self.region]
-            network_config = self.config.region_defaults.overlay(
-                region_config)
+            network_config = self.config.region_defaults.overlay(region_config)
         except KeyError:
             network_config = self.config.region_defaults
 
-        if not self.get_cache('network_id'):
+        if not self.get_cache("network_id"):
             try:
                 network_body = {
                     "network": {
                         "name": network_config.network_name,
-                        'tenant_id': self.project_id,
-                        "admin_state_up": True
+                        "tenant_id": self.project_id,
+                        "admin_state_up": True,
                     }
                 }
                 network = neutron.create_network(body=network_body)
             except Exception as e:
                 self.add_note(
-                    "Error: '%s' while creating network: %s" %
-                    (e, network_config.network_name))
+                    "Error: '%s' while creating network: %s"
+                    % (e, network_config.network_name)
+                )
                 raise
-            self.set_cache('network_id', network['network']['id'])
-            self.add_note("Network %s created for project %s" %
-                          (network_config.network_name,
-                           self.project_id))
+            self.set_cache("network_id", network["network"]["id"])
+            self.add_note(
+                "Network %s created for project %s"
+                % (network_config.network_name, self.project_id)
+            )
         else:
-            self.add_note("Network %s already created for project %s" %
-                          (network_config.network_name,
-                           self.project_id))
+            self.add_note(
+                "Network %s already created for project %s"
+                % (network_config.network_name, self.project_id)
+            )
 
-        if not self.get_cache('subnet_id'):
+        if not self.get_cache("subnet_id"):
             try:
                 subnet_body = {
                     "subnet": {
-                        "network_id": self.get_cache('network_id'),
+                        "network_id": self.get_cache("network_id"),
                         "ip_version": 4,
-                        'tenant_id': self.project_id,
-                        'dns_nameservers': network_config.dns_nameservers,
-                        "cidr": network_config.subnet_cidr
+                        "tenant_id": self.project_id,
+                        "dns_nameservers": network_config.dns_nameservers,
+                        "cidr": network_config.subnet_cidr,
                     }
                 }
                 subnet = neutron.create_subnet(body=subnet_body)
             except Exception as e:
-                self.add_note(
-                    "Error: '%s' while creating subnet" % e)
+                self.add_note("Error: '%s' while creating subnet" % e)
                 raise
-            self.set_cache('subnet_id', subnet['subnet']['id'])
-            self.add_note("Subnet created for network %s" %
-                          network_config.network_name)
+            self.set_cache("subnet_id", subnet["subnet"]["id"])
+            self.add_note("Subnet created for network %s" % network_config.network_name)
         else:
-            self.add_note("Subnet already created for network %s" %
-                          network_config.network_name)
+            self.add_note(
+                "Subnet already created for network %s" % network_config.network_name
+            )
 
-        if not self.get_cache('router_id'):
+        if not self.get_cache("router_id"):
             try:
                 router_body = {
                     "router": {
@@ -175,39 +175,35 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
                         "external_gateway_info": {
                             "network_id": network_config.public_network
                         },
-                        'tenant_id': self.project_id,
-                        "admin_state_up": True
+                        "tenant_id": self.project_id,
+                        "admin_state_up": True,
                     }
                 }
                 router = neutron.create_router(body=router_body)
             except Exception as e:
                 self.add_note(
-                    "Error: '%s' while creating router: %s" %
-                    (e, network_config.router_name))
+                    "Error: '%s' while creating router: %s"
+                    % (e, network_config.router_name)
+                )
                 raise
-            self.set_cache('router_id', router['router']['id'])
-            self.add_note("Router created for project %s" %
-                          self.project_id)
+            self.set_cache("router_id", router["router"]["id"])
+            self.add_note("Router created for project %s" % self.project_id)
         else:
-            self.add_note("Router already created for project %s" %
-                          self.project_id)
+            self.add_note("Router already created for project %s" % self.project_id)
 
-        if not self.get_cache('port_id'):
+        if not self.get_cache("port_id"):
             try:
-                interface_body = {
-                    "subnet_id": self.get_cache('subnet_id')
-                }
+                interface_body = {"subnet_id": self.get_cache("subnet_id")}
                 interface = neutron.add_interface_router(
-                    self.get_cache('router_id'), body=interface_body)
+                    self.get_cache("router_id"), body=interface_body
+                )
             except Exception as e:
-                self.add_note(
-                    "Error: '%s' while attaching interface" % e)
+                self.add_note("Error: '%s' while attaching interface" % e)
                 raise
-            self.set_cache('port_id', interface['port_id'])
+            self.set_cache("port_id", interface["port_id"])
             self.add_note("Interface added to router for subnet")
         else:
-            self.add_note(
-                "Interface added to router for project %s" % self.project_id)
+            self.add_note("Interface added to router for project %s" % self.project_id)
 
     def _prepare(self):
         # Note: Do we need to get this from cache? it is a required setting
@@ -231,31 +227,28 @@ class NewProjectDefaultNetworkAction(NewDefaultNetworkAction):
     """
 
     required = [
-        'setup_network',
-        'region',
+        "setup_network",
+        "region",
     ]
 
     serializer = serializers.NewProjectDefaultNetworkSerializer
 
     def _pre_validate(self):
         # Note: Don't check project here as it doesn't exist yet.
-        self.action.valid = validate_steps([
-            self._validate_region,
-        ])
+        self.action.valid = validate_steps([self._validate_region,])
         self.action.save()
 
     def _validate(self):
-        self.action.valid = validate_steps([
-            self._validate_region,
-            self._validate_project_id,
-        ])
+        self.action.valid = validate_steps(
+            [self._validate_region, self._validate_project_id,]
+        )
         self.action.save()
 
     def _prepare(self):
         self._pre_validate()
 
     def _approve(self):
-        self.project_id = self.action.task.cache.get('project_id', None)
+        self.project_id = self.action.task.cache.get("project_id", None)
         self._validate()
 
         if self.setup_network and self.valid:
@@ -266,9 +259,9 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
     """ Updates quota for a project to a given size in a list of regions """
 
     required = [
-        'size',
-        'project_id',
-        'regions',
+        "size",
+        "project_id",
+        "regions",
     ]
 
     serializer = serializers.UpdateProjectQuotasSerializer
@@ -293,10 +286,10 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
     def _get_email(self):
 
         if CONF.identity.username_is_email:
-            return self.action.task.keystone_user['username']
+            return self.action.task.keystone_user["username"]
         else:
             id_manager = user_store.IdentityManager()
-            user = id_manager.users.get(self.keystone_user['user_id'])
+            user = id_manager.users.get(self.keystone_user["user_id"])
             email = user.email
             if email:
                 return email
@@ -316,17 +309,20 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
         quota_config = CONF.quota.sizes.get(quota_size, {})
         if not quota_config:
             self.add_note(
-                "Project quota not defined for size '%s' in region %s." % (
-                    quota_size, region_name))
+                "Project quota not defined for size '%s' in region %s."
+                % (quota_size, region_name)
+            )
             return
 
         quota_manager = QuotaManager(
-            self.project_id, self.config.size_difference_threshold)
+            self.project_id, self.config.size_difference_threshold
+        )
 
         quota_manager.set_region_quota(region_name, quota_config)
 
-        self.add_note("Project quota for region %s set to %s" % (
-                      region_name, quota_size))
+        self.add_note(
+            "Project quota for region %s set to %s" % (region_name, quota_size)
+        )
 
     def _can_auto_approve(self):
         wait_days = self.config.days_between_autoapprove
@@ -334,30 +330,34 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
             completed_on__gte=timezone.now() - timedelta(days=wait_days),
             task_type__exact=self.action.task.task_type,
             cancelled__exact=False,
-            project_id__exact=self.project_id)
+            project_id__exact=self.project_id,
+        )
 
         changed_in_period = False
         # Check to see if there have been any updates in the relavent regions
         # recently
         for task in task_list:
             for action in task.actions:
-                intersect = set(action.action_data[
-                    'regions']).intersection(self.regions)
+                intersect = set(action.action_data["regions"]).intersection(
+                    self.regions
+                )
                 if intersect:
                     changed_in_period = True
 
         region_sizes = []
 
         quota_manager = QuotaManager(
-            self.project_id, self.config.size_difference_threshold)
+            self.project_id, self.config.size_difference_threshold
+        )
 
         for region in self.regions:
             current_size = quota_manager.get_region_quota_data(
-                region, include_usage=False)['current_quota_size']
+                region, include_usage=False
+            )["current_quota_size"]
             region_sizes.append(current_size)
             self.add_note(
-                "Project has size '%s' in region: '%s'" %
-                (current_size, region))
+                "Project has size '%s' in region: '%s'" % (current_size, region)
+            )
 
         # Check for preapproved_quotas
         preapproved_quotas = []
@@ -365,42 +365,44 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
 
         # If all region sizes are the same
         if region_sizes.count(region_sizes[0]) == len(region_sizes):
-            preapproved_quotas = quota_manager.get_quota_change_options(
-                region_sizes[0])
-            smaller_quotas = quota_manager.get_smaller_quota_options(
-                region_sizes[0])
+            preapproved_quotas = quota_manager.get_quota_change_options(region_sizes[0])
+            smaller_quotas = quota_manager.get_smaller_quota_options(region_sizes[0])
 
         if self.size in smaller_quotas:
             self.add_note(
-                "Quota size '%s' is in list of smaller quotas: %s" %
-                (self.size, smaller_quotas))
+                "Quota size '%s' is in list of smaller quotas: %s"
+                % (self.size, smaller_quotas)
+            )
             return True
 
         if changed_in_period:
             self.add_note(
-                "Quota has already been updated within the auto "
-                "approve time limit.")
+                "Quota has already been updated within the auto " "approve time limit."
+            )
             return False
 
         if self.size not in preapproved_quotas:
             self.add_note(
-                "Quota size '%s' not in preapproved list: %s" %
-                (self.size, preapproved_quotas))
+                "Quota size '%s' not in preapproved list: %s"
+                % (self.size, preapproved_quotas)
+            )
             return False
 
         self.add_note(
-            "Quota size '%s' in preapproved list: %s" %
-            (self.size, preapproved_quotas))
+            "Quota size '%s' in preapproved list: %s" % (self.size, preapproved_quotas)
+        )
         return True
 
     def _validate(self):
         # Make sure the project id is valid and can be used
-        self.action.valid = validate_steps([
-            self._validate_project_id,
-            self._validate_quota_size_exists,
-            self._validate_regions_exist,
-            self._validate_usage_lower_than_quota,
-        ])
+        self.action.valid = validate_steps(
+            [
+                self._validate_project_id,
+                self._validate_quota_size_exists,
+                self._validate_regions_exist,
+                self._validate_usage_lower_than_quota,
+            ]
+        )
         self.action.save()
 
     def _prepare(self):
@@ -420,8 +422,8 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
             self._set_region_quota(region, self.size)
 
         self.action.state = "completed"
-        self.action.task.cache['project_id'] = self.project_id
-        self.action.task.cache['size'] = self.size
+        self.action.task.cache["project_id"] = self.project_id
+        self.action.task.cache["size"] = self.size
 
         self.action.save()
 
@@ -434,6 +436,7 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
 
 class SetProjectQuotaAction(UpdateProjectQuotasAction):
     """ Updates quota for a given project to a configured quota level """
+
     required = []
 
     serializer = serializers.SetProjectQuotaSerializer
@@ -454,9 +457,7 @@ class SetProjectQuotaAction(UpdateProjectQuotasAction):
 
     def _validate(self):
         # Make sure the project id is valid and can be used
-        self.action.valid = validate_steps([
-            self._validate_project_id,
-        ])
+        self.action.valid = validate_steps([self._validate_project_id,])
         self.action.save()
 
     def _prepare(self):
@@ -466,7 +467,7 @@ class SetProjectQuotaAction(UpdateProjectQuotasAction):
 
     def _approve(self):
         # Assumption: another action has placed the project_id into the cache.
-        self.project_id = self.action.task.cache.get('project_id', None)
+        self.project_id = self.action.task.cache.get("project_id", None)
         self._validate()
 
         if not self.valid or self.action.state == "completed":

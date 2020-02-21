@@ -34,7 +34,8 @@ class BaseNotificationHandler(object):
         """
         try:
             notif_config = CONF.notifications.handler_defaults.get(
-                self.__class__.__name__)
+                self.__class__.__name__
+            )
         except KeyError:
             # Handler has no config
             return {}
@@ -44,10 +45,12 @@ class BaseNotificationHandler(object):
         try:
             if notification.error:
                 task_defaults = task_defaults.error_handler_config.get(
-                    self.__class__.__name__)
+                    self.__class__.__name__
+                )
             else:
                 task_defaults = task_defaults.standard_handler_config.get(
-                    self.__class__.__name__)
+                    self.__class__.__name__
+                )
         except KeyError:
             task_defaults = {}
 

@@ -22,10 +22,10 @@ class UpdateProjectQuotas(BaseTask):
     ]
 
     email_config = {
-        'initial': None,
-        'token': None,
-        'completed': {
-            'template': 'create_project_and_user_completed.txt',
-            'subject': 'signup completed'
-        }
+        "initial": None,
+        "token": None,
+        "completed": {
+            "template": "create_project_and_user_completed.txt",
+            "subject": "signup completed",
+        },
     }

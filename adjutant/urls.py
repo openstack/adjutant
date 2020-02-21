@@ -15,5 +15,5 @@
 from django.conf.urls import include, url
 
 urlpatterns = [
-    url(r'^', include('adjutant.api.urls')),
+    url(r"^", include("adjutant.api.urls")),
 ]

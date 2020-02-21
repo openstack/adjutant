@@ -23,8 +23,7 @@ from adjutant.api.models import Task
 from adjutant.config import CONF
 from django.utils import timezone
 from adjutant.notifications.utils import create_notification
-from adjutant.tasks.v1.utils import (
-    send_stage_email, create_token, handle_task_error)
+from adjutant.tasks.v1.utils import send_stage_email, create_token, handle_task_error
 from adjutant import exceptions
 
 
@@ -35,7 +34,7 @@ def make_task_config(task_class):
         fields.BoolConfig(
             "allow_auto_approve",
             help_text="Override if this task allows auto_approval. "
-                      "Otherwise uses task default.",
+            "Otherwise uses task default.",
             default=task_class.allow_auto_approve,
         )
     )
@@ -43,7 +42,7 @@ def make_task_config(task_class):
         fields.ListConfig(
             "additional_actions",
             help_text="Additional actions to be run as part of the task "
-                      "after default actions.",
+            "after default actions.",
             default=task_class.additional_actions or [],
         )
     )
@@ -51,7 +50,7 @@ def make_task_config(task_class):
         fields.IntConfig(
             "token_expiry",
             help_text="Override for the task token expiry. "
-                      "Otherwise uses task default.",
+            "Otherwise uses task default.",
             default=task_class.token_expiry,
         )
     )
@@ -59,13 +58,11 @@ def make_task_config(task_class):
         fields.DictConfig(
             "actions",
             help_text="Action config overrides over the action defaults. "
-                      "See 'adjutant.workflow.action_defaults'.",
+            "See 'adjutant.workflow.action_defaults'.",
             is_json=True,
             default=task_class.action_config or {},
             sample_default={
-                "SomeCustomAction": {
-                    "some_action_setting": "<a-uuid-probably>"
-                }
+                "SomeCustomAction": {"some_action_setting": "<a-uuid-probably>"}
             },
         )
     )
@@ -73,14 +70,12 @@ def make_task_config(task_class):
         fields.DictConfig(
             "emails",
             help_text="Email config overrides for this task over task defaults."
-                      "See 'adjutant.workflow.emails'.",
+            "See 'adjutant.workflow.emails'.",
             is_json=True,
             default=task_class.email_config or {},
             sample_default={
                 "initial": None,
-                "token": {
-                    "subject": "Some custom subject",
-                },
+                "token": {"subject": "Some custom subject",},
             },
         )
     )
@@ -88,7 +83,7 @@ def make_task_config(task_class):
         fields.DictConfig(
             "notifications",
             help_text="Notification config overrides for this task over task defaults."
-                      "See 'adjutant.workflow.notifications'.",
+            "See 'adjutant.workflow.notifications'.",
             is_json=True,
             default=task_class.notification_config or {},
             sample_default={
@@ -96,14 +91,14 @@ def make_task_config(task_class):
                 "error_handlers": ["EmailNotification"],
                 "standard_handler_config": {
                     "EmailNotification": {
-                        'emails': ['example@example.com'],
-                        'reply': 'no-reply@example.com',
+                        "emails": ["example@example.com"],
+                        "reply": "no-reply@example.com",
                     }
                 },
                 "error_handler_config": {
                     "EmailNotification": {
-                        'emails': ['example@example.com'],
-                        'reply': 'no-reply@example.com',
+                        "emails": ["example@example.com"],
+                        "reply": "no-reply@example.com",
                     }
                 },
             },
@@ -141,50 +136,45 @@ class BaseTask(object):
     email_config = None
     notification_config = None
 
-    def __init__(self,
-                 task_model=None,
-                 task_data=None,
-                 action_data=None):
+    def __init__(self, task_model=None, task_data=None, action_data=None):
         self._config = None
-        self.logger = getLogger('adjutant')
+        self.logger = getLogger("adjutant")
 
         if task_model:
             self.task = task_model
             self._refresh_actions()
         else:
             # raises 400 validation error
-            action_serializer_list = self._instantiate_action_serializers(
-                action_data)
+            action_serializer_list = self._instantiate_action_serializers(action_data)
 
             hash_key = self._create_task_hash(action_serializer_list)
             # raises duplicate error
             self._handle_duplicates(hash_key)
 
-            keystone_user = task_data.get('keystone_user', {})
+            keystone_user = task_data.get("keystone_user", {})
             self.task = Task.objects.create(
                 keystone_user=keystone_user,
-                project_id=keystone_user.get('project_id'),
+                project_id=keystone_user.get("project_id"),
                 task_type=self.task_type,
-                hash_key=hash_key)
+                hash_key=hash_key,
+            )
             self.task.save()
 
             # Instantiate actions with serializers
             self.actions = []
             for i, action in enumerate(action_serializer_list):
-                data = action['serializer'].validated_data
+                data = action["serializer"].validated_data
 
                 # construct the action class
-                self.actions.append(action['action'](
-                    data=data,
-                    task=self.task,
-                    order=i
-                ))
+                self.actions.append(
+                    action["action"](data=data, task=self.task, order=i)
+                )
             self.logger.info(
                 "(%s) - '%s' task created (%s)."
-                % (timezone.now(), self.task_type, self.task.uuid))
+                % (timezone.now(), self.task_type, self.task.uuid)
+            )
 
-    def _instantiate_action_serializers(self, action_data,
-                                        use_existing_actions=False):
+    def _instantiate_action_serializers(self, action_data, use_existing_actions=False):
         action_serializer_list = []
 
         if use_existing_actions:
@@ -209,13 +199,13 @@ class BaseTask(object):
             # instantiate serializer class
             if not action_class.serializer:
                 raise exceptions.SerializerMissingException(
-                    "No serializer defined for action %s" % action_name)
+                    "No serializer defined for action %s" % action_name
+                )
             serializer = action_class.serializer(data=action_data)
 
-            action_serializer_list.append({
-                'name': action_name,
-                'action': action_class,
-                'serializer': serializer})
+            action_serializer_list.append(
+                {"name": action_name, "action": action_class, "serializer": serializer}
+            )
 
             if serializer and not serializer.is_valid():
                 valid = False
@@ -223,52 +213,50 @@ class BaseTask(object):
         if not valid:
             errors = {}
             for action in action_serializer_list:
-                if action['serializer']:
-                    errors.update(action['serializer'].errors)
+                if action["serializer"]:
+                    errors.update(action["serializer"].errors)
             raise exceptions.TaskSerializersInvalid(errors)
 
         return action_serializer_list
 
     def _create_task_hash(self, action_list):
-        hashable_list = [self.task_type, ]
+        hashable_list = [
+            self.task_type,
+        ]
 
         for action in action_list:
-            hashable_list.append(action['name'])
-            if not action['serializer']:
+            hashable_list.append(action["name"])
+            if not action["serializer"]:
                 continue
             # iterate like this to maintain consistent order for hash
-            fields = sorted(action['serializer'].validated_data.keys())
+            fields = sorted(action["serializer"].validated_data.keys())
             for field in fields:
                 try:
-                    hashable_list.append(
-                        action['serializer'].validated_data[field])
+                    hashable_list.append(action["serializer"].validated_data[field])
                 except KeyError:
                     if field == "username" and CONF.identity.username_is_email:
                         continue
                     else:
                         raise
 
-        return hashlib.sha256(str(hashable_list).encode('utf-8')).hexdigest()
+        return hashlib.sha256(str(hashable_list).encode("utf-8")).hexdigest()
 
     def _handle_duplicates(self, hash_key):
 
         duplicate_tasks = Task.objects.filter(
-            hash_key=hash_key,
-            completed=0,
-            cancelled=0)
+            hash_key=hash_key, completed=0, cancelled=0
+        )
 
         if not duplicate_tasks:
             return
 
         if self.duplicate_policy == "cancel":
             now = timezone.now()
-            self.logger.info(
-                "(%s) - Task is a duplicate - Cancelling old tasks." %
-                now)
+            self.logger.info("(%s) - Task is a duplicate - Cancelling old tasks." % now)
             for task in duplicate_tasks:
                 task.add_task_note(
-                    "Task cancelled because was an old duplicate. - (%s)"
-                    % now)
+                    "Task cancelled because was an old duplicate. - (%s)" % now
+                )
                 task.get_task().cancel()
             return
 
@@ -288,7 +276,7 @@ class BaseTask(object):
             email_conf = self.config.emails.token
             send_stage_email(self.task, email_conf, token)
         except KeyError as e:
-            handle_task_error(e, self.task, error_text='while sending token')
+            handle_task_error(e, self.task, error_text="while sending token")
 
     def add_note(self, note):
         """
@@ -296,7 +284,8 @@ class BaseTask(object):
         """
         now = timezone.now()
         self.logger.info(
-            "(%s)(%s)(%s) - %s" % (now, self.task_type, self.task.uuid, note))
+            "(%s)(%s)(%s) - %s" % (now, self.task_type, self.task.uuid, note)
+        )
         note = "%s - (%s)" % (note, now)
         self.task.add_task_note(note)
 
@@ -320,7 +309,8 @@ class BaseTask(object):
         if not valid:
             # TODO(amelia): get action invalidation reasons and raise those
             raise exceptions.TaskActionsInvalid(
-                self.task, 'actions invalid', internal_message)
+                self.task, "actions invalid", internal_message
+            )
 
     @property
     def approved(self):
@@ -342,40 +332,47 @@ class BaseTask(object):
         if completed is not None:
             if self.task.completed and not completed:
                 raise exceptions.TaskStateInvalid(
-                    self.task, "This task has already been completed.")
+                    self.task, "This task has already been completed."
+                )
             if not self.task.completed and completed:
                 raise exceptions.TaskStateInvalid(
-                    self.task, "This task hasn't been completed.")
+                    self.task, "This task hasn't been completed."
+                )
 
         if cancelled is not None:
             if self.task.cancelled and not cancelled:
                 raise exceptions.TaskStateInvalid(
-                    self.task, "This task has been cancelled.")
+                    self.task, "This task has been cancelled."
+                )
             if not self.task.cancelled and cancelled:
                 raise exceptions.TaskStateInvalid(
-                    self.task, "This task has not been cancelled.")
+                    self.task, "This task has not been cancelled."
+                )
         if approved is not None:
             if self.task.approved and not approved:
                 raise exceptions.TaskStateInvalid(
-                    self.task, "This task has already been approved.")
+                    self.task, "This task has already been approved."
+                )
             if not self.task.approved and approved:
                 raise exceptions.TaskStateInvalid(
-                    self.task, "This task has not been approved.")
+                    self.task, "This task has not been approved."
+                )
 
     def update(self, action_data):
         self.confirm_state(approved=False, completed=False, cancelled=False)
 
         action_serializer_list = self._instantiate_action_serializers(
-            action_data, use_existing_actions=True)
+            action_data, use_existing_actions=True
+        )
 
         hash_key = self._create_task_hash(action_serializer_list)
         self._handle_duplicates(hash_key)
 
         for action in action_serializer_list:
-            data = action['serializer'].validated_data
+            data = action["serializer"].validated_data
 
-            action['action'].action.action_data = data
-            action['action'].action.save()
+            action["action"].action.action_data = data
+            action["action"].action.save()
         self._refresh_actions()
         self.prepare()
 
@@ -392,8 +389,7 @@ class BaseTask(object):
             try:
                 action.prepare()
             except Exception as e:
-                handle_task_error(
-                    e, self.task, error_text='while setting up task')
+                handle_task_error(e, self.task, error_text="while setting up task")
 
         # send initial confirmation email:
         email_conf = self.config.emails.initial
@@ -424,10 +420,7 @@ class BaseTask(object):
             return
 
         if self.send_approval_notification:
-            notes = {
-                'notes':
-                    ["'%s' task needs approval." % self.task_type]
-            }
+            notes = {"notes": ["'%s' task needs approval." % self.task_type]}
             create_notification(self.task, notes)
 
     def approve(self, approved_by="system"):
@@ -451,8 +444,7 @@ class BaseTask(object):
             try:
                 action.approve()
             except Exception as e:
-                handle_task_error(
-                    e, self.task, error_text='while approving task')
+                handle_task_error(e, self.task, error_text="while approving task")
 
         self.is_valid("task invalid after approval")
 
@@ -495,10 +487,11 @@ class BaseTask(object):
             try:
                 data[field] = token_data[field]
             except KeyError:
-                errors[field] = ["This field is required.", ]
+                errors[field] = [
+                    "This field is required.",
+                ]
             except TypeError:
-                errors = ["Improperly formated json. "
-                          "Should be a key-value object."]
+                errors = ["Improperly formated json. " "Should be a key-value object."]
                 break
 
         if errors:
@@ -510,8 +503,7 @@ class BaseTask(object):
             try:
                 action.submit(data)
             except Exception as e:
-                handle_task_error(
-                    e, self.task, "while submiting task")
+                handle_task_error(e, self.task, "while submiting task")
 
         self.is_valid("task invalid after submit")
 

@@ -30,7 +30,7 @@ def send_email(to_addresses, context, conf, task):
     Function for sending emails from actions
     """
 
-    if not conf.get('template'):
+    if not conf.get("template"):
         return
 
     if not to_addresses:
@@ -40,66 +40,58 @@ def send_email(to_addresses, context, conf, task):
     elif isinstance(to_addresses, set):
         to_addresses = list(to_addresses)
 
-    text_template = loader.get_template(
-        conf['template'],
-        using='include_etc_templates')
+    text_template = loader.get_template(conf["template"], using="include_etc_templates")
 
-    html_template = conf.get('html_template')
+    html_template = conf.get("html_template")
     if html_template:
         html_template = loader.get_template(
-            html_template,
-            using='include_etc_templates')
+            html_template, using="include_etc_templates"
+        )
 
     try:
         message = text_template.render(context)
         # from_email is the return-path and is distinct from the
         # message headers
-        from_email = conf.get('from')
+        from_email = conf.get("from")
         if not from_email:
-            from_email = conf.get('reply')
+            from_email = conf.get("reply")
             if not from_email:
                 return
         elif "%(task_uuid)s" in from_email:
-            from_email = from_email % {'task_uuid': task.uuid}
+            from_email = from_email % {"task_uuid": task.uuid}
 
-        reply_email = conf['reply']
+        reply_email = conf["reply"]
         # these are the message headers which will be visible to
         # the email client.
         headers = {
-            'X-Adjutant-Task-UUID': task.uuid,
+            "X-Adjutant-Task-UUID": task.uuid,
             # From needs to be set to be distinct from return-path
-            'From': reply_email,
-            'Reply-To': reply_email,
+            "From": reply_email,
+            "Reply-To": reply_email,
         }
 
         email = EmailMultiAlternatives(
-            conf['subject'],
-            message,
-            from_email,
-            to_addresses,
-            headers=headers,
+            conf["subject"], message, from_email, to_addresses, headers=headers,
         )
 
         if html_template:
-            email.attach_alternative(
-                html_template.render(context), "text/html")
+            email.attach_alternative(html_template.render(context), "text/html")
 
         email.send(fail_silently=False)
         return True
 
     except Exception as e:
         notes = {
-            'errors':
-                ("Error: '%s' while sending additional email for task: %s" %
-                    (e, task.uuid))
+            "errors": (
+                "Error: '%s' while sending additional email for task: %s"
+                % (e, task.uuid)
+            )
         }
 
         notif_conf = task.config.notifications
 
         if e.__class__.__name__ in notif_conf.safe_errors:
-            notification = create_notification(
-                task, notes, error=True,
-                handlers=False)
+            notification = create_notification(task, notes, error=True, handlers=False)
             notification.acknowledged = True
             notification.save()
         else:

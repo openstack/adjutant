@@ -16,6 +16,6 @@ import pkg_resources
 
 
 def load_feature_sets():
-    for entry_point in pkg_resources.iter_entry_points('adjutant.feature_sets'):
+    for entry_point in pkg_resources.iter_entry_points("adjutant.feature_sets"):
         feature_set = entry_point.load()
         feature_set().load()

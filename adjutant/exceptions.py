@@ -24,6 +24,7 @@ class BaseServiceException(Exception):
     If thrown during the course of an API call will be caught and returned
     to the user as an ServiceUnavailable error with a 503 response.
     """
+
     default_message = "A internal service error has occured."
 
     def __init__(self, message=None):
@@ -34,28 +35,23 @@ class BaseServiceException(Exception):
 
 
 class InvalidActionClass(BaseServiceException):
-    default_message = (
-        "Cannot register action not built off the BaseAction class.")
+    default_message = "Cannot register action not built off the BaseAction class."
 
 
 class InvalidActionSerializer(BaseServiceException):
-    default_message = (
-        "Action serializer must be a valid DRF serializer.")
+    default_message = "Action serializer must be a valid DRF serializer."
 
 
 class InvalidTaskClass(BaseServiceException):
-    default_message = (
-        "Action serializer must be a valid DRF serializer.")
+    default_message = "Action serializer must be a valid DRF serializer."
 
 
 class InvalidAPIClass(BaseServiceException):
-    default_message = (
-        "Cannot register task not built off the BaseTask class.")
+    default_message = "Cannot register task not built off the BaseTask class."
 
 
 class DelegateAPINotRegistered(BaseServiceException):
-    default_message = (
-        "Failed to setup DelegateAPI that has not been registered.")
+    default_message = "Failed to setup DelegateAPI that has not been registered."
 
 
 class TaskNotRegistered(BaseServiceException):
@@ -76,6 +72,7 @@ class ConfigurationException(BaseServiceException):
 
 class BaseAPIException(Exception):
     """An Task error occurred."""
+
     status_code = status.HTTP_400_BAD_REQUEST
 
     def __init__(self, message=None, internal_message=None):
@@ -95,17 +92,17 @@ class BaseAPIException(Exception):
 
 class NotFound(BaseAPIException):
     status_code = status.HTTP_404_NOT_FOUND
-    default_message = 'Not found.'
+    default_message = "Not found."
 
 
 class TaskNotFound(NotFound):
     status_code = status.HTTP_404_NOT_FOUND
-    default_message = 'Task not found.'
+    default_message = "Task not found."
 
 
 class ServiceUnavailable(BaseAPIException):
     status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-    default_message = 'Service temporarily unavailable, try again later.'
+    default_message = "Service temporarily unavailable, try again later."
 
 
 class TaskSerializersInvalid(BaseAPIException):
@@ -145,5 +142,6 @@ class TaskStateInvalid(BaseTaskException):
 
 class TaskActionsFailed(BaseTaskException):
     """For use when Task processing fails and we want to wrap that."""
+
     status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-    default_message = 'Service temporarily unavailable, try again later.'
+    default_message = "Service temporarily unavailable, try again later."

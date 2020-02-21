@@ -10,8 +10,8 @@ from adjutant import config
 def make_yaml_lines(val, depth, comment=False):
     new_lines = []
     line_prefix = "  " * (depth + 1)
-    for line in yaml.dump(val).split('\n'):
-        if line == '':
+    for line in yaml.dump(val).split("\n"):
+        if line == "":
             continue
         if comment:
             new_lines.append(line_prefix + "# %s" % line)
@@ -28,7 +28,7 @@ def make_field_lines(field, depth):
     field_help_text = "# %s" % field.help_text
     field_lines.append(line_prefix + field_help_text)
 
-    default = ''
+    default = ""
     if field.default is not None:
         default = field.default
 
@@ -48,7 +48,7 @@ def make_field_lines(field, depth):
         else:
             field_lines.append(line_prefix + "# %s:" % field.name)
     else:
-        if default == '':
+        if default == "":
             field_lines.append(line_prefix + "# %s: <your_value>" % field.name)
         else:
             default_str = " " + str(default)
@@ -70,20 +70,20 @@ def make_group_lines(group, depth=0):
 
 
 class Command(BaseCommand):
-    help = ''
+    help = ""
 
     def add_arguments(self, parser):
-        parser.add_argument('--output-file', default="adjutant.yaml")
+        parser.add_argument("--output-file", default="adjutant.yaml")
 
     def handle(self, *args, **options):
-        print("Generating example file to: '%s'" % options['output_file'])
+        print("Generating example file to: '%s'" % options["output_file"])
 
         base_lines = []
         for group in config._root_config:
             base_lines += make_group_lines(group)
             base_lines.append("")
 
-        with open(options['output_file'], "w") as f:
+        with open(options["output_file"], "w") as f:
             for line in base_lines:
                 f.write(line)
                 f.write("\n")
