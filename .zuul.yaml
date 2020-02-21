@@ -1,6 +1,25 @@
+- job:
+    name: adjutant-black-style-check
+    parent: tox
+    description: |
+      Runs black linting tests.
+
+      Uses tox with the ``black`` environment.
+    vars:
+      tox_envlist: black_check
+      test_setup_skip: true
+
+
 - project:
     templates:
       - publish-openstack-docs-pti
       - build-release-notes-jobs-python3
       - openstack-cover-jobs
       - openstack-python3-ussuri-jobs
+    check:
+      jobs:
+        - adjutant-black-style-check
+    gate:
+      queue: adjutant
+      jobs:
+        - adjutant-black-style-check
