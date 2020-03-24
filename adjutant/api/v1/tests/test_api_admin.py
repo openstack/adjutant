@@ -14,16 +14,14 @@
 
 from datetime import timedelta
 import json
-import mock
+from unittest import mock
 from unittest import skip
 
+from confspirator.tests import utils as conf_utils
 from django.utils import timezone
 from django.core import mail
-
 from rest_framework import status
 from rest_framework.test import APITestCase
-
-from confspirator.tests import utils as conf_utils
 
 from adjutant.api.models import Task, Token, Notification
 from adjutant.common.tests import fake_clients
