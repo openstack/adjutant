@@ -13,13 +13,11 @@
 #    under the License.
 
 from datetime import timedelta
-import mock
-
-from rest_framework import status
-
-from django.utils import timezone
+from unittest import mock
 
 from confspirator.tests import utils as conf_utils
+from django.utils import timezone
+from rest_framework import status
 
 from adjutant.api.models import Token, Task
 from adjutant.common.tests import fake_clients

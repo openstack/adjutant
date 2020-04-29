@@ -12,12 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
 from smtplib import SMTPException
-
-from django.core import mail
+from unittest import mock
 
 from confspirator.tests import utils as conf_utils
+from django.core import mail
 
 from adjutant.actions.v1.misc import SendAdditionalEmailAction
 from adjutant.actions.utils import send_email

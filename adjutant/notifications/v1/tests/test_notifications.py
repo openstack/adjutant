@@ -12,13 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import mock
-
-from django.core import mail
-
-from rest_framework import status
+from unittest import mock
 
 from confspirator.tests import utils as conf_utils
+from django.core import mail
+from rest_framework import status
 
 from adjutant.api.models import Notification
 from adjutant.tasks.models import Task

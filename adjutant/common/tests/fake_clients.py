@@ -12,9 +12,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from unittest import mock
 from uuid import uuid4
-
-import mock
 
 from adjutant.config import CONF
 
