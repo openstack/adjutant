@@ -19,3 +19,4 @@ Adjutant Release Notes
    :maxdepth: 1
 
    unreleased
+   ussuri
