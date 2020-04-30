@@ -5,6 +5,7 @@ Welcome to Adjutant's documentation!
 .. toctree::
    :maxdepth: 1
 
+   contributing
    development
    release-notes
    devstack-guide
