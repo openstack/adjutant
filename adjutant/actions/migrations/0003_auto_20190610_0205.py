@@ -11,6 +11,10 @@ class Migration(migrations.Migration):
         ('actions', '0002_action_auto_approve'),
     ]
 
+    run_before = [
+        ("api", "0005_auto_20190610_0209"),
+    ]
+
     operations = [
         migrations.AlterField(
             model_name='action',
