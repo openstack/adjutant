@@ -409,6 +409,7 @@ class TokenDetail(APIViewWithLogger):
                 "actions": [str(act) for act in actions],
                 "required_fields": required_fields,
                 "task_type": token.task.task_type,
+                "requires_authentication": token.task.get_task().token_requires_authentication,
             }
         )
 
@@ -428,6 +429,14 @@ class TokenDetail(APIViewWithLogger):
                 {"errors": ["This token does not exist or has expired."]}, status=404
             )
 
-        self.task_manager.submit(token.task, request.data)
+        task = self.task_manager.get(token.task)
+        if task.token_requires_authentication and not request.keystone_user.get(
+            "authenticated", False
+        ):
+            return Response(
+                {"errors": ["This token requires authentication to submit."]}, 401
+            )
+
+        self.task_manager.submit(task, request.data, request.keystone_user)
 
         return Response({"notes": ["Token submitted successfully."]}, status=200)

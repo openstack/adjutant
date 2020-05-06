@@ -186,8 +186,15 @@ class BaseAction(object):
             )
             return self._post_approve()
 
-    def submit(self, token_data):
-        return self._submit(token_data)
+    def submit(self, token_data, keystone_user=None):
+        try:
+            return self._submit(token_data, keystone_user)
+        except TypeError:
+            self.logger.warning(
+                "DEPRECATED: Action '_submit' must accept a second parameter "
+                "'keystone_user=None' along with the required 'token_data'."
+            )
+            return self._submit(token_data)
 
     def _prepare(self):
         raise NotImplementedError
@@ -195,7 +202,7 @@ class BaseAction(object):
     def _approve(self):
         raise NotImplementedError
 
-    def _submit(self, token_data):
+    def _submit(self, token_data, keystone_user=None):
         raise NotImplementedError
 
     def __str__(self):

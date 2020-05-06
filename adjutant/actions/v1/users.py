@@ -135,7 +135,7 @@ class NewUserAction(UserNameAction, ProjectMixin, UserMixin):
     def _approve(self):
         self._validate()
 
-    def _submit(self, token_data):
+    def _submit(self, token_data, keystone_user=None):
         self._validate()
 
         if not self.valid:
@@ -258,7 +258,7 @@ class ResetUserPasswordAction(UserNameAction, UserMixin):
     def _approve(self):
         self._validate()
 
-    def _submit(self, token_data):
+    def _submit(self, token_data, keystone_user=None):
         self._validate()
 
         if not self.valid:
@@ -366,7 +366,7 @@ class EditUserRolesAction(UserIdAction, ProjectMixin, UserMixin):
     def _approve(self):
         self._validate()
 
-    def _submit(self, token_data):
+    def _submit(self, token_data, keystone_user=None):
         self._validate()
 
         if not self.valid:
@@ -470,7 +470,7 @@ class UpdateUserEmailAction(UserIdAction, UserMixin):
         self.action.need_token = True
         self.set_token_fields(["confirm"])
 
-    def _submit(self, token_data):
+    def _submit(self, token_data, keystone_user=None):
         self._validate()
 
         if not self.valid:

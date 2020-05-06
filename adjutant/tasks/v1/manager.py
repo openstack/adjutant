@@ -66,15 +66,7 @@ class TaskManager(object):
                     "Task not found with uuid of: '%s'" % task
                 )
         if isinstance(task, Task):
-            try:
-                return tasks.TASK_CLASSES[task.task_type](task)
-            except KeyError:
-                # TODO(adriant): Maybe we should handle this better
-                # for older deprecated tasks:
-                raise exceptions.TaskNotRegistered(
-                    "Task type '%s' not registered, "
-                    "and used for existing task." % task.task_type
-                )
+            return task.get_task()
         raise exceptions.TaskNotFound("Task not found for value of: '%s'" % task)
 
     def update(self, task, action_data):
@@ -87,9 +79,9 @@ class TaskManager(object):
         task.approve(approved_by)
         return task
 
-    def submit(self, task, token_data):
+    def submit(self, task, token_data, keystone_user=None):
         task = self.get(task)
-        task.submit(token_data)
+        task.submit(token_data, keystone_user)
         return task
 
     def cancel(self, task):

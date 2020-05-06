@@ -165,7 +165,7 @@ class SendAdditionalEmailAction(BaseAction):
     def _approve(self):
         self.perform_action("approve")
 
-    def _submit(self, data):
+    def _submit(self, token_data, keystone_user=None):
         self.perform_action("submit")
 
     def perform_action(self, stage):

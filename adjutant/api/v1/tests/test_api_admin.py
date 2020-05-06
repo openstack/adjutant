@@ -27,6 +27,8 @@ from adjutant.api.models import Task, Token, Notification
 from adjutant.common.tests import fake_clients
 from adjutant.common.tests.fake_clients import FakeManager, setup_identity_cache
 from adjutant.config import CONF
+from adjutant.tasks.v1.users import InviteUser
+from adjutant.tasks.v1.manager import TaskManager
 
 
 @mock.patch("adjutant.common.user_store.IdentityManager", FakeManager)
@@ -218,6 +220,7 @@ class AdminAPITests(APITestCase):
                 "actions": ["ResetUserPasswordAction"],
                 "required_fields": ["password"],
                 "task_type": "reset_user_password",
+                "requires_authentication": False,
             },
         )
         self.assertEqual(1, Token.objects.count())
@@ -1577,3 +1580,83 @@ class AdminAPITests(APITestCase):
             },
         )
         self.assertEqual(new_notification.task, new_task)
+
+    @mock.patch.object(InviteUser, "token_requires_authentication", True)
+    def test_token_require_authenticated(self):
+        """
+        test for reissue of tokens
+        """
+        project = mock.Mock()
+        project.id = "test_project_id"
+        project.name = "test_project"
+        project.domain = "default"
+        project.roles = {}
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com"
+        )
+
+        setup_identity_cache(projects=[project], users=[user])
+
+        url = "/v1/actions/InviteUser"
+        headers = {
+            "project_name": project.name,
+            "project_id": project.id,
+            "roles": "project_admin,member,project_mod",
+            "username": "owner@example.com",
+            "user_id": "test_user_id",
+            "authenticated": True,
+        }
+        data = {
+            "email": "test@example.com",
+            "roles": ["member"],
+            "project_id": "test_project_id",
+        }
+        response = self.client.post(url, data, format="json", headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+
+        new_token = Token.objects.all()[0]
+
+        url = "/v1/tokens/" + new_token.token
+        data = {"confirm": True}
+        response = self.client.post(url, data, format="json", headers={})
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(
+            response.json(),
+            {"errors": ["This token requires authentication to submit."]},
+        )
+
+        headers = {
+            "project_name": project.name,
+            "project_id": project.id,
+            "roles": "project_admin,member,project_mod",
+            "username": "owner@example.com",
+            "user_id": "test_user_id",
+            "authenticated": True,
+        }
+
+        submitted_keystone_user = {}
+
+        def mocked_submit(self, task, token_data, keystone_user):
+            submitted_keystone_user.update(keystone_user)
+
+        with mock.patch.object(TaskManager, "submit", mocked_submit):
+            response = self.client.post(url, data, format="json", headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.json(),
+            {"notes": ["Token submitted successfully."]},
+        )
+        self.assertEqual(
+            submitted_keystone_user,
+            {
+                "authenticated": True,
+                "project_domain_id": "default",
+                "project_id": "test_project_id",
+                "project_name": "test_project",
+                "roles": ["project_admin", "member", "project_mod"],
+                "user_domain_id": "default",
+                "user_id": "test_user_id",
+                "username": "owner@example.com",
+            },
+        )

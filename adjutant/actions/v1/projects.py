@@ -135,7 +135,7 @@ class NewProjectAction(BaseAction, ProjectMixin, UserMixin):
                 % (user.name, project_id, default_roles)
             )
 
-    def _submit(self, token_data):
+    def _submit(self, token_data, keystone_user=None):
         """
         Nothing to do here. Everything is done at the approve step.
         """
@@ -406,7 +406,7 @@ class NewProjectWithUserAction(UserNameAction, ProjectMixin, UserMixin):
                 % (self.username, project_id, default_roles)
             )
 
-    def _submit(self, token_data):
+    def _submit(self, token_data, keystone_user=None):
         """
         The submit action is performed when a token is submitted.
         This is done to set a user password only, and so should now only
@@ -537,5 +537,5 @@ class AddDefaultUsersToProjectAction(BaseAction, ProjectMixin, UserMixin):
             self.action.save()
             self.add_note("All users added.")
 
-    def _submit(self, token_data):
+    def _submit(self, token_data, keystone_user=None):
         pass

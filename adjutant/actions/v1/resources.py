@@ -219,7 +219,7 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
         if self.setup_network and self.valid:
             self._create_network()
 
-    def _submit(self, token_data):
+    def _submit(self, token_data, keystone_user=None):
         pass
 
 
@@ -437,7 +437,7 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
 
         self.action.save()
 
-    def _submit(self, token_data):
+    def _submit(self, token_data, keystone_user=None):
         """
         Nothing to do here. Everything is done at approve.
         """
@@ -494,5 +494,5 @@ class SetProjectQuotaAction(UpdateProjectQuotasAction):
         self.action.state = "completed"
         self.action.save()
 
-    def _submit(self, token_data):
+    def _submit(self, token_data, keystone_user=None):
         pass

@@ -129,6 +129,7 @@ class BaseTask(object):
     deprecated_task_types = None
     duplicate_policy = "cancel"
     send_approval_notification = True
+    token_requires_authentication = False
 
     # config defaults for the task (used to generate default config):
     allow_auto_approve = True
@@ -466,7 +467,7 @@ class BaseTask(object):
         for token in self.task.tokens:
             token.delete()
 
-    def submit(self, token_data=None):
+    def submit(self, token_data=None, keystone_user=None):
 
         self.confirm_state(approved=True, completed=False, cancelled=False)
 
@@ -502,7 +503,7 @@ class BaseTask(object):
 
         for action in actions:
             try:
-                action.submit(data)
+                action.submit(data, keystone_user)
             except Exception as e:
                 handle_task_error(e, self.task, "while submiting task")
 

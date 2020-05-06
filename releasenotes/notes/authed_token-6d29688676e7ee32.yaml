@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    Tasks can now be configured to required a user to be authenticated when an
+    Adjutant token is submitted for the final phase of a task. Actions will now
+    be passed the ``keystone_user`` who submitted the token to do any processing
+    on that as needed for the final step.
+deprecations:
+  - |
+    All actions now need to have ``keystone_user`` as a second optional
+    paramater in the ``submit``function. It should have a default of ``None``,
+    set as ``keystone_user=None``. Any existing actions without this will continue
+    to work with a fallback, but that fallback will be removed in the W release
+    cycle.

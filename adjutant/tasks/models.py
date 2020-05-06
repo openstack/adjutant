@@ -18,6 +18,7 @@ from django.utils import timezone
 from jsonfield import JSONField
 
 from adjutant.config import CONF
+from adjutant import exceptions
 from adjutant import tasks
 
 
@@ -76,7 +77,15 @@ class Task(models.Model):
 
     def get_task(self):
         """Returns self as the appropriate task wrapper type."""
-        return tasks.TASK_CLASSES[self.task_type](task_model=self)
+        try:
+            return tasks.TASK_CLASSES[self.task_type](task_model=self)
+        except KeyError:
+            # TODO(adriant): Maybe we should handle this better
+            # for older deprecated tasks:
+            raise exceptions.TaskNotRegistered(
+                "Task type '%s' not registered, "
+                "and used for existing task." % self.task_type
+            )
 
     @property
     def config(self):

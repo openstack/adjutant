@@ -185,7 +185,7 @@ functions::
             # Do some logic here
             self.action.task.cache['value'] = self.value1
 
-        def _submit(self, data):
+        def _submit(self, token_data, keystone_user=None):
             # Do some logic here
             self.add_note("Submit action performed")
 
