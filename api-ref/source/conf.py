@@ -39,9 +39,10 @@ html_theme = "openstackdocstheme"
 # html_theme_options = {}
 
 # openstackdocstheme settings
-repository_name = "openstack/adjutant"
+openstackdocs_repo_name = "openstack/adjutant"
+openstackdocs_auto_name = False
 html_theme = "openstackdocs"
-use_storyboard = True
+openstackdocs_use_storyboard = True
 
 # Add any paths that contain custom themes here, relative to this directory.
 # html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()

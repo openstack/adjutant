@@ -55,8 +55,9 @@ project = "Adjutant Release Notes"
 copyright = "2019, Adjutant Developers"
 
 # openstackdocstheme settings
-repository_name = "openstack/adjutant"
-use_storyboard = True
+openstackdocs_repo_name = "openstack/adjutant"
+openstackdocs_auto_name = False
+openstackdocs_use_storyboard = True
 
 # Release  notes are version independent
 

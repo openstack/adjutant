@@ -36,9 +36,10 @@ extensions = ["openstackdocstheme"]
 templates_path = ["_templates"]
 
 # openstackdocstheme settings
-repository_name = "openstack/adjutant"
+openstackdocs_repo_name = "openstack/adjutant"
+openstackdocs_auto_name = False
 html_theme = "openstackdocs"
-use_storyboard = True
+openstackdocs_use_storyboard = True
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
