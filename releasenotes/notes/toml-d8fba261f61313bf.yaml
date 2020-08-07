@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Adjutant now optionally supports toml as a config file format,
+    although yaml is still considered the default. Both can now be
+    exported as example configs.

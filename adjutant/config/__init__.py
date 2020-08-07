@@ -14,9 +14,8 @@
 
 import os
 import sys
-import yaml
 
-from confspirator import load
+import confspirator
 from confspirator import groups
 
 from adjutant.config import api
@@ -34,7 +33,10 @@ _root_config.register_child_config(notification.config_group)
 _root_config.register_child_config(workflow.config_group)
 _root_config.register_child_config(quota.config_group)
 
-_config_file = "/etc/adjutant/adjutant.yaml"
+_config_files = [
+    "/etc/adjutant/adjutant.yaml",
+    "/etc/adjutant/adjutant.toml",
+]
 _old_config_file = "/etc/adjutant/conf.yaml"
 
 
@@ -56,24 +58,27 @@ def _load_config():
     else:
         test_mode = False
 
-    config_file_locations = [_config_file, _old_config_file]
+    config_file_locations = list(_config_files)
+    config_file_locations.append(_old_config_file)
 
     conf_file = os.environ.get("ADJUTANT_CONFIG_FILE", None)
 
     if conf_file:
         config_file_locations.insert(0, conf_file)
 
-    conf_dict = None
+    loaded_config = None
     used_config_loc = None
     for conf_file_loc in config_file_locations:
         try:
-            with open(conf_file_loc) as f:
-                # NOTE(adriant): we print because we don't yet know
-                # where to log to
-                print("Loading config from '%s'" % conf_file_loc)
-                conf_dict = yaml.load(f, Loader=yaml.FullLoader)
-                used_config_loc = conf_file_loc
-                break
+            # NOTE(adriant): we print because we don't yet know
+            # where to log to
+            if not test_mode:
+                print("Checking for config at '%s'" % conf_file_loc)
+            loaded_config = confspirator.load_file(
+                _root_config, conf_file_loc, test_mode=test_mode
+            )
+            used_config_loc = conf_file_loc
+            break
         except IOError:
             if not test_mode:
                 print(
@@ -88,22 +93,21 @@ def _load_config():
     ):
         print(
             "DEPRECATED: Using the old default config location '%s' is deprecated "
-            "in favor of '%s', or setting a config location via the environment "
-            "variable 'ADJUTANT_CONFIG_FILE'." % (_old_config_file, _config_file)
+            "in favor of one of '%s', or setting a config location via the environment "
+            "variable 'ADJUTANT_CONFIG_FILE'." % (_old_config_file, _config_files)
         )
 
-    if conf_dict is None:
+    if loaded_config is None:
         if not test_mode:
             print(
                 "No valid conf file not found, will rely on defaults and "
                 "environment variables.\n"
-                "Config should be placed at '%s' or a location defined via the "
-                "environment variable 'ADJUTANT_CONFIG_FILE'." % _config_file
+                "Config should be placed at one of '%s' or a location defined via the "
+                "environment variable 'ADJUTANT_CONFIG_FILE'." % _config_files
             )
-        conf_dict = {}
+        return confspirator.load_dict(_root_config, {}, test_mode=test_mode)
 
-    conf_dict = {"adjutant": conf_dict}
-    return load(_root_config, conf_dict, test_mode=test_mode)
+    return loaded_config
 
 
 CONF = _load_config()
