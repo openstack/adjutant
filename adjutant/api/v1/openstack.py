@@ -314,7 +314,7 @@ class UserRoles(BaseDelegateAPI):
 
     @utils.mod_or_admin
     def delete(self, args, **kwargs):
-        """ Revoke user roles to the current project.
+        """Revoke user roles to the current project.
 
         This only supports Active users
         """

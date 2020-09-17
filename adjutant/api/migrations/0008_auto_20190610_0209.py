@@ -16,6 +16,10 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.SeparateDatabaseAndState(
-            state_operations=[migrations.DeleteModel(name="Task",),],
+            state_operations=[
+                migrations.DeleteModel(
+                    name="Task",
+                ),
+            ],
         ),
     ]

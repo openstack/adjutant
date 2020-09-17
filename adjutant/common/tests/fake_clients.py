@@ -159,7 +159,9 @@ def setup_identity_cache(
         "new_role_assignments": [],
         "roles": {r.id: r for r in roles},
         "regions": {"RegionOne": region_one, "RegionTwo": region_two},
-        "domains": {default_domain.id: default_domain,},
+        "domains": {
+            default_domain.id: default_domain,
+        },
         "credentials": credentials,
     }
 
@@ -345,7 +347,9 @@ class FakeManager(object):
         if inherited:
             scope["OS-INHERIT:inherited_to"] = "projects"
         role_assignment = FakeRoleAssignment(
-            scope=scope, role={"name": role.name}, user={"id": user.id},
+            scope=scope,
+            role={"name": role.name},
+            user={"id": user.id},
         )
         return role_assignment
 
@@ -773,8 +777,8 @@ class FakeCinderClient(FakeOpenstackClient):
 
 
 class FakeResource(object):
-    """ Stub class to represent an individual instance of a volume or
-    snapshot """
+    """Stub class to represent an individual instance of a volume or
+    snapshot"""
 
     def __init__(self, size):
         self.size = size

@@ -27,8 +27,7 @@ LOG = getLogger("adjutant")
 
 
 def exception_handler(exc, context):
-    """Returns the response that should be used for any given exception.
-    """
+    """Returns the response that should be used for any given exception."""
     now = timezone.now()
     if isinstance(exc, Http404):
         exc = exceptions.NotFound()

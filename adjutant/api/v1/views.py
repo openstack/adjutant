@@ -337,7 +337,14 @@ class TokenList(APIViewWithLogger):
         uuid = request.data.get("task", None)
         if uuid is None:
             return Response(
-                {"errors": {"task": ["This field is required.",]}}, status=400
+                {
+                    "errors": {
+                        "task": [
+                            "This field is required.",
+                        ]
+                    }
+                },
+                status=400,
             )
         try:
             # TODO(adriant): better handle this bit of incode policy

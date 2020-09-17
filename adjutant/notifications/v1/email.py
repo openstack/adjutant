@@ -61,7 +61,8 @@ class EmailNotification(base.BaseNotificationHandler):
                 default="notification.txt",
             ),
             fields.StrConfig(
-                "html_template", help_text="Email html template for this notification.",
+                "html_template",
+                help_text="Email html template for this notification.",
             ),
         ]
     )

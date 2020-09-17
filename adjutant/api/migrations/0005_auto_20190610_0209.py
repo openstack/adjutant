@@ -15,7 +15,10 @@ class Migration(migrations.Migration):
     operations = [
         migrations.SeparateDatabaseAndState(
             database_operations=[
-                migrations.AlterModelTable(name="task", table="tasks_task",),
+                migrations.AlterModelTable(
+                    name="task",
+                    table="tasks_task",
+                ),
             ],
         ),
     ]

@@ -1326,8 +1326,7 @@ class AdminAPITests(APITestCase):
             self.assertEqual(task, response.json()["tasks"][i])
 
     def test_task_list_filter(self):
-        """
-        """
+        """"""
         project = fake_clients.FakeProject(name="test_project")
 
         setup_identity_cache(projects=[project])

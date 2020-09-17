@@ -64,13 +64,16 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
                         default="default_router",
                     ),
                     fields.StrConfig(
-                        "public_network", help_text="ID of the public network.",
+                        "public_network",
+                        help_text="ID of the public network.",
                     ),
                     fields.StrConfig(
-                        "subnet_cidr", help_text="CIDR for the default subnet.",
+                        "subnet_cidr",
+                        help_text="CIDR for the default subnet.",
                     ),
                     fields.ListConfig(
-                        "dns_nameservers", help_text="DNS nameservers for the subnet.",
+                        "dns_nameservers",
+                        help_text="DNS nameservers for the subnet.",
                     ),
                 ],
             ),
@@ -235,12 +238,19 @@ class NewProjectDefaultNetworkAction(NewDefaultNetworkAction):
 
     def _pre_validate(self):
         # Note: Don't check project here as it doesn't exist yet.
-        self.action.valid = validate_steps([self._validate_region,])
+        self.action.valid = validate_steps(
+            [
+                self._validate_region,
+            ]
+        )
         self.action.save()
 
     def _validate(self):
         self.action.valid = validate_steps(
-            [self._validate_region, self._validate_project_id,]
+            [
+                self._validate_region,
+                self._validate_project_id,
+            ]
         )
         self.action.save()
 
@@ -457,7 +467,11 @@ class SetProjectQuotaAction(UpdateProjectQuotasAction):
 
     def _validate(self):
         # Make sure the project id is valid and can be used
-        self.action.valid = validate_steps([self._validate_project_id,])
+        self.action.valid = validate_steps(
+            [
+                self._validate_project_id,
+            ]
+        )
         self.action.save()
 
     def _prepare(self):

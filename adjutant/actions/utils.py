@@ -71,7 +71,11 @@ def send_email(to_addresses, context, conf, task):
         }
 
         email = EmailMultiAlternatives(
-            conf["subject"], message, from_email, to_addresses, headers=headers,
+            conf["subject"],
+            message,
+            from_email,
+            to_addresses,
+            headers=headers,
         )
 
         if html_template:

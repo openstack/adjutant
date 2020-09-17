@@ -12,7 +12,10 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RemoveField(model_name="task", name="ip_address",),
+        migrations.RemoveField(
+            model_name="task",
+            name="ip_address",
+        ),
         migrations.AddField(
             model_name="task",
             name="task_notes",
@@ -34,7 +37,9 @@ class Migration(migrations.Migration):
             field=models.BooleanField(default=False),
         ),
         migrations.AlterField(
-            model_name="task", name="hash_key", field=models.CharField(max_length=64),
+            model_name="task",
+            name="hash_key",
+            field=models.CharField(max_length=64),
         ),
         migrations.AlterField(
             model_name="task",
@@ -42,7 +47,9 @@ class Migration(migrations.Migration):
             field=models.CharField(max_length=64, null=True),
         ),
         migrations.AlterField(
-            model_name="task", name="task_type", field=models.CharField(max_length=100),
+            model_name="task",
+            name="task_type",
+            field=models.CharField(max_length=100),
         ),
         migrations.AddIndex(
             model_name="task",

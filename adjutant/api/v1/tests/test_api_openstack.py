@@ -480,9 +480,9 @@ class QuotaAPITests(AdjutantAPITestCase):
 
     def test_update_quota_history(self):
         """
-         Update the quota size of a project with a quota change recently
-         It should update the quota the first time but wait for admin approval
-         the second time
+        Update the quota size of a project with a quota change recently
+        It should update the quota the first time but wait for admin approval
+        the second time
         """
         project = fake_clients.FakeProject(name="test_project", id="test_project_id")
 
@@ -583,8 +583,8 @@ class QuotaAPITests(AdjutantAPITestCase):
 
     def test_update_quota_old_history(self):
         """
-         Update the quota size of a project with a quota change 31 days ago
-         It should update the quota the first time without approval
+        Update the quota size of a project with a quota change 31 days ago
+        It should update the quota the first time without approval
         """
 
         project = fake_clients.FakeProject(name="test_project", id="test_project_id")
@@ -629,8 +629,8 @@ class QuotaAPITests(AdjutantAPITestCase):
 
     def test_update_quota_other_project_history(self):
         """
-         Tests that a quota update to another project does not interfer
-         with the 30 days per project limit.
+        Tests that a quota update to another project does not interfer
+        with the 30 days per project limit.
         """
 
         project = fake_clients.FakeProject(name="test_project", id="test_project_id")
@@ -793,7 +793,11 @@ class QuotaAPITests(AdjutantAPITestCase):
                                 "security_groups": 0,
                                 "security_group_rules": 0,
                             },
-                            "cinder": {"gigabytes": 0, "snapshots": 0, "volumes": 0,},
+                            "cinder": {
+                                "gigabytes": 0,
+                                "snapshots": 0,
+                                "volumes": 0,
+                            },
                             "neutron": {
                                 "floatingip": 0,
                                 "network": 0,

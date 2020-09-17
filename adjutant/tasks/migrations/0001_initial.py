@@ -54,7 +54,9 @@ class Migration(migrations.Migration):
                         ("approved_on", models.DateTimeField(null=True)),
                         ("completed_on", models.DateTimeField(null=True)),
                     ],
-                    options={"indexes": [],},
+                    options={
+                        "indexes": [],
+                    },
                 ),
             ],
         ),

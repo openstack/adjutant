@@ -493,12 +493,19 @@ class AddDefaultUsersToProjectAction(BaseAction, ProjectMixin, UserMixin):
         return all_found
 
     def _pre_validate(self):
-        self.action.valid = validate_steps([self._validate_users,])
+        self.action.valid = validate_steps(
+            [
+                self._validate_users,
+            ]
+        )
         self.action.save()
 
     def _validate(self):
         self.action.valid = validate_steps(
-            [self._validate_users, self._validate_project_id,]
+            [
+                self._validate_users,
+                self._validate_project_id,
+            ]
         )
         self.action.save()
 

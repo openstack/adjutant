@@ -75,7 +75,9 @@ def make_task_config(task_class):
             default=task_class.email_config or {},
             sample_default={
                 "initial": None,
-                "token": {"subject": "Some custom subject",},
+                "token": {
+                    "subject": "Some custom subject",
+                },
             },
         )
     )
@@ -424,8 +426,7 @@ class BaseTask(object):
             create_notification(self.task, notes)
 
     def approve(self, approved_by="system"):
-        """Run the approve stage for all the actions.
-        """
+        """Run the approve stage for all the actions."""
 
         self.confirm_state(completed=False, cancelled=False)
 

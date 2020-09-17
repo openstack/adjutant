@@ -435,7 +435,10 @@ class UpdateUserEmailAction(UserIdAction, UserMixin):
 
     def _validate(self):
         self.action.valid = validate_steps(
-            [self._validate_user, self._validate_email_not_in_use,]
+            [
+                self._validate_user,
+                self._validate_email_not_in_use,
+            ]
         )
         self.action.save()
 

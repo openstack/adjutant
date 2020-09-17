@@ -32,7 +32,11 @@ DEFAULT_QUOTA_SIZES = {
             "security_groups": 20,
             "security_group_rules": 100,
         },
-        "cinder": {"gigabytes": 5000, "snapshots": 50, "volumes": 20,},
+        "cinder": {
+            "gigabytes": 5000,
+            "snapshots": 50,
+            "volumes": 20,
+        },
         "neutron": {
             "floatingip": 10,
             "network": 3,

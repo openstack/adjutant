@@ -126,7 +126,9 @@ _notifications_defaults_group.register_child_config(
         "standard_handlers",
         help_text="Handlers to use for standard notifications.",
         required=True,
-        default=["EmailNotification",],
+        default=[
+            "EmailNotification",
+        ],
     )
 )
 _notifications_defaults_group.register_child_config(
@@ -134,7 +136,9 @@ _notifications_defaults_group.register_child_config(
         "error_handlers",
         help_text="Handlers to use for error notifications.",
         required=True,
-        default=["EmailNotification",],
+        default=[
+            "EmailNotification",
+        ],
     )
 )
 _notifications_defaults_group.register_child_config(

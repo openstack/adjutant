@@ -94,8 +94,12 @@ AUTHENTICATION_BACKENDS = []
 
 REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "adjutant.api.exception_handler.exception_handler",
-    "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer",],
-    "DEFAULT_PARSER_CLASSES": ["rest_framework.parsers.JSONParser",],
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
+    "DEFAULT_PARSER_CLASSES": [
+        "rest_framework.parsers.JSONParser",
+    ],
     "DEFAULT_PERMISSION_CLASSES": [],
 }
 
@@ -131,8 +135,16 @@ else:
             },
         },
         "loggers": {
-            "adjutant": {"handlers": ["file"], "level": "INFO", "propagate": False,},
-            "django": {"handlers": ["file"], "level": "INFO", "propagate": False,},
+            "adjutant": {
+                "handlers": ["file"],
+                "level": "INFO",
+                "propagate": False,
+            },
+            "django": {
+                "handlers": ["file"],
+                "level": "INFO",
+                "propagate": False,
+            },
             "keystonemiddleware": {
                 "handlers": ["file"],
                 "level": "INFO",

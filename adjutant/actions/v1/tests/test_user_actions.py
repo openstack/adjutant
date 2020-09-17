@@ -49,7 +49,11 @@ from adjutant.config import CONF
                         "heat_stack_owner",
                         "project_admin",
                     ],
-                    "project_mod": ["member", "heat_stack_owner", "project_mod",],
+                    "project_mod": [
+                        "member",
+                        "heat_stack_owner",
+                        "project_mod",
+                    ],
                 },
             },
         ],
@@ -859,7 +863,12 @@ class UserActionTests(AdjutantTestCase):
                 "adjutant.identity.role_mapping": [
                     {
                         "operation": "update",
-                        "value": {"project_mod": ["member", "project_mod",],},
+                        "value": {
+                            "project_mod": [
+                                "member",
+                                "project_mod",
+                            ],
+                        },
                     },
                 ],
             },

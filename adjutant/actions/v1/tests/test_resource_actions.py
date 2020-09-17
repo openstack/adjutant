@@ -620,7 +620,9 @@ class QuotaActionTests(AdjutantTestCase):
     @conf_utils.modify_conf(
         CONF,
         operations={
-            "adjutant.quota.sizes_ascending": [{"operation": "override", "value": []},],
+            "adjutant.quota.sizes_ascending": [
+                {"operation": "override", "value": []},
+            ],
         },
     )
     def test_update_quota_not_in_sizes_asc(self):

@@ -122,7 +122,11 @@ def send_stage_email(task, email_conf, token=None):
         }
 
         email = EmailMultiAlternatives(
-            email_conf["subject"], message, from_email, [emails.pop()], headers=headers,
+            email_conf["subject"],
+            message,
+            from_email,
+            [emails.pop()],
+            headers=headers,
         )
 
         if html_template:

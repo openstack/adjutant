@@ -50,14 +50,23 @@ config_group.register_child_config(
         check_value_type=True,
         is_json=True,
         default={
-            "admin": ["project_admin", "project_mod", "heat_stack_owner", "member",],
+            "admin": [
+                "project_admin",
+                "project_mod",
+                "heat_stack_owner",
+                "member",
+            ],
             "project_admin": [
                 "project_admin",
                 "project_mod",
                 "heat_stack_owner",
                 "member",
             ],
-            "project_mod": ["project_mod", "heat_stack_owner", "member",],
+            "project_mod": [
+                "project_mod",
+                "heat_stack_owner",
+                "member",
+            ],
         },
         test_default={
             "admin": ["project_admin", "project_mod", "member", "heat_stack_owner"],

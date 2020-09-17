@@ -89,7 +89,10 @@ class MiscActionTests(AdjutantTestCase):
         it to become invalid or break.
         """
 
-        task = Task.objects.create(keystone_user={}, task_type="edit_roles",)
+        task = Task.objects.create(
+            keystone_user={},
+            task_type="edit_roles",
+        )
 
         action = SendAdditionalEmailAction({}, task=task, order=1)
 
