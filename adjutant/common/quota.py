@@ -71,7 +71,7 @@ class QuotaManager(object):
                 ("floating_ips", "totalFloatingIpsUsed"),
                 ("ram", "totalRAMUsed"),
                 ("cores", "totalCoresUsed"),
-                ("secuirty_groups", "totalSecurityGroupsUsed"),
+                ("security_groups", "totalSecurityGroupsUsed"),
             ]
 
             nova_usage_dict = {}
@@ -110,7 +110,7 @@ class QuotaManager(object):
                 "floatingip": len(floatingips),
                 "port": len(ports),
                 "subnet": len(subnets),
-                "secuirty_group": len(security_groups),
+                "security_group": len(security_groups),
                 "security_group_rule": len(security_group_rules),
             }
 
