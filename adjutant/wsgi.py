@@ -38,6 +38,7 @@ application = get_wsgi_application()
 # the Keystone Auth Middleware.
 conf = {
     "auth_plugin": "password",
+    "interface": CONF.identity.auth.interface,
     "username": CONF.identity.auth.username,
     "password": CONF.identity.auth.password,
     "project_name": CONF.identity.auth.project_name,

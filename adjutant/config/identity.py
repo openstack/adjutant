@@ -82,6 +82,16 @@ config_group.register_child_config(
 )
 
 _auth_group = groups.ConfigGroup("auth")
+
+_auth_group.register_child_config(
+    fields.StrConfig(
+        "interface",
+        help_text="Interface name default of Keystone",
+        default="public",
+        required=True,
+    )
+)
+
 _auth_group.register_child_config(
     fields.StrConfig(
         "username",
