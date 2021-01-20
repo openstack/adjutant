@@ -44,6 +44,7 @@ conf = {
     "project_domain_id": CONF.identity.auth.project_domain_id,
     "user_domain_id": CONF.identity.auth.user_domain_id,
     "auth_url": CONF.identity.auth.auth_url,
+    "interface": CONF.identity.auth.interface,
     "delay_auth_decision": True,
     "include_service_catalog": False,
     "token_cache_time": CONF.identity.token_cache_time,

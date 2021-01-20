@@ -134,4 +134,12 @@ _auth_group.register_child_config(
         required_for_tests=False,
     )
 )
+_auth_group.register_child_config(
+    fields.StrConfig(
+        "interface",
+        help_text="Keystone endpoint interface type.",
+        default="public",
+        required=True,
+    )
+)
 config_group.register_child_config(_auth_group)
