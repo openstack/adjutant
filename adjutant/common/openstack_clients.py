@@ -21,6 +21,7 @@ from cinderclient import client as cinderclient
 from neutronclient.v2_0 import client as neutronclient
 from novaclient import client as novaclient
 from octaviaclient.api.v2 import octavia
+from troveclient.v1 import client as troveclient
 
 from adjutant.config import CONF
 
@@ -78,3 +79,7 @@ def get_octaviaclient(region):
     service = ks.services.list(name="octavia")[0]
     endpoint = ks.endpoints.list(service=service, region=region, interface="public")[0]
     return octavia.OctaviaAPI(session=get_auth_session(), endpoint=endpoint.url)
+
+
+def get_troveclient(region):
+    return troveclient.Client(session=get_auth_session(), region_name=region)

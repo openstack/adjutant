@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add a service quota helper for trove to facilitate the management of trove
+    quotas via adjutant.

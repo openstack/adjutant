@@ -53,6 +53,11 @@ DEFAULT_QUOTA_SIZES = {
             "member": 2,
             "pool": 1,
         },
+        "trove": {
+            "instances": 3,
+            "volumes": 3,
+            "backups": 15,
+        },
     },
     "medium": {
         "cinder": {"gigabytes": 10000, "volumes": 100, "snapshots": 300},
@@ -85,6 +90,11 @@ DEFAULT_QUOTA_SIZES = {
             "member": 5,
             "pool": 5,
         },
+        "trove": {
+            "instances": 10,
+            "volumes": 10,
+            "backups": 50,
+        },
     },
     "large": {
         "cinder": {"gigabytes": 50000, "volumes": 200, "snapshots": 600},
@@ -116,6 +126,11 @@ DEFAULT_QUOTA_SIZES = {
             "load_balancer": 10,
             "member": 10,
             "pool": 10,
+        },
+        "trove": {
+            "instances": 20,
+            "volumes": 20,
+            "backups": 100,
         },
     },
 }

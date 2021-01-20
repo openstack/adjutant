@@ -29,6 +29,7 @@ from adjutant.common.tests.fake_clients import (
     get_fake_neutron,
     get_fake_novaclient,
     get_fake_cinderclient,
+    get_fake_troveclient,
     setup_neutron_cache,
     neutron_cache,
     cinder_cache,
@@ -36,6 +37,7 @@ from adjutant.common.tests.fake_clients import (
     setup_mock_caches,
     get_fake_octaviaclient,
     octavia_cache,
+    trove_cache,
 )
 from adjutant.common.tests.utils import AdjutantTestCase
 from adjutant.config import CONF
@@ -516,6 +518,7 @@ class ProjectSetupActionTests(AdjutantTestCase):
 @mock.patch(
     "adjutant.common.openstack_clients.get_octaviaclient", get_fake_octaviaclient
 )
+@mock.patch("adjutant.common.openstack_clients.get_troveclient", get_fake_troveclient)
 class QuotaActionTests(AdjutantTestCase):
     def test_update_quota(self):
         """
@@ -686,13 +689,15 @@ class QuotaActionTests(AdjutantTestCase):
             "adjutant.quota.services": [
                 {
                     "operation": "override",
-                    "value": {"*": ["cinder", "neutron", "nova", "octavia"]},
+                    "value": {"*": ["cinder", "neutron", "nova", "octavia", "trove"]},
                 }
             ]
         },
     )
-    def test_update_quota_octavia(self):
-        """Tests the quota update of the octavia service"""
+    def test_update_quota_extra_services(self):
+        """Tests the quota update of extra services over and above
+        core openstack services.
+        """
         project = mock.Mock()
         project.id = "test_project_id"
         project.name = "test_project"
@@ -735,6 +740,8 @@ class QuotaActionTests(AdjutantTestCase):
         self.assertEqual(neutronquota["network"], 10)
         octaviaquota = octavia_cache["RegionOne"]["test_project_id"]["quota"]
         self.assertEqual(octaviaquota["load_balancer"], 10)
+        trove_quota = trove_cache["RegionOne"]["test_project_id"]["quota"]
+        self.assertEqual(trove_quota["instances"], 20)
 
     @conf_utils.modify_conf(
         CONF,
@@ -742,13 +749,15 @@ class QuotaActionTests(AdjutantTestCase):
             "adjutant.quota.services": [
                 {
                     "operation": "override",
-                    "value": {"*": ["cinder", "neutron", "nova", "octavia"]},
+                    "value": {"*": ["cinder", "neutron", "nova", "octavia", "trove"]},
                 }
             ]
         },
     )
-    def test_update_quota_octavia_over_usage(self):
-        """When octavia usage is higher than new quota it won't be changed"""
+    def test_quota_downgrade_fails_when_usage_exceeds_requested_quota(self):
+        """Ensures that a quota change will fail validation when the
+        current usage exceeds the requested quota.
+        """
         project = mock.Mock()
         project.id = "test_project_id"
         project.name = "test_project"
@@ -780,6 +789,13 @@ class QuotaActionTests(AdjutantTestCase):
             {"id": "fake_id2"},
         ]
 
+        trove_cache["RegionOne"][project.id]["instances"] = [
+            {"id": "fake_id"},
+            {"id": "fake_id2"},
+            {"id": "fake_id3"},
+            {"id": "fake_id4"},
+        ]
+
         action = UpdateProjectQuotasAction(data, task=task, order=1)
 
         action.prepare()
@@ -790,5 +806,8 @@ class QuotaActionTests(AdjutantTestCase):
 
         # check the quotas were updated
         octaviaquota = octavia_cache["RegionOne"]["test_project_id"]["quota"]
+        trove_quota = trove_cache["RegionOne"]["test_project_id"]["quota"]
+
         # Still set to default
         self.assertEqual(octaviaquota["load_balancer"], 1)
+        self.assertEqual(trove_quota["instances"], 3)

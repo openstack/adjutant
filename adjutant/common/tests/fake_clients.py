@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from collections import namedtuple
 from unittest import mock
 from uuid import uuid4
 
@@ -23,6 +24,7 @@ neutron_cache = {}
 nova_cache = {}
 cinder_cache = {}
 octavia_cache = {}
+trove_cache = {}
 
 
 class FakeProject(object):
@@ -731,6 +733,43 @@ class FakeOctaviaClient(object):
             raise AttributeError
 
 
+class FakeTroveClient(object):
+    class FakeTroveQuotaManager(object):
+
+        FakeTroveResource = namedtuple(
+            "FakeTroveResource", ["resource", "in_use", "reserved", "limit"]
+        )
+
+        def __init__(self, region):
+
+            global trove_cache
+            self.region = region
+            if region not in trove_cache:
+                trove_cache[region] = {}
+            self.cache = trove_cache[region]
+
+        def show(self, project_id):
+            quota = self.cache[project_id]["quota"]
+
+            quotas = []
+            resources = self.cache[project_id]["quota"].keys()
+            reserved = 0
+            for resource in resources:
+                in_use = len(self.cache[project_id][resource])
+                quotas.append(
+                    self.FakeTroveResource(resource, in_use, reserved, quota[resource])
+                )
+            return quotas
+
+        def update(self, project_id, values):
+            if project_id not in self.cache:
+                self.cache[project_id] = {"quota": {}}
+            self.cache[project_id]["quota"] = values
+
+    def __init__(self, region):
+        self.quota = self.FakeTroveQuotaManager(region)
+
+
 class FakeNovaClient(FakeOpenstackClient):
     def __init__(self, region):
         global nova_cache
@@ -782,6 +821,22 @@ class FakeResource(object):
 
     def __init__(self, size):
         self.size = size
+
+
+def setup_trove_cache(region, project_id):
+    global trove_cache
+    if region not in trove_cache:
+        trove_cache[region] = {}
+    if project_id not in trove_cache[region]:
+        trove_cache[region][project_id] = {}
+
+    trove_cache[region][project_id] = {
+        "instances": [],
+        "backups": [],
+        "volumes": [],
+    }
+
+    trove_cache[region][project_id]["quota"] = dict(CONF.quota.sizes["small"]["trove"])
 
 
 def setup_neutron_cache(region, project_id):
@@ -884,6 +939,7 @@ def setup_mock_caches(region, project_id):
     setup_nova_cache(region, project_id)
     setup_cinder_cache(region, project_id)
     setup_neutron_cache(region, project_id)
+    setup_trove_cache(region, project_id)
     client = FakeOctaviaClient(region)
     if project_id in octavia_cache[region]:
         del octavia_cache[region][project_id]
@@ -905,3 +961,7 @@ def get_fake_cinderclient(region):
 
 def get_fake_octaviaclient(region):
     return FakeOctaviaClient(region)
+
+
+def get_fake_troveclient(region):
+    return FakeTroveClient(region)

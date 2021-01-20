@@ -166,11 +166,37 @@ class QuotaManager(object):
             )
             return usage
 
+    class ServiceQuotaTroveHelper(ServiceQuotaHelper):
+        def __init__(self, region_name, project_id):
+            self.client = openstack_clients.get_troveclient(region=region_name)
+            self.project_id = project_id
+
+        def get_quota(self):
+            project_quota = self.client.quota.show(self.project_id)
+
+            quotas = {}
+            for quota in project_quota:
+                quotas[quota.resource] = quota.limit
+            return quotas
+
+        def set_quota(self, values):
+            self.client.quota.update(self.project_id, values)
+
+        def get_usage(self):
+            project_quota = self.client.quota.show(self.project_id)
+
+            usage = {}
+            for quota in project_quota:
+                usage[quota.resource] = quota.in_use
+
+            return usage
+
     _quota_updaters = {
         "cinder": ServiceQuotaCinderHelper,
         "nova": ServiceQuotaNovaHelper,
         "neutron": ServiceQuotaNeutronHelper,
         "octavia": ServiceQuotaOctaviaHelper,
+        "trove": ServiceQuotaTroveHelper,
     }
 
     def __init__(self, project_id, size_difference_threshold=None):

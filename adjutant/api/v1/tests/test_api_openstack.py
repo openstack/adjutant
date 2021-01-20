@@ -28,10 +28,12 @@ from adjutant.common.tests.fake_clients import (
     get_fake_novaclient,
     get_fake_cinderclient,
     get_fake_octaviaclient,
+    get_fake_troveclient,
     cinder_cache,
     nova_cache,
     neutron_cache,
     octavia_cache,
+    trove_cache,
     setup_mock_caches,
     setup_quota_cache,
     FakeResource,
@@ -416,6 +418,7 @@ class OpenstackAPITests(AdjutantAPITestCase):
 @mock.patch(
     "adjutant.common.openstack_clients.get_octaviaclient", get_fake_octaviaclient
 )
+@mock.patch("adjutant.common.openstack_clients.get_troveclient", get_fake_troveclient)
 class QuotaAPITests(AdjutantAPITestCase):
     def setUp(self):
         super(QuotaAPITests, self).setUp()
@@ -446,6 +449,11 @@ class QuotaAPITests(AdjutantAPITestCase):
             octaviaquota = octavia_cache[region_name][project_id]["quota"]
             load_balancer = CONF.quota.sizes.get(size)["octavia"]["load_balancer"]
             self.assertEqual(octaviaquota["load_balancer"], load_balancer)
+
+        if "trove" in extra_services:
+            trove_quota = trove_cache[region_name][project_id]["quota"]
+            instance = CONF.quota.sizes.get(size)["trove"]["instances"]
+            self.assertEqual(trove_quota["instances"], instance)
 
     def test_update_quota_no_history(self):
         """ Update the quota size of a project with no history """
@@ -1255,13 +1263,13 @@ class QuotaAPITests(AdjutantAPITestCase):
             "adjutant.quota.services": [
                 {
                     "operation": "override",
-                    "value": {"*": ["cinder", "neutron", "nova", "octavia"]},
+                    "value": {"*": ["cinder", "neutron", "nova", "octavia", "trove"]},
                 },
             ],
         },
     )
-    def test_update_quota_no_history_with_octavia(self):
-        """ Update quota for octavia."""
+    def test_update_quota_extra_services(self):
+        """ Update quota for extra services """
 
         project = fake_clients.FakeProject(name="test_project", id="test_project_id")
 
@@ -1290,5 +1298,5 @@ class QuotaAPITests(AdjutantAPITestCase):
 
         # Then check to see the quotas have changed
         self.check_quota_cache(
-            "RegionOne", project.id, "medium", extra_services=["octavia"]
+            "RegionOne", project.id, "medium", extra_services=["octavia", "trove"]
         )
