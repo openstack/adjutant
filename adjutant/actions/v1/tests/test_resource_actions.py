@@ -24,6 +24,8 @@ from adjutant.actions.v1.resources import (
 )
 from adjutant.api.models import Task
 from adjutant.common.tests.fake_clients import (
+    FakeProject,
+    FakeUser,
     FakeManager,
     setup_identity_cache,
     get_fake_neutron,
@@ -811,3 +813,57 @@ class QuotaActionTests(AdjutantTestCase):
         # Still set to default
         self.assertEqual(octaviaquota["load_balancer"], 1)
         self.assertEqual(trove_quota["instances"], 3)
+
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.identity.username_is_email": [
+                {
+                    "operation": "override",
+                    "value": False,
+                }
+            ]
+        },
+    )
+    def test_update_quota_username_not_email(self):
+        """
+        Test that the action correctly handles its username is not email case.
+        """
+
+        project = FakeProject(name="test_project")
+        user = FakeUser(
+            name="test",
+            password="123",
+            email="test@example.com",
+        )
+        setup_identity_cache(projects=[project], users=[user])
+        setup_mock_caches("RegionOne", "test_project_id")
+
+        task = Task.objects.create(
+            keystone_user={"user_id": user.id, "roles": ["admin"]}
+        )
+
+        data = {
+            "project_id": "test_project_id",
+            "size": "medium",
+            "regions": ["RegionOne"],
+            "user_id": user.id,
+        }
+        action = UpdateProjectQuotasAction(data, task=task, order=1)
+
+        user_email = action.get_email()
+        self.assertEqual(user_email, user.email)
+
+        # Now we reset the user/task/action and try without an email
+        user = FakeUser(
+            name="test",
+            password="123",
+        )
+        setup_identity_cache(projects=[project], users=[user])
+        task = Task.objects.create(
+            keystone_user={"user_id": user.id, "roles": ["admin"]}
+        )
+        action = UpdateProjectQuotasAction(data, task=task, order=1)
+
+        user_email = action.get_email()
+        self.assertEqual(user_email, None)

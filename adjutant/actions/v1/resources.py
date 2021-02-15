@@ -299,8 +299,8 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
             return self.action.task.keystone_user["username"]
         else:
             id_manager = user_store.IdentityManager()
-            user = id_manager.users.get(self.keystone_user["user_id"])
-            email = user.email
+            user = id_manager.get_user(self.action.task.keystone_user["user_id"])
+            email = getattr(user, "email", None)
             if email:
                 return email
 
