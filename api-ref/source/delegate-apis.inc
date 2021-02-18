@@ -299,7 +299,7 @@ Response Example
 
 Show Quota Details
 ========================
-.. rest_method:: GET /v1/openstack/quota
+.. rest_method:: GET /v1/openstack/quotas
 
 Authentication: Project Moderator or Admin
 
@@ -314,7 +314,7 @@ Request Example
 ----------------
 .. code-block:: bash
 
-    curl -H "X-Auth-Token: $NOS_TOKEN" http://0.0.0.0:5050/v1/openstack/quota
+    curl -H "X-Auth-Token: $NOS_TOKEN" http://0.0.0.0:5050/v1/openstack/quotas
 
 Response Example
 -----------------
@@ -404,7 +404,7 @@ Response Example
 
 Update Quota
 ========================
-.. rest_method:: POST /v1/openstack/quota
+.. rest_method:: POST /v1/openstack/quotas
 
 Authentication: Project Moderator or Admin
 
