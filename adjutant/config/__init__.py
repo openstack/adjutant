@@ -24,6 +24,7 @@ from adjutant.config import identity
 from adjutant.config import notification
 from adjutant.config import quota
 from adjutant.config import workflow
+from adjutant.config import feature_sets
 
 _root_config = groups.ConfigGroup("adjutant")
 _root_config.register_child_config(django.config_group)
@@ -32,6 +33,7 @@ _root_config.register_child_config(api.config_group)
 _root_config.register_child_config(notification.config_group)
 _root_config.register_child_config(workflow.config_group)
 _root_config.register_child_config(quota.config_group)
+_root_config.register_child_config(feature_sets.config_group)
 
 _config_files = [
     "/etc/adjutant/adjutant.yaml",
