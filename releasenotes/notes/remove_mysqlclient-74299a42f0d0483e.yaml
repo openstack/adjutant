@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    Adjutant no longer includes mysqlclient in its requirements file.
+    Going forward you will have to install that yourself as part of your
+    build/deployment processes.
