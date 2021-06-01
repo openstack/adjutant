@@ -237,7 +237,7 @@ class QuotaManager(object):
         return current_quota
 
     def get_quota_differences(self, current_quota):
-        """ Gets the closest matching quota size for a given quota """
+        """Gets the closest matching quota size for a given quota"""
         quota_differences = {}
         for size, setting in CONF.quota.sizes.items():
             match_percentages = []
@@ -272,7 +272,7 @@ class QuotaManager(object):
         return quota_differences
 
     def get_quota_size(self, current_quota, difference_threshold=None):
-        """ Gets the closest matching quota size for a given quota """
+        """Gets the closest matching quota size for a given quota"""
         quota_differences = self.get_quota_differences(current_quota)
 
         diff_threshold = difference_threshold or self.size_diff_threshold
@@ -289,7 +289,7 @@ class QuotaManager(object):
         return "custom"
 
     def get_quota_change_options(self, quota_size):
-        """ Get's the pre-approved quota change options for a given size """
+        """Get's the pre-approved quota change options for a given size"""
         quota_list = CONF.quota.sizes_ascending
         try:
             list_position = quota_list.index(quota_size)
@@ -304,7 +304,7 @@ class QuotaManager(object):
         return quota_change_list
 
     def get_smaller_quota_options(self, quota_size):
-        """ Get the quota sizes smaller than the current size."""
+        """Get the quota sizes smaller than the current size."""
         quota_list = CONF.quota.sizes_ascending
         try:
             list_position = quota_list.index(quota_size)

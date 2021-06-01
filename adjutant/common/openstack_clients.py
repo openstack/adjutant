@@ -39,7 +39,7 @@ client_auth_session = None
 
 
 def get_auth_session():
-    """ Returns a global auth session to be shared by all clients """
+    """Returns a global auth session to be shared by all clients"""
     global client_auth_session
     if not client_auth_session:
 

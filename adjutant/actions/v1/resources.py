@@ -266,7 +266,7 @@ class NewProjectDefaultNetworkAction(NewDefaultNetworkAction):
 
 
 class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
-    """ Updates quota for a project to a given size in a list of regions """
+    """Updates quota for a project to a given size in a list of regions"""
 
     required = [
         "size",
@@ -445,7 +445,7 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
 
 
 class SetProjectQuotaAction(UpdateProjectQuotasAction):
-    """ Updates quota for a given project to a configured quota level """
+    """Updates quota for a given project to a configured quota level"""
 
     required = []
 

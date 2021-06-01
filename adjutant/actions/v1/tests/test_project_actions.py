@@ -589,7 +589,7 @@ class ProjectActionTests(AdjutantTestCase):
         self.assertEqual(action.valid, False)
 
     def test_new_project_invalid_domain_id(self):
-        """ Create a project using an invalid domain """
+        """Create a project using an invalid domain"""
 
         setup_identity_cache()
 
