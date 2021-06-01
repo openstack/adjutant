@@ -534,7 +534,7 @@ class FakeManager(object):
 
 class FakeOpenstackClient(object):
     class Quotas(object):
-        """ Stub class for testing quotas """
+        """Stub class for testing quotas"""
 
         def __init__(self, service):
             self.service = service
@@ -794,7 +794,7 @@ class FakeNovaClient(FakeOpenstackClient):
 
 class FakeCinderClient(FakeOpenstackClient):
     class FakeResourceGroup(object):
-        """ Stub class to represent volumes and snapshots """
+        """Stub class to represent volumes and snapshots"""
 
         def __init__(self, region, cache_key):
             self.region = region
@@ -901,7 +901,7 @@ def setup_nova_cache(region, project_id):
 
 
 def setup_quota_cache(region_name, project_id, size="small"):
-    """ Sets up the quota cache for a given region and project """
+    """Sets up the quota cache for a given region and project"""
     global cinder_cache
 
     if region_name not in cinder_cache:

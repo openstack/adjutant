@@ -335,7 +335,7 @@ class OpenstackAPITests(AdjutantAPITestCase):
                 self.assertTrue(adj_user["manageable"])
 
     def test_remove_user_role(self):
-        """ Remove all roles on a user from our project """
+        """Remove all roles on a user from our project"""
         project = fake_clients.FakeProject(name="test_project")
 
         user = fake_clients.FakeUser(
@@ -456,7 +456,7 @@ class QuotaAPITests(AdjutantAPITestCase):
             self.assertEqual(trove_quota["instances"], instance)
 
     def test_update_quota_no_history(self):
-        """ Update the quota size of a project with no history """
+        """Update the quota size of a project with no history"""
 
         project = fake_clients.FakeProject(name="test_project", id="test_project_id")
 
@@ -917,7 +917,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         self.assertEqual(recent_task["status"], "Awaiting Approval")
 
     def test_set_multi_region_quota(self):
-        """ Sets a quota to all to all regions in a project """
+        """Sets a quota to all to all regions in a project"""
 
         project = fake_clients.FakeProject(name="test_project", id="test_project_id")
 
@@ -1079,7 +1079,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         self.check_quota_cache("RegionTwo", project.id, "small")
 
     def test_set_quota_over_limit(self):
-        """ Attempts to set a smaller quota than the current usage """
+        """Attempts to set a smaller quota than the current usage"""
         project = fake_clients.FakeProject(name="test_project", id="test_project_id")
 
         user = fake_clients.FakeUser(
@@ -1146,7 +1146,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         self.check_quota_cache("RegionOne", project.id, "small")
 
     def test_set_quota_invalid_region(self):
-        """ Attempts to set a quota on a non-existent region """
+        """Attempts to set a quota on a non-existent region"""
         project = fake_clients.FakeProject(name="test_project", id="test_project_id")
 
         user = fake_clients.FakeUser(
@@ -1180,7 +1180,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         },
     )
     def test_no_auto_approved_quota_change(self):
-        """ Test allow_auto_approve config setting on a task."""
+        """Test allow_auto_approve config setting on a task."""
 
         project = fake_clients.FakeProject(name="test_project", id="test_project_id")
 
@@ -1269,7 +1269,7 @@ class QuotaAPITests(AdjutantAPITestCase):
         },
     )
     def test_update_quota_extra_services(self):
-        """ Update quota for extra services """
+        """Update quota for extra services"""
 
         project = fake_clients.FakeProject(name="test_project", id="test_project_id")
 
