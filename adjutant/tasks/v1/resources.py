@@ -25,7 +25,7 @@ class UpdateProjectQuotas(BaseTask):
         "initial": None,
         "token": None,
         "completed": {
-            "template": "create_project_and_user_completed.txt",
-            "subject": "signup completed",
+            "template": "update_quota_completed.txt",
+            "subject": "Quota Updated",
         },
     }
