@@ -44,13 +44,13 @@ class BaseNotificationHandler(object):
 
         try:
             if notification.error:
-                task_defaults = task_defaults.error_handler_config.get(
+                task_defaults = task_defaults.error_handler_config[
                     self.__class__.__name__
-                )
+                ]
             else:
-                task_defaults = task_defaults.standard_handler_config.get(
+                task_defaults = task_defaults.standard_handler_config[
                     self.__class__.__name__
-                )
+                ]
         except KeyError:
             task_defaults = {}
 
