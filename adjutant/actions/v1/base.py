@@ -291,8 +291,9 @@ class UserMixin(ResourceMixin):
     def _validate_role_permissions(self):
         keystone_user = self.action.task.keystone_user
         # Role permissions check
+        requested_roles = set(list(self.roles) + list(self.inherited_roles))
         if not self.are_roles_manageable(
-            user_roles=keystone_user["roles"], requested_roles=self.roles
+            user_roles=keystone_user["roles"], requested_roles=requested_roles
         ):
             self.add_note("User does not have permission to edit role(s).")
             return False

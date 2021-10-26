@@ -374,6 +374,51 @@ class UserActionTests(AdjutantTestCase):
         action.prepare()
         self.assertFalse(action.valid)
 
+    def test_new_user_invalid_roles(self):
+        """
+        Test that you can't add roles outside of managed roles.
+
+        Action should be invalid.
+        """
+
+        project = fake_clients.FakeProject(name="test_project")
+
+        setup_identity_cache(projects=[project])
+
+        task = Task.objects.create(
+            keystone_user={
+                "roles": ["project_admin"],
+                "project_id": project.id,
+                "project_domain_id": "default",
+            }
+        )
+
+        data = {
+            "email": "test@example.com",
+            "project_id": project.id,
+            "roles": ["admin"],
+            "inherited_roles": [],
+            "domain_id": "default",
+        }
+
+        action = NewUserAction(data, task=task, order=1)
+
+        action.prepare()
+        self.assertFalse(action.valid)
+
+        data = {
+            "email": "test@example.com",
+            "project_id": project.id,
+            "roles": [],
+            "inherited_roles": ["admin"],
+            "domain_id": "default",
+        }
+
+        action = NewUserAction(data, task=task, order=1)
+
+        action.prepare()
+        self.assertFalse(action.valid)
+
     def test_new_user_wrong_domain(self):
         """
         Existing user, valid project, invalid domain.
@@ -780,6 +825,18 @@ class UserActionTests(AdjutantTestCase):
                 role_name="project_admin",
                 user={"id": user.id},
             ),
+            fake_clients.FakeRoleAssignment(
+                scope={"project": {"id": project.id}},
+                role_name="member",
+                user={"id": user.id},
+                inherited=True,
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={"project": {"id": project.id}},
+                role_name="project_admin",
+                user={"id": user.id},
+                inherited=True,
+            ),
         ]
 
         setup_identity_cache(
@@ -800,6 +857,33 @@ class UserActionTests(AdjutantTestCase):
             "project_id": project.id,
             "roles": ["project_mod"],
             "inherited_roles": [],
+            "remove": False,
+        }
+
+        action = EditUserRolesAction(data, task=task, order=1)
+
+        action.prepare()
+        self.assertEqual(action.valid, False)
+
+        fake_client = fake_clients.FakeManager()
+
+        roles = fake_client._get_roles_as_names(user, project)
+        self.assertEqual(roles, ["member", "project_admin"])
+
+        task = Task.objects.create(
+            keystone_user={
+                "roles": ["project_mod"],
+                "project_id": project.id,
+                "project_domain_id": "default",
+            }
+        )
+
+        data = {
+            "domain_id": "default",
+            "user_id": user.id,
+            "project_id": project.id,
+            "roles": [],
+            "inherited_roles": ["project_mod"],
             "remove": False,
         }
 
