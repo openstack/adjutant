@@ -967,7 +967,7 @@ class DelegateAPITests(AdjutantAPITestCase):
         self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
         self.assertEqual(response.json(), {"notes": ["task created"]})
 
-        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(len(mail.outbox), 2)
 
         new_token = Token.objects.all()[0]
         url = "/v1/tokens/" + new_token.token
@@ -976,6 +976,7 @@ class DelegateAPITests(AdjutantAPITestCase):
         response = self.client.post(url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(user.email, "new_test@example.com")
+        self.assertEqual(len(mail.outbox), 3)
 
     def test_update_email_task_not_authenticated(self):
         """

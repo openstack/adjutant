@@ -77,7 +77,7 @@ class UpdateUserEmail(BaseTask):
     ]
     action_config = {
         "SendAdditionalEmailAction": {
-            "initial": {
+            "prepare": {
                 "subject": "OpenStack Email Update Requested",
                 "template": "update_user_email_started.txt",
                 "email_current_user": True,
