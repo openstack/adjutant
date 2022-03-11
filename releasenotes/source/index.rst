@@ -19,6 +19,7 @@ Adjutant Release Notes
    :maxdepth: 1
 
    unreleased
+   yoga
    xena
    wallaby
    victoria
