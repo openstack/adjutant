@@ -1,10 +1,10 @@
 pbr>=5.2.0
 
-Django>=2.2,<2.3
+Django>=3.2.12
 Babel>=2.6.0
 decorator>=4.4.0
 django-rest-swagger>=2.2.0
-djangorestframework>=3.9.4
+djangorestframework>=3.14.0
 jsonfield>=2.0.2
 keystoneauth1>=3.14.0
 keystonemiddleware>=6.0.0

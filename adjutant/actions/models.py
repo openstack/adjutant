@@ -40,7 +40,7 @@ class Action(models.Model):
     #               Can be thought of in terms of priority, None has the
     #               lowest priority, then True with False having the
     #               highest priority
-    auto_approve = models.NullBooleanField(default=None)
+    auto_approve = models.BooleanField(default=None, null=True)
     order = models.IntegerField()
     created = models.DateTimeField(default=timezone.now)
 

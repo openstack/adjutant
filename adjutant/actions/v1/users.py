@@ -211,10 +211,10 @@ class ResetUserPasswordAction(UserNameAction, UserMixin):
     def _validate_user_roles(self):
         id_manager = user_store.IdentityManager()
 
-        roles = id_manager.get_all_roles(self.user)
+        all_roles = id_manager.get_all_roles(self.user)
 
         user_roles = []
-        for roles in roles.values():
+        for roles in all_roles.values():
             user_roles.extend(role.name for role in roles)
 
         if set(self.config.blacklisted_roles) & set(user_roles):
