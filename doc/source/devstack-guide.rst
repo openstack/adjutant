@@ -5,8 +5,8 @@ Deploying Adjutant in Devstack
 This is a guide to setting up Adjutant in a running Devstack
 environment close to how we have been running it for development purposes.
 
-This guide assumes you are running this in a clean ubuntu 16.04
-virtual machine with sudo access.
+This guide assumes you are running this in a clean Ubuntu 20.04
+virtual machine as user `ubuntu`.
 
 ***************
 Deploy Devstack
@@ -15,25 +15,24 @@ Deploy Devstack
 Grab the Devstack repo::
 
     git clone https://opendev.org/openstack/devstack
+    cd devstack
 
+And then define a basic `local.conf` file with the password set and place that
+in the devstack folder::
 
-And then define a basic localrc file with the password set and place that in
-the devstack folder (adjutant's default conf assumes 'openstack' as the admin
-password)::
-
+    [[local|localrc]]
     ADMIN_PASSWORD=openstack
-    MYSQL_PASSWORD=openstack
     DATABASE_PASSWORD=openstack
     RABBIT_PASSWORD=openstack
     SERVICE_PASSWORD=openstack
+    HOST_IP=<Floating IP of VM, if needed>
 
 Run the devstack build::
 
-    ./devstack/stack.sh
+    ./stack.sh
 
-Provided your VM has enough ram to handle a devstack install this should
-take a while, but go smoothly. Ideally give your VM 5gb or more of ram, any
-less can cause the devstack build to fail.
+Provided your VM has enough RAM (5GiB suggested) to handle a devstack install
+this should take a while, but go smoothly.
 
 ***************
 Deploy Adjutant
@@ -61,16 +60,46 @@ the install.
 ******************
 Configure Adjutant
 ******************
-Most of the default conf values should work fine against devstack, but one
-thing that you will need to change is the uuid for the public network in
-`DEFAULT_ACTION_SETTINGS` for the actions NewDefaultNetworkAction and
-NewProjectDefaultNetworkAction. If you don't set this correctly, then signups
-or tasks using those actions will not be able to correctly create a default
-network as they cannot find the correct external public network.
+
+Most of the default conf values should work fine against devstack, but you will
+need to set a few, as detailed in the headings below.
+
+Identity user
+==================
+
+Adjutant needs to know which service account user to operate as.
+
+By default these are unset, and need to be configured:
+
+* `identity.auth.username`
+* `identity.auth.password`
+* `identity.auth.project_name`
+* `identity.auth.auth_url`
+
+Find the values for these from devstack `local.conf` or from the environment::
+
+    cd devstack
+    source openrc admin
+    env | grep OS_
+
+Network UUIDs
+=================
+
+To be able to use the actions `NewDefaultNetworkAction` and
+`NewProjectDefaultNetworkAction` you will need to set the the network uuids in:
+
+* `workflow.action_defaults.NewDefaultNetworkAction.public_network`
+* `workflow.action_defaults.NewProjectDefaultNetworkAction.public_network`
+
+If you don't set the `public_network` values to match your OpenStack
+environment, then signups or tasks using those actions will not be able to
+correctly create a default network as they cannot find the correct external
+public network.
 
 On a fresh devstack there is only one public network so to find the public
 network uuid you can to run::
 
+    source openrc admin
     openstack network show public
 
 And then grab the id value and put that into the Adjutant conf.
@@ -78,28 +107,32 @@ And then grab the id value and put that into the Adjutant conf.
 Username is email
 =================
 
-The example conf for Adjutant is setup with `USERNAME_IS_EMAIL = TRUE` which
-works on the assumption that usernames are emails. This is easy to change in
-the conf, but a fairly useful way of avoiding username clashes. If you set this
-to `False` then usernames will be required as well as emails for most tasks
-that deal with user creation.
+The example conf for Adjutant is setup with `identity.username_is_email = true`
+which works on the assumption that usernames are emails. This is easy to change
+in the conf, but a fairly useful way of avoiding username clashes. If you set
+this to `false` then usernames will be required as well as emails for most
+tasks that deal with user creation.
 
 Migrating between the two states hasn't yet been handled entirely, so once you
-pick a value for `USERNAME_IS_EMAIL` stick with it, or clear the database
-inbetween.
+pick a value for `identity.username_is_email` stick with it, or clear the
+database in between.
 
 ****************
 Running Adjutant
 ****************
+
+If you wish you use a different Adjutant config file path than /etc/adjutant,
+you need to set the environment variable::
+
+    export ADJUTANT_CONFIG_FILE=etc/adjutant.yaml
 
 Still in the Adjutant repo directory, you will now need to run the migrations
 to build a basic database. By default this will use sqlite3.::
 
     adjutant-api migrate
 
-Now the that the migrations have been setup and the database built run the
-service from the same directory, and it will revert to using the config file
-at 'conf/conf.yaml'::
+Now the that the migrations have been setup and the database built, run the
+API service from the same directory::
 
     adjutant-api runserver 0.0.0.0:5050
 
@@ -112,11 +145,13 @@ at 'conf/conf.yaml'::
 Now you have Adjutant running, keep this window open as you'll want to keep
 an eye on the console output.
 
+API request logs are written to `adjutant.log` by default.
+
 **********************************
 Add Adjutant to Keystone Catalogue
 **********************************
 
-In a new SSH termimal connected to your ubuntu VM setup your credentials as
+In a new SSH termimal, connected to your Ubuntu VM, set up your credentials as
 environment variables::
 
     export OS_USERNAME=admin
@@ -128,12 +163,17 @@ environment variables::
     export OS_IDENTITY_API_VERSION=3
     export OS_REGION_NAME=RegionOne
 
-If you used the localrc file as given above, these should work.
+If you used the `local.conf` file as given above, these should work.
 
-Now setup a new service in Keystone for Adjutant and add an endpoint for it::
+Alternatively, use the `openrc` file provided in the devstack directory::
+
+    source openrc admin
+
+Now we can set up a new service in Keystone for Adjutant, and add an endpoint
+to the catalog::
 
     openstack service create registration --name adjutant
-    openstack endpoint create adjutant public http://0.0.0.0:5050/v1 --region RegionOne
+    openstack endpoint create adjutant public http://127.0.0.1:5050/v1 --region RegionOne
 
 **********************************
 Adjutant specific roles
@@ -156,14 +196,10 @@ install Heat::
 Testing Adjutant via the CLI
 **********************************
 
-Now that the service is running, and the endpoint setup, you will want
+Now that the service is running, and the endpoint set up, you will want
 to install the client and try talking to the service::
 
-    sudo pip install python-adjutantclient
-
-In this case the client should be safe to install globally with sudo, but you
-can also install it in the same virtualenv as Adjutant itself, or make a new
-virtualenv.
+    pip install python-adjutantclient
 
 Now lets check the status of the service::
 
@@ -205,9 +241,10 @@ Normally that would direct the user to a Horizon dashboard page where they can
 submit their password.
 
 Since we don't have that running, your only option is to submit it via the CLI.
-This is cumbersome, but doable. From that url in your Adjutant output, grab the
-values after '.../token/'. That is bob's token. You can submit that via the
-CLI::
+This is cumbersome, but doable.
+
+Using the url in Adjutant's output, grab the values after '.../token/'.
+That is bob's token. You can submit that via the CLI::
 
     openstack admin task token submit <token> <json_data>
     openstack admin task token submit e86cbfb187d34222ace90845f900893c '{"password": "123456"}'
@@ -239,4 +276,5 @@ Adjutant has a Horizon UI plugin, the code and setup instructions for it can
 be found `here <https://opendev.org/openstack/adjutant-ui>`_.
 
 If you do set this up, you will want to edit the default Adjutant conf to so
-that the TOKEN_SUBMISSION_URL is correctly set to point at your Horizon.
+that the value for `workflow.horizon_url` is correctly set to point at your
+Horizon URL.

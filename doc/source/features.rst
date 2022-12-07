@@ -43,7 +43,7 @@ the `project_admin` or `project_mod` role.
 RoleList
 ++++++++
 
-Mirco API to list roles that can be managed by your current user for users on
+Micro API to list roles that can be managed by your current user for users on
 your project.
 
 .. note:: Adjutant-UI exposes this with the Project Users panel for Horizon.

@@ -1,9 +1,9 @@
 Project History
 ===============
 
-Adjutant was started by CatalystCloud to fill our needs around missing
-features in OpenStack. CatalystCloud is public cloud provider based in New
-Zealand with a strong focus on opensource, with a team of operators and
+Adjutant was started by Catalyst Cloud to fill our needs around missing
+features in OpenStack. Catalyst Cloud is public cloud provider based in New
+Zealand with a strong focus on Open Source, with a team of operators and
 developers who are all contributors to OpenStack itself.
 
 Early prototyping for Adjutant began at the end of 2015 to fill some of the
@@ -76,10 +76,10 @@ development where the OpenStack community could see and be transparent about
 our own internal usage of the service and our plans for it. The code had been
 on our company github for a while, but it was time to move it somewhere better.
 
-So we renamed again, and then finally moved all the core repos to OpenStack
+So, in 2017 we renamed again, and then moved all the core repos to OpenStack
 infrastructure, as well as the code review, bug, and spec tracking.
 
-Adjutant, in it's current form is the culmination of that process, and while
+Adjutant, in its current form is the culmination of that process, and while
 the core driving force behind Adjutant was our own needs, it always was the
 intention to provide Adjutant for anyone to build and use themselves so that
-their effort isn't wasted threading the same ground.
+their effort isn't wasted treading the same ground.

@@ -122,7 +122,7 @@ texinfo_documents = [
         master_doc,
         "Adjutant",
         "Adjutant Documentation",
-        "Catalyst IT Ltd",
+        "Catalyst Cloud",
         "Adjutant",
         "One line description of project.",
         "Miscellaneous",
