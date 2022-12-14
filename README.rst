@@ -23,10 +23,9 @@ to external systems as needed.
 
 Useful for automating generic admin tasks that users might request but
 otherwise can't do without the admin role. Also allows automating the
-signup and creation of new users, but also allows such requests to
-require approval first if wanted. Due to issuing of uri+tokens for
-final steps of some actions, allows for a password submit/reset system
-as well.
+signup and creation of new users, and allows such requests to require
+approval first if wanted. Due to issuing of uri+tokens for final steps
+of some actions, allows for a password submit/reset system as well.
 
 Documentation
 =============
