@@ -5,7 +5,6 @@ from django.db import migrations
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("api", "0005_auto_20190610_0209"),
         ("tasks", "0001_initial"),

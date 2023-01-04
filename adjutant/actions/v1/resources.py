@@ -294,7 +294,6 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
     )
 
     def _get_email(self):
-
         if CONF.identity.username_is_email:
             return self.action.task.keystone_user["username"]
         else:

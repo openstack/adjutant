@@ -42,7 +42,6 @@ def get_auth_session():
     """Returns a global auth session to be shared by all clients"""
     global client_auth_session
     if not client_auth_session:
-
         auth = v3.Password(
             username=CONF.identity.auth.username,
             password=CONF.identity.auth.password,

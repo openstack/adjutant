@@ -217,7 +217,6 @@ class FakeManager(object):
 
         for assignment in identity_cache["role_assignments"]:
             if assignment.scope["project"]["id"] == project.id:
-
                 user = users.get(assignment.user["id"])
                 if not user:
                     user = self.get_user(assignment.user["id"])
@@ -315,7 +314,6 @@ class FakeManager(object):
                 assignment.user["id"] == user.id
                 and assignment.scope["project"]["id"] == project.id
             ):
-
                 if (
                     assignment.scope.get("OS-INHERIT:inherited_to") and not inherited
                 ) or (
@@ -735,13 +733,11 @@ class FakeOctaviaClient(object):
 
 class FakeTroveClient(object):
     class FakeTroveQuotaManager(object):
-
         FakeTroveResource = namedtuple(
             "FakeTroveResource", ["resource", "in_use", "reserved", "limit"]
         )
 
         def __init__(self, region):
-
             global trove_cache
             self.region = region
             if region not in trove_cache:

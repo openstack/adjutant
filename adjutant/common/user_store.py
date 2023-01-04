@@ -143,7 +143,6 @@ class IdentityManager(object):  # pragma: no cover
     def create_user(
         self, name, password, email, created_on, domain=None, default_project=None
     ):
-
         user = self.ks_client.users.create(
             name=name,
             password=password,

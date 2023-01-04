@@ -29,7 +29,6 @@ from adjutant.config import CONF
 
 
 class UserList(tasks.InviteUser):
-
     url = r"^openstack/users/?$"
 
     config_group = groups.DynamicNameConfigGroup(
@@ -176,7 +175,6 @@ class UserList(tasks.InviteUser):
 
 
 class UserDetail(BaseDelegateAPI):
-
     url = r"^openstack/users/(?P<user_id>\w+)/?$"
 
     config_group = groups.DynamicNameConfigGroup(
@@ -263,7 +261,6 @@ class UserDetail(BaseDelegateAPI):
 
 
 class UserRoles(BaseDelegateAPI):
-
     url = r"^openstack/users/(?P<user_id>\w+)/roles/?$"
 
     config_group = groups.DynamicNameConfigGroup(
@@ -338,7 +335,6 @@ class UserRoles(BaseDelegateAPI):
 
 
 class RoleList(BaseDelegateAPI):
-
     url = r"^openstack/roles/?$"
 
     @utils.mod_or_admin
@@ -490,7 +486,6 @@ class UpdateProjectQuotas(BaseDelegateAPI):
 
     @utils.mod_or_admin
     def post(self, request):
-
         request.data["project_id"] = request.keystone_user["project_id"]
         self.project_id = request.keystone_user["project_id"]
 

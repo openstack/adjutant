@@ -8,7 +8,6 @@ import jsonfield.fields
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("api", "0005_auto_20190610_0209"),
     ]

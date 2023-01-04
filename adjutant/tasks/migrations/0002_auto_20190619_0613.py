@@ -6,7 +6,6 @@ import jsonfield.fields
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
         ("tasks", "0001_initial"),
     ]

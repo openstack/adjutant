@@ -28,7 +28,6 @@ from adjutant import exceptions
 
 
 def make_task_config(task_class):
-
     config_group = groups.DynamicNameConfigGroup()
     config_group.register_child_config(
         fields.BoolConfig(
@@ -245,7 +244,6 @@ class BaseTask(object):
         return hashlib.sha256(str(hashable_list).encode("utf-8")).hexdigest()
 
     def _handle_duplicates(self, hash_key):
-
         duplicate_tasks = Task.objects.filter(
             hash_key=hash_key, completed=0, cancelled=0
         )
@@ -468,7 +466,6 @@ class BaseTask(object):
             token.delete()
 
     def submit(self, token_data=None, keystone_user=None):
-
         self.confirm_state(approved=True, completed=False, cancelled=False)
 
         required_fields = set()

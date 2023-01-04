@@ -100,7 +100,6 @@ def _build_default_email_group(group_name):
 
 
 class SendAdditionalEmailAction(BaseAction):
-
     serializer = serializers.SendAdditionalEmailSerializer
 
     config_group = groups.DynamicNameConfigGroup(

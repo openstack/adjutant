@@ -7,7 +7,6 @@ import adjutant.api.models
 
 
 class Migration(migrations.Migration):
-
     dependencies = []
 
     operations = [

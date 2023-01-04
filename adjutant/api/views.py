@@ -48,7 +48,6 @@ class SingleVersionView(APIView):
     """
 
     def get(self, request):
-
         version = _VERSIONS.get(self.version, {}).copy()
         if not version:
             return Response({"error": "Not Found"}, status=404)

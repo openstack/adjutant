@@ -322,7 +322,6 @@ class EditUserRolesAction(UserIdAction, ProjectMixin, UserMixin):
         return True
 
     def _validate_role_permissions(self):
-
         id_manager = user_store.IdentityManager()
 
         current_user_roles = id_manager.get_roles(

@@ -860,7 +860,6 @@ class DelegateAPITests(AdjutantAPITestCase):
         self.assertEqual(len(mail.outbox), 3)
 
     def test_update_email_task_invalid_email(self):
-
         user = fake_clients.FakeUser(
             name="test@example.com", password="123", email="test@example.com"
         )
@@ -897,7 +896,6 @@ class DelegateAPITests(AdjutantAPITestCase):
         },
     )
     def test_update_email_pre_existing_user_with_email(self):
-
         user = fake_clients.FakeUser(
             name="test@example.com", password="123", email="test@example.com"
         )
@@ -940,7 +938,6 @@ class DelegateAPITests(AdjutantAPITestCase):
         },
     )
     def test_update_email_user_with_email_username_not_email(self):
-
         user = fake_clients.FakeUser(
             name="test", password="123", email="test@example.com"
         )
@@ -1006,7 +1003,6 @@ class DelegateAPITests(AdjutantAPITestCase):
         },
     )
     def test_update_email_task_username_not_email(self):
-
         user = fake_clients.FakeUser(
             name="test_user", password="123", email="test@example.com"
         )
