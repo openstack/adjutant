@@ -11,6 +11,7 @@
 
 
 - project:
+    queue: adjutant
     templates:
       - publish-openstack-docs-pti
       - build-release-notes-jobs-python3
@@ -20,6 +21,5 @@
       jobs:
         - adjutant-black-style-check
     gate:
-      queue: adjutant
       jobs:
         - adjutant-black-style-check
