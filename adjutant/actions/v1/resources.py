@@ -83,6 +83,28 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
                 "See 'region_defaults'.",
                 default={},
             ),
+            fields.ListConfig(
+                "create_in_regions",
+                help_text=(
+                    "Set the regions in which a default network will be "
+                    "created. When unset or empty, the default behaviour "
+                    "depends on the value of 'create_in_all_regions'."
+                ),
+                default=[],
+                required=False,
+            ),
+            fields.BoolConfig(
+                "create_in_all_regions",
+                help_text=(
+                    "When set to False (the default), if no regions are set "
+                    "in 'create_in_regions', a default network will only be "
+                    "created in the default region for new sign-ups. "
+                    "When set to True, a default network will be created in "
+                    "all regions, not just the default region."
+                ),
+                default=False,
+                required=False,
+            ),
         ]
     )
 
@@ -114,14 +136,34 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
         self.action.save()
 
     def _create_network(self):
-        neutron = openstack_clients.get_neutronclient(region=self.region)
+        if self.config.create_in_regions:
+            for region in self.config.create_in_regions:
+                self._create_network_in_region(region)
+        elif self.config.create_in_all_regions:
+            id_manager = user_store.IdentityManager()
+            for region in id_manager.list_regions():
+                region_id = region.id
+                self._create_network_in_region(region_id)
+        else:
+            self._create_network_in_region(self.region)
+
+    def _create_network_in_region(self, region):
+        neutron = openstack_clients.get_neutronclient(region=region)
         try:
-            region_config = self.config.regions[self.region]
+            region_config = self.config.regions[region]
             network_config = self.config.region_defaults.overlay(region_config)
         except KeyError:
             network_config = self.config.region_defaults
 
-        if not self.get_cache("network_id"):
+        cache_suffix = f"_{region}"
+        is_default_region = region == self.region
+
+        network_id = self.get_cache(f"network_id{cache_suffix}")
+        # NOTE(callumdickinson): Backwards compatibility with older tasks.
+        if not network_id and is_default_region:
+            network_id = self.get_cache("network_id")
+        # If the default network does not exist, create it.
+        if not network_id:
             try:
                 network_body = {
                     "network": {
@@ -133,26 +175,39 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
                 network = neutron.create_network(body=network_body)
             except Exception as e:
                 self.add_note(
-                    "Error: '%s' while creating network: %s"
-                    % (e, network_config.network_name)
+                    (
+                        f"Error while creating network '{network_config.network_name}' "
+                        f"for project '{self.project_id}' in region '{region}': {e}"
+                    ),
                 )
                 raise
-            self.set_cache("network_id", network["network"]["id"])
+            network_id = network["network"]["id"]
             self.add_note(
-                "Network %s created for project %s"
-                % (network_config.network_name, self.project_id)
+                (
+                    f"Network '{network_config.network_name}' "
+                    f"created for project '{self.project_id}' in region '{region}'"
+                ),
             )
         else:
             self.add_note(
-                "Network %s already created for project %s"
-                % (network_config.network_name, self.project_id)
+                (
+                    f"Network '{network_config.network_name}' "
+                    f"already created for project '{self.project_id}' "
+                    f"in region '{region}'"
+                ),
             )
+        self.set_cache(f"network_id{cache_suffix}", network_id)
 
-        if not self.get_cache("subnet_id"):
+        subnet_id = self.get_cache(f"subnet_id{cache_suffix}")
+        # NOTE(callumdickinson): Backwards compatibility with older tasks.
+        if not subnet_id and is_default_region:
+            subnet_id = self.get_cache("subnet_id")
+        # If the default subnet does not exist, create it.
+        if not subnet_id:
             try:
                 subnet_body = {
                     "subnet": {
-                        "network_id": self.get_cache("network_id"),
+                        "network_id": network_id,
                         "ip_version": 4,
                         "tenant_id": self.project_id,
                         "dns_nameservers": network_config.dns_nameservers,
@@ -161,16 +216,38 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
                 }
                 subnet = neutron.create_subnet(body=subnet_body)
             except Exception as e:
-                self.add_note("Error: '%s' while creating subnet" % e)
+                self.add_note(
+                    (
+                        "Error while creating subnet "
+                        f"in network '{network_config.network_name}' "
+                        f"for project '{self.project_id}' in region '{region}': {e}"
+                    ),
+                )
                 raise
-            self.set_cache("subnet_id", subnet["subnet"]["id"])
-            self.add_note("Subnet created for network %s" % network_config.network_name)
+            subnet_id = subnet["subnet"]["id"]
+            self.add_note(
+                (
+                    f"Subnet '{subnet_id}' created "
+                    f"in network '{network_config.network_name}' "
+                    f"created for project '{self.project_id}' in region '{region}'"
+                ),
+            )
         else:
             self.add_note(
-                "Subnet already created for network %s" % network_config.network_name
+                (
+                    f"Subnet '{subnet_id}' already created "
+                    f"in network '{network_config.network_name}' "
+                    f"created for project '{self.project_id}' in region '{region}'"
+                ),
             )
+        self.set_cache(f"subnet_id{cache_suffix}", subnet_id)
 
-        if not self.get_cache("router_id"):
+        router_id = self.get_cache(f"router_id{cache_suffix}")
+        # NOTE(callumdickinson): Backwards compatibility with older tasks.
+        if not router_id and is_default_region:
+            router_id = self.get_cache("router_id")
+        # If the default router does not exist, create it.
+        if not router_id:
             try:
                 router_body = {
                     "router": {
@@ -185,28 +262,70 @@ class NewDefaultNetworkAction(BaseAction, ProjectMixin):
                 router = neutron.create_router(body=router_body)
             except Exception as e:
                 self.add_note(
-                    "Error: '%s' while creating router: %s"
-                    % (e, network_config.router_name)
+                    (
+                        f"Error while creating router '{network_config.router_name}' "
+                        f"for project '{self.project_id}' in region '{region}': {e}"
+                    ),
                 )
                 raise
-            self.set_cache("router_id", router["router"]["id"])
-            self.add_note("Router created for project %s" % self.project_id)
+            router_id = router["router"]["id"]
+            self.add_note(
+                (
+                    f"Router '{network_config.router_name}' "
+                    f"created for project '{self.project_id}' in region '{region}'"
+                ),
+            )
         else:
-            self.add_note("Router already created for project %s" % self.project_id)
+            self.add_note(
+                (
+                    f"Router '{network_config.router_name}' "
+                    f"already created for project '{self.project_id}' "
+                    f"in region '{region}'"
+                ),
+            )
+        self.set_cache(f"router_id{cache_suffix}", router_id)
 
-        if not self.get_cache("port_id"):
+        port_id = self.get_cache(f"port_id{cache_suffix}")
+        # NOTE(callumdickinson): Backwards compatibility with older tasks.
+        if not port_id and is_default_region:
+            port_id = self.get_cache("port_id")
+        # If the subnet port on the default router does not exist, create it.
+        if not port_id:
             try:
-                interface_body = {"subnet_id": self.get_cache("subnet_id")}
-                interface = neutron.add_interface_router(
-                    self.get_cache("router_id"), body=interface_body
-                )
+                interface_body = {"subnet_id": subnet_id}
+                interface = neutron.add_interface_router(router_id, body=interface_body)
             except Exception as e:
-                self.add_note("Error: '%s' while attaching interface" % e)
+                self.add_note(
+                    (
+                        "Error while adding interface "
+                        f"for network '{network_config.network_name}' "
+                        f"to router '{network_config.router_name}' "
+                        f"for project '{self.project_id}' "
+                        f"in region '{region}': {e}"
+                    ),
+                )
                 raise
-            self.set_cache("port_id", interface["port_id"])
-            self.add_note("Interface added to router for subnet")
+            port_id = interface["port_id"]
+            self.add_note(
+                (
+                    f"Interface '{interface['port_id']}' "
+                    f"for network '{network_config.network_name}' "
+                    f"added to router '{network_config.router_name}' "
+                    f"for project '{self.project_id}' "
+                    f"in region '{region}'"
+                ),
+            )
         else:
-            self.add_note("Interface added to router for project %s" % self.project_id)
+            self.add_note(
+                (
+                    f"Interface '{port_id}' "
+                    f"for network '{network_config.network_name}' "
+                    f"already added to router '{network_config.router_name}' "
+                    f"for project '{self.project_id}' "
+                    f"in region '{region}'"
+                ),
+            )
+        self.set_cache(f"port_id{cache_suffix}", port_id)
 
     def _prepare(self):
         # Note: Do we need to get this from cache? it is a required setting

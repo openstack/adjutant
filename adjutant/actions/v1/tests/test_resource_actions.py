@@ -124,14 +124,101 @@ class ProjectSetupActionTests(AdjutantTestCase):
         self.assertEqual(
             action.action.cache,
             {
-                "network_id": "net_id_0",
-                "port_id": "port_id_3",
-                "router_id": "router_id_2",
-                "subnet_id": "subnet_id_1",
+                "network_id_RegionOne": "net_id_0",
+                "port_id_RegionOne": "port_id_3",
+                "router_id_RegionOne": "router_id_2",
+                "subnet_id_RegionOne": "subnet_id_1",
             },
         )
 
         global neutron_cache
+        self.assertEqual(
+            len(neutron_cache["RegionOne"]["test_project_id"]["networks"]), 1
+        )
+        self.assertEqual(
+            len(neutron_cache["RegionOne"]["test_project_id"]["routers"]), 1
+        )
+        self.assertEqual(
+            len(neutron_cache["RegionOne"]["test_project_id"]["subnets"]), 1
+        )
+
+    def test_network_setup_old_cache_compatibility(self):
+        """
+        Check that a task with old-tyle cache values defined is compatible
+        with the new implementation.
+        """
+        setup_neutron_cache("RegionOne", "test_project_id")
+
+        global neutron_cache
+
+        task = Task.objects.create(
+            keystone_user={"roles": ["admin"], "project_id": "test_project_id"}
+        )
+
+        project = mock.Mock()
+        project.id = "test_project_id"
+        project.name = "test_project"
+        project.domain = "default"
+        project.roles = {}
+
+        setup_identity_cache(projects=[project])
+
+        data = {
+            "setup_network": True,
+            "region": "RegionOne",
+            "project_id": "test_project_id",
+        }
+
+        action = NewDefaultNetworkAction(data, task=task, order=1)
+
+        neutron_cache[data["region"]][project.id]["networks"]["net_id_0"] = {
+            "name": "somenetwork",
+            "tenant_id": project.id,
+            "admin_state_up": True,
+        }
+        neutron_cache[data["region"]][project.id]["subnets"]["subnet_id_1"] = {
+            "network_id": "net_id_0",
+            "ip_version": 4,
+            "tenant_id": project.id,
+            "dns_nameservers": ["193.168.1.2", "193.168.1.3"],
+            "cidr": "192.168.1.0/24",
+        }
+        neutron_cache[data["region"]][project.id]["routers"]["router_id_2"] = {
+            "name": "somerouter",
+            "external_gateway_info": {
+                "network_id": "3cb50f61-5bce-4c03-96e6-8e262e12bb35",
+            },
+            "tenant_id": project.id,
+            "admin_state_up": True,
+        }
+        neutron_cache[data["region"]]["i"] = 4
+        action.action.cache = {
+            "network_id": "net_id_0",
+            "port_id": "port_id_3",
+            "router_id": "router_id_2",
+            "subnet_id": "subnet_id_1",
+        }
+
+        action.prepare()
+        self.assertEqual(action.valid, True)
+
+        action.approve()
+        self.assertEqual(action.valid, True)
+
+        self.assertEqual(
+            action.action.cache,
+            {
+                "network_id": "net_id_0",
+                "port_id": "port_id_3",
+                "router_id": "router_id_2",
+                "subnet_id": "subnet_id_1",
+                "network_id_RegionOne": "net_id_0",
+                "port_id_RegionOne": "port_id_3",
+                "router_id_RegionOne": "router_id_2",
+                "subnet_id_RegionOne": "subnet_id_1",
+            },
+        )
+
         self.assertEqual(
             len(neutron_cache["RegionOne"]["test_project_id"]["networks"]), 1
         )
@@ -186,6 +273,164 @@ class ProjectSetupActionTests(AdjutantTestCase):
             len(neutron_cache["RegionOne"]["test_project_id"]["subnets"]), 0
         )
 
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            (
+                "adjutant.workflow.action_defaults.NewDefaultNetworkAction"
+                ".create_in_regions"
+            ): [
+                {"operation": "override", "value": ["RegionOne", "RegionTwo"]},
+            ],
+        },
+    )
+    def test_network_setup_create_in_regions(self):
+        """
+        Check that all regions specified in 'create_in_regions'
+        have a default network created.
+        """
+        setup_neutron_cache("RegionOne", "test_project_id")
+        setup_neutron_cache("RegionTwo", "test_project_id")
+
+        task = Task.objects.create(
+            keystone_user={"roles": ["admin"], "project_id": "test_project_id"}
+        )
+
+        project = mock.Mock()
+        project.id = "test_project_id"
+        project.name = "test_project"
+        project.domain = "default"
+        project.roles = {}
+
+        setup_identity_cache(projects=[project])
+
+        data = {
+            "setup_network": True,
+            "region": "RegionOne",
+            "project_id": "test_project_id",
+        }
+
+        action = NewDefaultNetworkAction(data, task=task, order=1)
+
+        action.prepare()
+        self.assertEqual(action.valid, True)
+
+        action.approve()
+        self.assertEqual(action.valid, True)
+
+        self.assertEqual(
+            action.action.cache,
+            {
+                "network_id_RegionOne": "net_id_0",
+                "port_id_RegionOne": "port_id_3",
+                "router_id_RegionOne": "router_id_2",
+                "subnet_id_RegionOne": "subnet_id_1",
+                "network_id_RegionTwo": "net_id_0",
+                "port_id_RegionTwo": "port_id_3",
+                "router_id_RegionTwo": "router_id_2",
+                "subnet_id_RegionTwo": "subnet_id_1",
+            },
+        )
+
+        global neutron_cache
+        self.assertEqual(
+            len(neutron_cache["RegionOne"]["test_project_id"]["networks"]), 1
+        )
+        self.assertEqual(
+            len(neutron_cache["RegionOne"]["test_project_id"]["routers"]), 1
+        )
+        self.assertEqual(
+            len(neutron_cache["RegionOne"]["test_project_id"]["subnets"]), 1
+        )
+        self.assertEqual(
+            len(neutron_cache["RegionTwo"]["test_project_id"]["networks"]), 1
+        )
+        self.assertEqual(
+            len(neutron_cache["RegionTwo"]["test_project_id"]["routers"]), 1
+        )
+        self.assertEqual(
+            len(neutron_cache["RegionTwo"]["test_project_id"]["subnets"]), 1
+        )
+
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            (
+                "adjutant.workflow.action_defaults.NewDefaultNetworkAction"
+                ".create_in_all_regions"
+            ): [
+                {"operation": "override", "value": True},
+            ],
+        },
+    )
+    def test_network_setup_create_in_all_regions(self):
+        """
+        Check that all regions have a default network created
+        when 'create_in_all_regions' is set to True.
+        """
+        setup_neutron_cache("RegionOne", "test_project_id")
+        setup_neutron_cache("RegionTwo", "test_project_id")
+
+        task = Task.objects.create(
+            keystone_user={"roles": ["admin"], "project_id": "test_project_id"}
+        )
+
+        project = mock.Mock()
+        project.id = "test_project_id"
+        project.name = "test_project"
+        project.domain = "default"
+        project.roles = {}
+
+        setup_identity_cache(projects=[project])
+
+        data = {
+            "setup_network": True,
+            "region": "RegionOne",
+            "project_id": "test_project_id",
+        }
+
+        action = NewDefaultNetworkAction(data, task=task, order=1)
+
+        action.prepare()
+        self.assertEqual(action.valid, True)
+
+        action.approve()
+        self.assertEqual(action.valid, True)
+
+        self.assertEqual(
+            action.action.cache,
+            {
+                "network_id_RegionOne": "net_id_0",
+                "port_id_RegionOne": "port_id_3",
+                "router_id_RegionOne": "router_id_2",
+                "subnet_id_RegionOne": "subnet_id_1",
+                "network_id_RegionTwo": "net_id_0",
+                "port_id_RegionTwo": "port_id_3",
+                "router_id_RegionTwo": "router_id_2",
+                "subnet_id_RegionTwo": "subnet_id_1",
+            },
+        )
+
+        global neutron_cache
+        self.assertEqual(
+            len(neutron_cache["RegionOne"]["test_project_id"]["networks"]), 1
+        )
+        self.assertEqual(
+            len(neutron_cache["RegionOne"]["test_project_id"]["routers"]), 1
+        )
+        self.assertEqual(
+            len(neutron_cache["RegionOne"]["test_project_id"]["subnets"]), 1
+        )
+        self.assertEqual(
+            len(neutron_cache["RegionTwo"]["test_project_id"]["networks"]), 1
+        )
+        self.assertEqual(
+            len(neutron_cache["RegionTwo"]["test_project_id"]["routers"]), 1
+        )
+        self.assertEqual(
+            len(neutron_cache["RegionTwo"]["test_project_id"]["subnets"]), 1
+        )
+
     def test_network_setup_fail(self):
         """
         Should fail, but on re_approve will continue where it left off.
@@ -224,7 +469,11 @@ class ProjectSetupActionTests(AdjutantTestCase):
             pass
 
         self.assertEqual(
-            action.action.cache, {"network_id": "net_id_0", "subnet_id": "subnet_id_1"}
+            action.action.cache,
+            {
+                "network_id_RegionOne": "net_id_0",
+                "subnet_id_RegionOne": "subnet_id_1",
+            },
         )
 
         self.assertEqual(
@@ -244,10 +493,10 @@ class ProjectSetupActionTests(AdjutantTestCase):
         self.assertEqual(
             action.action.cache,
             {
-                "network_id": "net_id_0",
-                "port_id": "port_id_3",
-                "router_id": "router_id_2",
-                "subnet_id": "subnet_id_1",
+                "network_id_RegionOne": "net_id_0",
+                "port_id_RegionOne": "port_id_3",
+                "router_id_RegionOne": "router_id_2",
+                "subnet_id_RegionOne": "subnet_id_1",
             },
         )
 
@@ -297,10 +546,10 @@ class ProjectSetupActionTests(AdjutantTestCase):
         self.assertEqual(
             action.action.cache,
             {
-                "network_id": "net_id_0",
-                "port_id": "port_id_3",
-                "router_id": "router_id_2",
-                "subnet_id": "subnet_id_1",
+                "network_id_RegionOne": "net_id_0",
+                "port_id_RegionOne": "port_id_3",
+                "router_id_RegionOne": "router_id_2",
+                "subnet_id_RegionOne": "subnet_id_1",
             },
         )
 
@@ -435,7 +684,11 @@ class ProjectSetupActionTests(AdjutantTestCase):
             pass
 
         self.assertEqual(
-            action.action.cache, {"network_id": "net_id_0", "subnet_id": "subnet_id_1"}
+            action.action.cache,
+            {
+                "network_id_RegionOne": "net_id_0",
+                "subnet_id_RegionOne": "subnet_id_1",
+            },
         )
 
         self.assertEqual(
@@ -455,10 +708,10 @@ class ProjectSetupActionTests(AdjutantTestCase):
         self.assertEqual(
             action.action.cache,
             {
-                "network_id": "net_id_0",
-                "port_id": "port_id_3",
-                "router_id": "router_id_2",
-                "subnet_id": "subnet_id_1",
+                "network_id_RegionOne": "net_id_0",
+                "port_id_RegionOne": "port_id_3",
+                "router_id_RegionOne": "router_id_2",
+                "subnet_id_RegionOne": "subnet_id_1",
             },
         )
 

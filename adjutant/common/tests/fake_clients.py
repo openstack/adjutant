@@ -575,13 +575,13 @@ class FakeNeutronClient(object):
         project_id = body["network"]["tenant_id"]
         net = {
             "network": {
-                "id": "net_id_%s" % neutron_cache["RegionOne"]["i"],
+                "id": "net_id_%s" % neutron_cache[self.region]["i"],
                 "body": body,
             }
         }
         net_id = net["network"]["id"]
-        neutron_cache["RegionOne"][project_id]["networks"][net_id] = net
-        neutron_cache["RegionOne"]["i"] += 1
+        neutron_cache[self.region][project_id]["networks"][net_id] = net
+        neutron_cache[self.region]["i"] += 1
         return net
 
     def create_subnet(self, body):
@@ -589,13 +589,13 @@ class FakeNeutronClient(object):
         project_id = body["subnet"]["tenant_id"]
         subnet = {
             "subnet": {
-                "id": "subnet_id_%s" % neutron_cache["RegionOne"]["i"],
+                "id": "subnet_id_%s" % neutron_cache[self.region]["i"],
                 "body": body,
             }
         }
         sub_id = subnet["subnet"]["id"]
-        neutron_cache["RegionOne"][project_id]["subnets"][sub_id] = subnet
-        neutron_cache["RegionOne"]["i"] += 1
+        neutron_cache[self.region][project_id]["subnets"][sub_id] = subnet
+        neutron_cache[self.region]["i"] += 1
         return subnet
 
     def create_router(self, body):
@@ -603,19 +603,19 @@ class FakeNeutronClient(object):
         project_id = body["router"]["tenant_id"]
         router = {
             "router": {
-                "id": "router_id_%s" % neutron_cache["RegionOne"]["i"],
+                "id": "router_id_%s" % neutron_cache[self.region]["i"],
                 "body": body,
             }
         }
         router_id = router["router"]["id"]
-        neutron_cache["RegionOne"][project_id]["routers"][router_id] = router
-        neutron_cache["RegionOne"]["i"] += 1
+        neutron_cache[self.region][project_id]["routers"][router_id] = router
+        neutron_cache[self.region]["i"] += 1
         return router
 
     def add_interface_router(self, router_id, body):
         global neutron_cache
-        port_id = "port_id_%s" % neutron_cache["RegionOne"]["i"]
-        neutron_cache["RegionOne"]["i"] += 1
+        port_id = "port_id_%s" % neutron_cache[self.region]["i"]
+        neutron_cache[self.region]["i"] += 1
         interface = {
             "port_id": port_id,
             "id": router_id,

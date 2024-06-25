@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    The ``create_in_all_regions`` option has been added to
+    ``NewDefaultNetworkAction`` and ``NewProjectDefaultNetworkAction``.
+    When set to ``true``, default networks and routers will be created in
+    all enabled regions, instead of just the default region.
+  - |
+    The ``create_in_regions`` option has been added to
+    ``NewDefaultNetworkAction`` and ``NewProjectDefaultNetworkAction``.
+    This defines a list of regions to create default networks and routers in
+    for new sign ups, instead of the default region
+    (or all regions, if ``create_in_all_regions`` is ``true``).
