@@ -29,14 +29,14 @@ class KeystoneHeaderUnwrapper:
     def __call__(self, request):
         try:
             token_data = {
-                "project_domain_id": request.META["HTTP_X_PROJECT_DOMAIN_ID"],
-                "project_name": request.META["HTTP_X_PROJECT_NAME"],
-                "project_id": request.META["HTTP_X_PROJECT_ID"],
-                "roles": request.META["HTTP_X_ROLES"].split(","),
-                "user_domain_id": request.META["HTTP_X_USER_DOMAIN_ID"],
-                "username": request.META["HTTP_X_USER_NAME"],
-                "user_id": request.META["HTTP_X_USER_ID"],
-                "authenticated": request.META["HTTP_X_IDENTITY_STATUS"],
+                "project_domain_id": request.headers["x-project-domain-id"],
+                "project_name": request.headers["x-project-name"],
+                "project_id": request.headers["x-project-id"],
+                "roles": request.headers["x-roles"].split(","),
+                "user_domain_id": request.headers["x-user-domain-id"],
+                "username": request.headers["x-user-name"],
+                "user_id": request.headers["x-user-id"],
+                "authenticated": request.headers["x-identity-status"],
             }
         except KeyError:
             token_data = {}
@@ -60,18 +60,16 @@ class TestingHeaderUnwrapper:
                 # TODO(adriant): follow up patch to update all the test
                 # headers to provide domain values.
                 # Default here is just a temporary measure.
-                "project_domain_id": request.META["headers"].get(
+                "project_domain_id": request.headers.get(
                     "project_domain_id", "default"
                 ),
-                "project_name": request.META["headers"]["project_name"],
-                "project_id": request.META["headers"]["project_id"],
-                "roles": request.META["headers"]["roles"].split(","),
-                "user_domain_id": request.META["headers"].get(
-                    "user_domain_id", "default"
-                ),
-                "username": request.META["headers"]["username"],
-                "user_id": request.META["headers"]["user_id"],
-                "authenticated": request.META["headers"]["authenticated"],
+                "project_name": request.headers["project_name"],
+                "project_id": request.headers["project_id"],
+                "roles": request.headers["roles"].split(","),
+                "user_domain_id": request.headers.get("user_domain_id", "default"),
+                "username": request.headers["username"],
+                "user_id": request.headers["user_id"],
+                "authenticated": request.headers["authenticated"],
             }
         except KeyError:
             token_data = {}

@@ -12,6 +12,6 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="action",
             name="auto_approve",
-            field=models.NullBooleanField(default=None),
+            field=models.BooleanField(null=True, default=None),
         ),
     ]

@@ -101,9 +101,9 @@ def register_notification_handler(notification_handler):
             "'%s' is not a built off the BaseNotificationHandler class."
             % notification_handler.__name__
         )
-    notifications.NOTIFICATION_HANDLERS[
-        notification_handler.__name__
-    ] = notification_handler
+    notifications.NOTIFICATION_HANDLERS[notification_handler.__name__] = (
+        notification_handler
+    )
     if notification_handler.config_group:
         # NOTE(adriant): We copy the config_group before naming it
         # to avoid cases where a subclass inherits but doesn't extend it

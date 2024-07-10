@@ -16,7 +16,7 @@
       - publish-openstack-docs-pti
       - build-release-notes-jobs-python3
       - openstack-cover-jobs
-      - openstack-python3-zed-jobs
+      - openstack-python3-jobs
     check:
       jobs:
         - adjutant-black-style-check

@@ -12,23 +12,23 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from django.conf.urls import url
+from django.urls import re_path
 from adjutant.api.v1 import views
 
 from adjutant import api
 from adjutant.config import CONF
 
 urlpatterns = [
-    url(r"^status/?$", views.StatusView.as_view()),
-    url(r"^tasks/(?P<uuid>\w+)/?$", views.TaskDetail.as_view()),
-    url(r"^tasks/?$", views.TaskList.as_view()),
-    url(r"^tokens/(?P<id>\w+)", views.TokenDetail.as_view()),
-    url(r"^tokens/?$", views.TokenList.as_view()),
-    url(r"^notifications/(?P<uuid>\w+)/?$", views.NotificationDetail.as_view()),
-    url(r"^notifications/?$", views.NotificationList.as_view()),
+    re_path(r"^status/?$", views.StatusView.as_view()),
+    re_path(r"^tasks/(?P<uuid>\w+)/?$", views.TaskDetail.as_view()),
+    re_path(r"^tasks/?$", views.TaskList.as_view()),
+    re_path(r"^tokens/(?P<id>\w+)", views.TokenDetail.as_view()),
+    re_path(r"^tokens/?$", views.TokenList.as_view()),
+    re_path(r"^notifications/(?P<uuid>\w+)/?$", views.NotificationDetail.as_view()),
+    re_path(r"^notifications/?$", views.NotificationList.as_view()),
 ]
 
 for active_view in CONF.api.active_delegate_apis:
     delegate_api = api.DELEGATE_API_CLASSES[active_view]
 
-    urlpatterns.append(url(delegate_api.url, delegate_api.as_view()))
+    urlpatterns.append(re_path(delegate_api.url, delegate_api.as_view()))
