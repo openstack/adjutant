@@ -14,6 +14,9 @@
 
 from confspirator import groups
 from confspirator import fields
+from confspirator import types
+
+from adjutant.common import constants
 
 
 config_group = groups.ConfigGroup("workflow")
@@ -39,23 +42,42 @@ config_group.register_child_config(
 
 def _build_default_email_group(
     group_name,
-    email_subject,
+    subject,
     email_from,
+    email_to,
     email_reply,
-    email_template,
-    email_html_template,
+    template,
+    html_template,
+    email_current_user,
+    emails,
 ):
     email_group = groups.ConfigGroup(group_name)
     email_group.register_child_config(
         fields.StrConfig(
             "subject",
             help_text="Default email subject for this stage",
-            default=email_subject,
+            default=subject,
         )
     )
     email_group.register_child_config(
         fields.StrConfig(
-            "from", help_text="Default from email for this stage", default=email_from
+            "from",
+            help_text="Default from email for this stage",
+            regex=constants.EMAIL_WITH_TEMPLATE_REGEX,
+            default=email_from,
+        )
+    )
+    email_group.register_child_config(
+        fields.StrConfig(
+            "to",
+            help_text=(
+                "Send the email to the given email address. "
+                "If not set, the email will be sent to the "
+                "recipient email address determined by the action "
+                "being run."
+            ),
+            regex=constants.EMAIL_WITH_TEMPLATE_REGEX,
+            default=email_to,
         )
     )
     email_group.register_child_config(
@@ -69,14 +91,32 @@ def _build_default_email_group(
         fields.StrConfig(
             "template",
             help_text="Default email template for this stage",
-            default=email_template,
+            default=template,
         )
     )
     email_group.register_child_config(
         fields.StrConfig(
             "html_template",
             help_text="Default email html template for this stage",
-            default=email_html_template,
+            default=html_template,
+        )
+    )
+    email_group.register_child_config(
+        fields.BoolConfig(
+            "email_current_user",
+            help_text="Email the user who initiated the task",
+            default=email_current_user,
+        )
+    )
+    email_group.register_child_config(
+        fields.ListConfig(
+            "emails",
+            item_type=types.List(item_type=types.Dict()),
+            help_text=(
+                "Send more than one email, setting parameter overrides "
+                "for each specific email as required"
+            ),
+            default=emails,
         )
     )
     return email_group
@@ -90,31 +130,40 @@ _task_defaults_group.register_child_config(_email_defaults_group)
 _email_defaults_group.register_child_config(
     _build_default_email_group(
         group_name="initial",
-        email_subject="Task Confirmation",
-        email_reply="no-reply@example.com",
+        subject="Task Confirmation",
         email_from="bounce+%(task_uuid)s@example.com",
-        email_template="initial.txt",
-        email_html_template=None,
+        email_to=None,
+        email_reply="no-reply@example.com",
+        template="initial.txt",
+        html_template=None,
+        email_current_user=False,
+        emails=[],
     )
 )
 _email_defaults_group.register_child_config(
     _build_default_email_group(
         group_name="token",
-        email_subject="Task Token",
-        email_reply="no-reply@example.com",
+        subject="Task Token",
         email_from="bounce+%(task_uuid)s@example.com",
-        email_template="token.txt",
-        email_html_template=None,
+        email_to=None,
+        email_reply="no-reply@example.com",
+        template="token.txt",
+        html_template=None,
+        email_current_user=False,
+        emails=[],
     )
 )
 _email_defaults_group.register_child_config(
     _build_default_email_group(
         group_name="completed",
-        email_subject="Task Completed",
-        email_reply="no-reply@example.com",
+        subject="Task Completed",
         email_from="bounce+%(task_uuid)s@example.com",
-        email_template="completed.txt",
-        email_html_template=None,
+        email_to=None,
+        email_reply="no-reply@example.com",
+        template="completed.txt",
+        html_template=None,
+        email_current_user=False,
+        emails=[],
     )
 )
 

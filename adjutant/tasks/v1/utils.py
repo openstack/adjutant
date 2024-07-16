@@ -22,6 +22,7 @@ from django.template import loader
 from django.utils import timezone
 
 from adjutant.api.models import Token
+from adjutant.common import user_store
 from adjutant.notifications.utils import create_notification
 from adjutant.config import CONF
 from adjutant import exceptions
@@ -58,27 +59,109 @@ def create_token(task, expiry_time=None):
 
 
 def send_stage_email(task, email_conf, token=None):
+    """Send one or more stage emails for a task using the given configuration.
+
+    This also accepts ``None`` for ``email_conf``, in which case
+    no emails are sent.
+
+    :param task: Task to send the stage email for
+    :type task: Task
+    :param email_conf: Stage email configuration (if configured)
+    :type email_conf: confspirator.groups.GroupNamespace | None
+    :param token: Token to add to the email template, defaults to None
+    :type token: str | None, optional
+    """
+
     if not email_conf:
         return
 
-    text_template = loader.get_template(
-        email_conf["template"], using="include_etc_templates"
-    )
-    html_template = email_conf["html_template"]
+    # Send one or more emails according to per-email configurations
+    # if provided. If not, send a single email using the stage-global
+    # email configuration values.
+    emails = email_conf["emails"] or [{}]
+
+    # For each per-email configuration, send a stage email using
+    # that configuration.
+    # We want to use the per-email configuration values if provided,
+    # but fall back to the stage-global email configuration value
+    # for any that are not.
+    for conf in emails:
+        _send_stage_email(
+            task=task,
+            token=token,
+            subject=conf.get("subject", email_conf["subject"]),
+            template=conf.get("template", email_conf["template"]),
+            html_template=conf.get(
+                "html_template",
+                email_conf["html_template"],
+            ),
+            email_from=conf.get("from", email_conf["from"]),
+            email_to=conf.get("to", email_conf["to"]),
+            email_reply=conf.get("reply", email_conf["reply"]),
+            email_current_user=conf.get(
+                "email_current_user",
+                email_conf["email_current_user"],
+            ),
+        )
+
+
+def _send_stage_email(
+    task,
+    token,
+    subject,
+    template,
+    html_template,
+    email_from,
+    email_to,
+    email_reply,
+    email_current_user,
+):
+    text_template = loader.get_template(template, using="include_etc_templates")
     if html_template:
         html_template = loader.get_template(
             html_template, using="include_etc_templates"
         )
 
+    # find our set of emails and actions that require email
     emails = set()
     actions = {}
-    # find our set of emails and actions that require email
+
+    # Fetch all possible email addresses that can be configured.
+    # Even if these are not actually used as the target email,
+    # they are made available in the email templates to be referenced.
+    if CONF.identity.username_is_email and "username" in task.keystone_user:
+        email_current_user_address = task.keystone_user["username"]
+    elif "user_id" in task.keystone_user:
+        id_manager = user_store.IdentityManager()
+        user = id_manager.get_user(task.keystone_user["user_id"])
+        email_current_user_address = user.email if user else None
+    else:
+        email_current_user_address = None
+    email_action_addresses = {}
     for action in task.actions:
         act = action.get_action()
         email = act.get_email()
         if email:
-            emails.add(email)
-            actions[str(act)] = act
+            action_name = str(act)
+            email_action_addresses[action_name] = email
+            actions[action_name] = act
+
+    if email_to:
+        emails.add(email_to)
+    elif email_current_user:
+        if not email_current_user_address:
+            notes = {
+                "errors": (
+                    "Error: Unable to send update, "
+                    "task email is configured to send to current user "
+                    f"but no username or user ID found in task: {task.uuid}"
+                ),
+            }
+            create_notification(task, notes, error=True)
+            return
+        emails.add(email_current_user_address)
+    else:
+        emails |= set(email_action_addresses.values())
 
     if not emails:
         return
@@ -93,7 +176,20 @@ def send_stage_email(task, email_conf, token=None):
         create_notification(task, notes, error=True)
         return
 
-    context = {"task": task, "actions": actions}
+    # from_email is the return-path and is distinct from the
+    # message headers
+    from_email = email_from % {"task_uuid": task.uuid} if email_from else email_reply
+    email_address = emails.pop()
+
+    context = {
+        "task": task,
+        "actions": actions,
+        "from_address": from_email,
+        "reply_address": email_reply,
+        "email_address": email_address,
+        "email_current_user_address": email_current_user_address,
+        "email_action_addresses": email_action_addresses,
+    }
     if token:
         tokenurl = CONF.workflow.horizon_url
         if not tokenurl.endswith("/"):
@@ -104,28 +200,20 @@ def send_stage_email(task, email_conf, token=None):
     try:
         message = text_template.render(context)
 
-        # from_email is the return-path and is distinct from the
-        # message headers
-        from_email = email_conf["from"]
-        if not from_email:
-            from_email = email_conf["reply"]
-        elif "%(task_uuid)s" in from_email:
-            from_email = from_email % {"task_uuid": task.uuid}
-
         # these are the message headers which will be visible to
         # the email client.
         headers = {
             "X-Adjutant-Task-UUID": task.uuid,
             # From needs to be set to be disctinct from return-path
-            "From": email_conf["reply"],
-            "Reply-To": email_conf["reply"],
+            "From": email_reply,
+            "Reply-To": email_reply,
         }
 
         email = EmailMultiAlternatives(
-            email_conf["subject"],
+            subject,
             message,
             from_email,
-            [emails.pop()],
+            [email_address],
             headers=headers,
         )
 
