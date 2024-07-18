@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    Quota management can now be disabled for specific regions by setting
+    ``quota.services.<region_name>`` to ``[]`` in the configuration.
+    This allows additional flexibility in what services are deployed to
+    which region.
+  - |
+    Quota management can now be disabled entirely in Adjutant by setting
+    ``quota.services`` to ``{}`` in the configuration, if quota management
+    is not required in deployments.

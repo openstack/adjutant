@@ -455,6 +455,334 @@ class QuotaAPITests(AdjutantAPITestCase):
             instance = CONF.quota.sizes.get(size)["trove"]["instances"]
             self.assertEqual(trove_quota["instances"], instance)
 
+    def test_quota_show(self):
+        """Check fetching the current quota sizes for available regions."""
+
+        project = fake_clients.FakeProject(
+            name="test_project",
+            id="test_project_id",
+        )
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com"
+        )
+
+        setup_identity_cache(projects=[project], users=[user])
+
+        admin_headers = {
+            "project_name": "test_project",
+            "project_id": project.id,
+            "roles": "project_admin,member,project_mod",
+            "username": "test@example.com",
+            "user_id": "user_id",
+            "authenticated": True,
+        }
+
+        url = "/v1/openstack/quotas/"
+
+        data = {}
+
+        response = self.client.get(
+            url,
+            data,
+            headers=admin_headers,
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            {
+                res["region"]: res["current_quota_size"]
+                for res in response.data["regions"]
+            },
+            {"RegionOne": "small", "RegionTwo": "small"},
+        )
+
+    def test_quota_show_explicit_single(self):
+        """Check the quota size for a single region explicitly."""
+
+        project = fake_clients.FakeProject(
+            name="test_project",
+            id="test_project_id",
+        )
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com"
+        )
+
+        setup_identity_cache(projects=[project], users=[user])
+
+        admin_headers = {
+            "project_name": "test_project",
+            "project_id": project.id,
+            "roles": "project_admin,member,project_mod",
+            "username": "test@example.com",
+            "user_id": "user_id",
+            "authenticated": True,
+        }
+
+        url = "/v1/openstack/quotas/"
+
+        data = {"regions": "RegionOne"}
+
+        response = self.client.get(
+            url,
+            data,
+            headers=admin_headers,
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            {
+                res["region"]: res["current_quota_size"]
+                for res in response.data["regions"]
+            },
+            {"RegionOne": "small"},
+        )
+
+    def test_quota_show_explicit_multiple(self):
+        """Check the quota size for multiple regions explicitly."""
+
+        project = fake_clients.FakeProject(
+            name="test_project",
+            id="test_project_id",
+        )
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com"
+        )
+
+        setup_identity_cache(projects=[project], users=[user])
+
+        admin_headers = {
+            "project_name": "test_project",
+            "project_id": project.id,
+            "roles": "project_admin,member,project_mod",
+            "username": "test@example.com",
+            "user_id": "user_id",
+            "authenticated": True,
+        }
+
+        url = "/v1/openstack/quotas/"
+
+        data = {"regions": "RegionOne,RegionTwo"}
+
+        response = self.client.get(
+            url,
+            data,
+            headers=admin_headers,
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            {
+                res["region"]: res["current_quota_size"]
+                for res in response.data["regions"]
+            },
+            {"RegionOne": "small", "RegionTwo": "small"},
+        )
+
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.quota.services": [
+                {
+                    "operation": "override",
+                    "value": {
+                        "RegionTwo": [],
+                        "*": ["cinder", "neutron", "nova"],
+                    },
+                },
+            ],
+        },
+    )
+    def test_quota_show_region_disabled(self):
+        """Check that if a request for showing the quota size of a region
+        for which quota management is disabled, an OK response is returned
+        with no regions listed.
+        """
+
+        project = fake_clients.FakeProject(
+            name="test_project",
+            id="test_project_id",
+        )
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com"
+        )
+
+        setup_identity_cache(projects=[project], users=[user])
+
+        admin_headers = {
+            "project_name": "test_project",
+            "project_id": project.id,
+            "roles": "project_admin,member,project_mod",
+            "username": "test@example.com",
+            "user_id": "user_id",
+            "authenticated": True,
+        }
+
+        url = "/v1/openstack/quotas/"
+
+        data = {"regions": "RegionTwo"}
+
+        response = self.client.get(
+            url,
+            data,
+            headers=admin_headers,
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["regions"], [])
+
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.quota.services": [
+                {
+                    "operation": "override",
+                    "value": {
+                        "RegionTwo": [],
+                        "*": ["cinder", "neutron", "nova"],
+                    },
+                },
+            ],
+        },
+    )
+    def test_quota_show_one_region_disabled(self):
+        """Check that if a request for showing quota sizes for multiple
+        regions are made, and one of those regions have quota management
+        disabled, that only quotas for enabled regions are returned.
+        """
+
+        project = fake_clients.FakeProject(
+            name="test_project",
+            id="test_project_id",
+        )
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com"
+        )
+
+        setup_identity_cache(projects=[project], users=[user])
+
+        admin_headers = {
+            "project_name": "test_project",
+            "project_id": project.id,
+            "roles": "project_admin,member,project_mod",
+            "username": "test@example.com",
+            "user_id": "user_id",
+            "authenticated": True,
+        }
+
+        url = "/v1/openstack/quotas/"
+
+        data = {"regions": "RegionOne,RegionTwo"}
+
+        response = self.client.get(
+            url,
+            data,
+            headers=admin_headers,
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            {
+                res["region"]: res["current_quota_size"]
+                for res in response.data["regions"]
+            },
+            {"RegionOne": "small"},
+        )
+
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.quota.services": [
+                {"operation": "override", "value": {}},
+            ],
+        },
+    )
+    def test_quota_show_disabled(self):
+        """Check that no quota sizes for regions are returned if
+        quota management is disabled entirely.
+        """
+
+        project = fake_clients.FakeProject(
+            name="test_project",
+            id="test_project_id",
+        )
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com"
+        )
+
+        setup_identity_cache(projects=[project], users=[user])
+
+        admin_headers = {
+            "project_name": "test_project",
+            "project_id": project.id,
+            "roles": "project_admin,member,project_mod",
+            "username": "test@example.com",
+            "user_id": "user_id",
+            "authenticated": True,
+        }
+
+        url = "/v1/openstack/quotas/"
+
+        data = {}
+
+        response = self.client.get(
+            url,
+            data,
+            headers=admin_headers,
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["regions"], [])
+
+    def test_quota_show_invalid_region(self):
+        """Check that if a request for showing the quota size of an
+        invalid region is made, an error response is returned.
+        """
+
+        project = fake_clients.FakeProject(
+            name="test_project",
+            id="test_project_id",
+        )
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com"
+        )
+
+        setup_identity_cache(projects=[project], users=[user])
+
+        admin_headers = {
+            "project_name": "test_project",
+            "project_id": project.id,
+            "roles": "project_admin,member,project_mod",
+            "username": "test@example.com",
+            "user_id": "user_id",
+            "authenticated": True,
+        }
+
+        url = "/v1/openstack/quotas/"
+
+        data = {"regions": "RegionThree"}
+
+        response = self.client.get(
+            url,
+            data,
+            headers=admin_headers,
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
     def test_update_quota_no_history(self):
         """Update the quota size of a project with no history"""
 
@@ -779,6 +1107,165 @@ class QuotaAPITests(AdjutantAPITestCase):
         # First check we can actually access the page correctly
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["regions"][0]["current_quota_size"], "small")
+
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.quota.services": [
+                {
+                    "operation": "override",
+                    "value": {
+                        "RegionOne": [],
+                        "*": ["cinder", "neutron", "nova"],
+                    },
+                },
+            ],
+        },
+    )
+    def test_update_quota_disabled_region(self):
+        """Check that if a quota update request is made for a disabled region,
+        the request is denied and the quota is not changed.
+        """
+
+        project = fake_clients.FakeProject(
+            name="test_project",
+            id="test_project_id",
+        )
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com"
+        )
+
+        setup_identity_cache(projects=[project], users=[user])
+
+        admin_headers = {
+            "project_name": "test_project",
+            "project_id": project.id,
+            "roles": "project_admin,member,project_mod",
+            "username": "test@example.com",
+            "user_id": "user_id",
+            "authenticated": True,
+        }
+
+        url = "/v1/openstack/quotas/"
+
+        data = {"size": "medium", "regions": ["RegionOne"]}
+
+        response = self.client.post(
+            url,
+            data,
+            headers=admin_headers,
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.check_quota_cache("RegionOne", project.id, "small")
+
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.quota.services": [
+                {
+                    "operation": "override",
+                    "value": {
+                        "RegionTwo": [],
+                        "*": ["cinder", "neutron", "nova"],
+                    },
+                },
+            ],
+        },
+    )
+    def test_update_quota_one_region_disabled(self):
+        """Check that if a quota update request is made for multiple regions
+        and one of them has quota management disabled, only the enabled
+        regions have their quota updated.
+        """
+
+        project = fake_clients.FakeProject(
+            name="test_project",
+            id="test_project_id",
+        )
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com"
+        )
+
+        setup_identity_cache(projects=[project], users=[user])
+
+        admin_headers = {
+            "project_name": "test_project",
+            "project_id": project.id,
+            "roles": "project_admin,member,project_mod",
+            "username": "test@example.com",
+            "user_id": "user_id",
+            "authenticated": True,
+        }
+
+        url = "/v1/openstack/quotas/"
+
+        data = {"size": "medium", "regions": ["RegionOne", "RegionTwo"]}
+
+        response = self.client.post(
+            url,
+            data,
+            headers=admin_headers,
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_202_ACCEPTED)
+
+        self.check_quota_cache("RegionOne", project.id, "medium")
+        self.check_quota_cache("RegionTwo", project.id, "small")
+
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.quota.services": [
+                {"operation": "override", "value": {}},
+            ],
+        },
+    )
+    def test_update_quota_disabled(self):
+        """Check that quota update requests return error responses and
+        updates are not performed if quota management is disabled entirely.
+        """
+
+        project = fake_clients.FakeProject(
+            name="test_project",
+            id="test_project_id",
+        )
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com"
+        )
+
+        setup_identity_cache(projects=[project], users=[user])
+
+        admin_headers = {
+            "project_name": "test_project",
+            "project_id": project.id,
+            "roles": "project_admin,member,project_mod",
+            "username": "test@example.com",
+            "user_id": "user_id",
+            "authenticated": True,
+        }
+
+        url = "/v1/openstack/quotas/"
+
+        data = {"size": "medium", "regions": ["RegionOne", "RegionTwo"]}
+
+        response = self.client.post(
+            url,
+            data,
+            headers=admin_headers,
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        self.check_quota_cache("RegionOne", project.id, "small")
+        self.check_quota_cache("RegionTwo", project.id, "small")
 
     @conf_utils.modify_conf(
         CONF,

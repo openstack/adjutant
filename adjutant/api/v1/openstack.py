@@ -467,9 +467,9 @@ class UpdateProjectQuotas(BaseDelegateAPI):
         quota_manager = QuotaManager(self.project_id)
         for region in regions:
             if self.check_region_exists(region):
-                region_quotas.append(
-                    quota_manager.get_region_quota_data(region, include_usage)
-                )
+                quota = quota_manager.get_region_quota_data(region, include_usage)
+                if quota:
+                    region_quotas.append(quota)
             else:
                 return Response({"ERROR": ["Region: %s is not valid" % region]}, 400)
 
@@ -489,15 +489,67 @@ class UpdateProjectQuotas(BaseDelegateAPI):
         request.data["project_id"] = request.keystone_user["project_id"]
         self.project_id = request.keystone_user["project_id"]
 
-        regions = request.data.get("regions", None)
+        # Fetch the currently existing regions.
+        active_regions = {
+            region.id: region for region in user_store.IdentityManager().list_regions()
+        }
 
+        # Get the regions for which quota updates should be applied,
+        # parsing the list to get the unique region names while
+        # preserving list order.
+        # If no regions are specified in the request, update all regions.
+        _target_regions = request.data.get("regions", [])
+        target_regions = list(
+            (
+                dict.fromkeys(_target_regions) if _target_regions else active_regions
+            ).keys()
+        )
+
+        # Create a mapping to check whether or not quota management
+        # is enabled on a per-region basis.
+        quota_enabled_for_region = {
+            region: bool(services) for region, services in CONF.quota.services.items()
+        }
+
+        # Filter out regions for which quota management is disabled.
+        # This checks for region-specific settings first, and if
+        # there isn't one, checks the settings for '*' (all regions).
+        regions = [
+            region
+            for region in target_regions
+            if quota_enabled_for_region.get(
+                region,
+                quota_enabled_for_region.get("*", False),
+            )
+        ]
+        request.data["regions"] = regions
+
+        # Check that any of the specified regions can
+        # have their quota updated.
         if not regions:
-            id_manager = user_store.IdentityManager()
-            regions = [region.id for region in id_manager.list_regions()]
-            request.data["regions"] = regions
+            return Response(
+                {
+                    "errors": [
+                        "Unable to update the quotas for the given regions",
+                    ],
+                },
+                status=400,
+            )
 
-        self.logger.info("(%s) - New UpdateProjectQuotas request." % timezone.now())
+        # Check that the specified regions actually exist.
+        not_regions = []
+        for region in regions:
+            if region not in active_regions:
+                not_regions.append(region)
+        if not_regions:
+            return Response(
+                {"errors": [f"Invalid regions: {', '.join(not_regions)}"]},
+                status=400,
+            )
 
+        self.logger.info(
+            "(%s) - New UpdateProjectQuotas request.",
+            timezone.now(),
+        )
         self.task_manager.create_from_request(self.task_type, request)
-
         return Response({"notes": ["task created"]}, status=202)
