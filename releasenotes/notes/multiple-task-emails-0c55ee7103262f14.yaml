@@ -1,0 +1,45 @@
+---
+features:
+  - |
+    Added the ``to`` field to task stage email configurations, for setting
+    an arbitrary address to send task stage emails to.
+  - |
+    Added the ``email_current_user`` field to task stage email configurations,
+    for sending task stage emails to the user who initiated the task.
+    Set ``email_current_user`` to ``true`` to enable this behaviour.
+  - |
+    Added the ``from_address`` variable to task stage email template
+    contexts, allowing the address the email is being sent from internally
+    to be templated in task stage email bodies.
+    Note that this is not necessarily the same address that is set in the
+    ``From`` header of the email. For that address, use
+    ``reply_address`` instead.
+  - |
+    Added the ``reply_address`` variable to task stage email template
+    contexts, allowing the reply-to address sent to the recipient to be
+    templated in task stage email bodies.
+  - |
+    Added the ``email_address`` variable to task stage email template contexts,
+    allowing the recipient email address to be templated in task stage email
+    bodies.
+  - |
+    Added the ``email_current_user_address`` variable to task stage email
+    template contexts, which exposes the email address of the user that
+    initiated the task for use in task stage email templates.
+    Note that depending on the task being run this value may not be
+    available for use, in which case it will be set to ``None``.
+  - |
+    Added the ``email_action_addresses`` variable to task stage email
+    template contexts, which exposes a dictionary mapping task actions
+    to their recipient email addresses for use in task stage email templates.
+    Note that depending on the task being run there may not be an email
+    address available for certain actions, in which case the dictionary will
+    not store a value for those tasks. If no tasks have any recipient email
+    addresses, the dictionary will be empty.
+  - |
+    Multiple emails can now be sent per task stage using the new ``emails``
+    configuration field. To send multiple emails per task stage, define a list
+    of emails to be sent as ``emails``, with per-email configuration set in
+    the list elements. If a value is not set per-email, the value set in the
+    stage configuration will be used, and if that is unset, the default value
+    will be used.
