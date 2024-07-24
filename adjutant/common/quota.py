@@ -203,17 +203,15 @@ class QuotaManager(object):
         # TODO(amelia): Try to find out which endpoints are available and get
         # the non enabled ones out of the list
 
-        self.default_helpers = dict(self._quota_updaters)
+        self.default_helpers = {}
         self.helpers = {}
 
         quota_services = dict(CONF.quota.services)
 
-        all_regions = quota_services.pop("*", None)
-        if all_regions:
-            self.default_helpers = {}
-            for service in all_regions:
-                if service in self._quota_updaters:
-                    self.default_helpers[service] = self._quota_updaters[service]
+        all_regions = quota_services.pop("*", [])
+        for service in all_regions:
+            if service in self._quota_updaters:
+                self.default_helpers[service] = self._quota_updaters[service]
 
         for region, services in quota_services.items():
             self.helpers[region] = {}
@@ -314,6 +312,12 @@ class QuotaManager(object):
         return quota_list[:list_position]
 
     def get_region_quota_data(self, region_id, include_usage=True):
+        # NOTE(callumdickinson): If the region has no services
+        # for which quotas should be managed, return None so the caller
+        # can handle this case properly.
+        if not self.helpers.get(region_id, self.default_helpers):
+            return None
+
         current_quota = self.get_current_region_quota(region_id)
         current_quota_size = self.get_quota_size(current_quota)
         change_options = self.get_quota_change_options(current_quota_size)
@@ -340,13 +344,18 @@ class QuotaManager(object):
         return current_usage
 
     def set_region_quota(self, region_id, quota_dict):
+        region_helpers = self.helpers.get(region_id, self.default_helpers)
+        if not region_helpers:
+            return [
+                (
+                    "WARNING: Quota management disabled in region "
+                    f"{region_id}, skipping."
+                ),
+            ]
         notes = []
         for service_name, values in quota_dict.items():
-            updater_class = self.helpers.get(region_id, self.default_helpers).get(
-                service_name
-            )
+            updater_class = region_helpers.get(service_name)
             if not updater_class:
-                notes.append("No quota updater found for %s. Ignoring" % service_name)
                 continue
 
             service_helper = updater_class(region_id, self.project_id)

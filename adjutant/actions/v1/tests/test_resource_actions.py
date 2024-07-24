@@ -821,6 +821,122 @@ class QuotaActionTests(AdjutantTestCase):
         neutronquota = neutron_cache["RegionOne"]["test_project_id"]["quota"]
         self.assertEqual(neutronquota["network"], 5)
 
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.quota.services": [
+                {
+                    "operation": "override",
+                    "value": {
+                        "RegionOne": [],
+                        "*": ["cinder", "neutron", "nova"],
+                    },
+                },
+            ],
+        },
+    )
+    def test_update_quota_fail_disabled_region(self):
+        """
+        Check that a quota update for a region for which quota management
+        is disabled is not valid, or performed.
+        """
+        project = mock.Mock()
+        project.id = "test_project_id"
+        project.name = "test_project"
+        project.domain = "default"
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = "user_id"
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = "default"
+        user.password = "test_password"
+
+        setup_identity_cache(projects=[project], users=[user])
+        setup_mock_caches("RegionOne", "test_project_id")
+
+        # Test sending to only a single region
+        task = Task.objects.create(keystone_user={"roles": ["admin"]})
+
+        data = {
+            "project_id": "test_project_id",
+            "size": "large",
+            "regions": ["RegionOne"],
+            "user_id": user.id,
+        }
+
+        action = UpdateProjectQuotasAction(data, task=task, order=1)
+
+        action.prepare()
+        self.assertEqual(action.valid, False)
+
+        action.approve()
+        self.assertEqual(action.valid, False)
+
+        # check the quotas were updated
+        cinderquota = cinder_cache["RegionOne"]["test_project_id"]["quota"]
+        self.assertEqual(cinderquota["gigabytes"], 5000)
+        novaquota = nova_cache["RegionOne"]["test_project_id"]["quota"]
+        self.assertEqual(novaquota["ram"], 65536)
+        neutronquota = neutron_cache["RegionOne"]["test_project_id"]["quota"]
+        self.assertEqual(neutronquota["network"], 3)
+
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.quota.services": [
+                {"operation": "override", "value": {}},
+            ],
+        },
+    )
+    def test_update_quota_fail_disabled(self):
+        """
+        Check that a quota update tasks are not valid or performed
+        when quota management is disabled completely.
+        """
+        project = mock.Mock()
+        project.id = "test_project_id"
+        project.name = "test_project"
+        project.domain = "default"
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = "user_id"
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = "default"
+        user.password = "test_password"
+
+        setup_identity_cache(projects=[project], users=[user])
+        setup_mock_caches("RegionOne", "test_project_id")
+
+        # Test sending to only a single region
+        task = Task.objects.create(keystone_user={"roles": ["admin"]})
+
+        data = {
+            "project_id": "test_project_id",
+            "size": "large",
+            "regions": ["RegionOne"],
+            "user_id": user.id,
+        }
+
+        action = UpdateProjectQuotasAction(data, task=task, order=1)
+
+        action.prepare()
+        self.assertEqual(action.valid, False)
+
+        action.approve()
+        self.assertEqual(action.valid, False)
+
+        # check the quotas were updated
+        cinderquota = cinder_cache["RegionOne"]["test_project_id"]["quota"]
+        self.assertEqual(cinderquota["gigabytes"], 5000)
+        novaquota = nova_cache["RegionOne"]["test_project_id"]["quota"]
+        self.assertEqual(novaquota["ram"], 65536)
+        neutronquota = neutron_cache["RegionOne"]["test_project_id"]["quota"]
+        self.assertEqual(neutronquota["network"], 3)
+
     def test_update_quota_multi_region(self):
         """
         Sets a new quota on all services of a project in multiple regions
@@ -874,6 +990,140 @@ class QuotaActionTests(AdjutantTestCase):
         self.assertEqual(novaquota["ram"], 655360)
         neutronquota = neutron_cache["RegionTwo"]["test_project_id"]["quota"]
         self.assertEqual(neutronquota["network"], 10)
+
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.quota.services": [
+                {
+                    "operation": "override",
+                    "value": {
+                        "RegionTwo": [],
+                        "*": ["cinder", "neutron", "nova"],
+                    },
+                },
+            ],
+        },
+    )
+    def test_update_quota_multi_region_one_disabled(self):
+        """
+        Check that when a request to update multiple regions at once
+        and one of the regions have quota management disabled,
+        only the enabled regions have their quotas updated.
+        """
+        project = mock.Mock()
+        project.id = "test_project_id"
+        project.name = "test_project"
+        project.domain = "default"
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = "user_id"
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = "default"
+        user.password = "test_password"
+
+        setup_identity_cache(projects=[project], users=[user])
+        setup_mock_caches("RegionOne", project.id)
+        setup_mock_caches("RegionTwo", project.id)
+
+        task = Task.objects.create(keystone_user={"roles": ["admin"]})
+
+        data = {
+            "project_id": "test_project_id",
+            "size": "large",
+            "domain_id": "default",
+            "regions": ["RegionOne", "RegionTwo"],
+            "user_id": "user_id",
+        }
+
+        action = UpdateProjectQuotasAction(data, task=task, order=1)
+
+        action.prepare()
+        self.assertEqual(action.valid, True)
+
+        action.approve()
+        self.assertEqual(action.valid, True)
+
+        # check the quotas were updated
+        cinderquota = cinder_cache["RegionOne"]["test_project_id"]["quota"]
+        self.assertEqual(cinderquota["gigabytes"], 50000)
+        novaquota = nova_cache["RegionOne"]["test_project_id"]["quota"]
+        self.assertEqual(novaquota["ram"], 655360)
+        neutronquota = neutron_cache["RegionOne"]["test_project_id"]["quota"]
+        self.assertEqual(neutronquota["network"], 10)
+
+        cinderquota = cinder_cache["RegionTwo"]["test_project_id"]["quota"]
+        self.assertEqual(cinderquota["gigabytes"], 5000)
+        novaquota = nova_cache["RegionTwo"]["test_project_id"]["quota"]
+        self.assertEqual(novaquota["ram"], 65536)
+        neutronquota = neutron_cache["RegionTwo"]["test_project_id"]["quota"]
+        self.assertEqual(neutronquota["network"], 3)
+
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.quota.services": [
+                {"operation": "override", "value": {}},
+            ],
+        },
+    )
+    def test_update_quota_multi_region_disabled(self):
+        """
+        Check that if a task to update quotas for multiple regions at once
+        is initiated but quota management is disabled, no regions' quotas
+        are updated.
+        """
+        project = mock.Mock()
+        project.id = "test_project_id"
+        project.name = "test_project"
+        project.domain = "default"
+        project.roles = {}
+
+        user = mock.Mock()
+        user.id = "user_id"
+        user.name = "test@example.com"
+        user.email = "test@example.com"
+        user.domain = "default"
+        user.password = "test_password"
+
+        setup_identity_cache(projects=[project], users=[user])
+        setup_mock_caches("RegionOne", project.id)
+        setup_mock_caches("RegionTwo", project.id)
+
+        task = Task.objects.create(keystone_user={"roles": ["admin"]})
+
+        data = {
+            "project_id": "test_project_id",
+            "size": "large",
+            "domain_id": "default",
+            "regions": ["RegionOne", "RegionTwo"],
+            "user_id": "user_id",
+        }
+
+        action = UpdateProjectQuotasAction(data, task=task, order=1)
+
+        action.prepare()
+        self.assertEqual(action.valid, False)
+
+        action.approve()
+        self.assertEqual(action.valid, False)
+
+        # check the quotas were updated
+        cinderquota = cinder_cache["RegionOne"]["test_project_id"]["quota"]
+        self.assertEqual(cinderquota["gigabytes"], 5000)
+        novaquota = nova_cache["RegionOne"]["test_project_id"]["quota"]
+        self.assertEqual(novaquota["ram"], 65536)
+        neutronquota = neutron_cache["RegionOne"]["test_project_id"]["quota"]
+        self.assertEqual(neutronquota["network"], 3)
+
+        cinderquota = cinder_cache["RegionTwo"]["test_project_id"]["quota"]
+        self.assertEqual(cinderquota["gigabytes"], 5000)
+        novaquota = nova_cache["RegionTwo"]["test_project_id"]["quota"]
+        self.assertEqual(novaquota["ram"], 65536)
+        neutronquota = neutron_cache["RegionTwo"]["test_project_id"]["quota"]
+        self.assertEqual(neutronquota["network"], 3)
 
     @conf_utils.modify_conf(
         CONF,

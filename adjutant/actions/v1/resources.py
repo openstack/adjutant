@@ -432,6 +432,18 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
             return False
         return True
 
+    def _validate_quota_management_enabled_for_regions(self):
+        # Check that at least one region in the given list has
+        # quota management enabled.
+        default_services = CONF.quota.services.get("*", {})
+        for region in self.regions:
+            if CONF.quota.services.get(region, default_services):
+                return True
+        self.add_note(
+            "Quota management is disabled for all specified regions",
+        )
+        return False
+
     def _set_region_quota(self, region_name, quota_size):
         # Set the quota for an individual region
         quota_config = CONF.quota.sizes.get(quota_size, {})
@@ -479,9 +491,17 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
         )
 
         for region in self.regions:
-            current_size = quota_manager.get_region_quota_data(
+            current_quota = quota_manager.get_region_quota_data(
                 region, include_usage=False
-            )["current_quota_size"]
+            )
+            # If get_region_quota_data returns None, this region
+            # has quota management disabled.
+            if not current_quota:
+                self.add_note(
+                    f"Quota management is disabled in region: {region}",
+                )
+                continue
+            current_size = current_quota["current_quota_size"]
             region_sizes.append(current_size)
             self.add_note(
                 "Project has size '%s' in region: '%s'" % (current_size, region)
@@ -490,6 +510,12 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
         # Check for preapproved_quotas
         preapproved_quotas = []
         smaller_quotas = []
+
+        if not region_sizes:
+            self.add_note(
+                "Quota management is disabled for all specified regions",
+            )
+            return False
 
         # If all region sizes are the same
         if region_sizes.count(region_sizes[0]) == len(region_sizes):
@@ -528,6 +554,7 @@ class UpdateProjectQuotasAction(BaseAction, QuotaMixin):
                 self._validate_project_id,
                 self._validate_quota_size_exists,
                 self._validate_regions_exist,
+                self._validate_quota_management_enabled_for_regions,
                 self._validate_usage_lower_than_quota,
             ]
         )
