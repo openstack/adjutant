@@ -16,3 +16,4 @@ python-octaviaclient>=1.8.0
 python-troveclient>=6.0.1
 six>=1.12.0
 confspirator>=0.2.2
+importlib-metadata>=6.2.1

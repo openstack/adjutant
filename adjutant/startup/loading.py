@@ -12,10 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import pkg_resources
+import importlib_metadata as metadata
 
 
 def load_feature_sets():
-    for entry_point in pkg_resources.iter_entry_points("adjutant.feature_sets"):
+    for entry_point in metadata.entry_points(group="adjutant.feature_sets"):
         feature_set = entry_point.load()
         feature_set().load()
