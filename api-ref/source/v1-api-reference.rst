@@ -82,12 +82,3 @@ Normal response code: 200
 
 .. include:: delegate-apis.inc
 
-
-****************************
-Additional API Documentation
-****************************
-
-While in debug mode the service will supply online browsable documentation via
-Django REST Swagger.
-
-This is viewable at: ../docs
