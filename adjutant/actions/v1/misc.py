@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import six
-
 from confspirator import groups
 from confspirator import fields
 from confspirator import types
@@ -146,7 +144,7 @@ class SendAdditionalEmailAction(BaseAction):
 
         if conf.get("email_task_cache"):
             task_emails = self.action.task.cache.get("additional_emails", [])
-            if isinstance(task_emails, six.string_types):
+            if isinstance(task_emails, str):
                 task_emails = [task_emails]
             for email in task_emails:
                 self.emails.add(email)

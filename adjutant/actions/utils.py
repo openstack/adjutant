@@ -1,5 +1,3 @@
-import six
-
 from django.core.mail import EmailMultiAlternatives
 from django.template import loader
 
@@ -35,7 +33,7 @@ def send_email(to_addresses, context, conf, task):
 
     if not to_addresses:
         return
-    if isinstance(to_addresses, six.string_types):
+    if isinstance(to_addresses, str):
         to_addresses = [to_addresses]
     elif isinstance(to_addresses, set):
         to_addresses = list(to_addresses)

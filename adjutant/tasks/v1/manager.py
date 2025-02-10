@@ -14,8 +14,6 @@
 
 from logging import getLogger
 
-from six import string_types
-
 from adjutant import exceptions
 from adjutant import tasks
 from adjutant.tasks.models import Task
@@ -58,7 +56,7 @@ class TaskManager(object):
     def get(self, task):
         if isinstance(task, BaseTask):
             return task
-        if isinstance(task, string_types):
+        if isinstance(task, str):
             try:
                 task = Task.objects.get(uuid=task)
             except Task.DoesNotExist:
