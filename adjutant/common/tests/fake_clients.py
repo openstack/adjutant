@@ -200,19 +200,16 @@ class FakeManager(object):
 
     def find_user(self, name, domain):
         domain = self._domain_from_id(domain)
-        global identity_cache
         for user in identity_cache["users"].values():
             if user.name.lower() == name.lower() and user.domain_id == domain.id:
                 return user
         return None
 
     def get_user(self, user_id):
-        global identity_cache
         return identity_cache["users"].get(user_id, None)
 
     def list_users(self, project):
         project = self._project_from_id(project)
-        global identity_cache
         users = {}
 
         for assignment in identity_cache["role_assignments"]:
@@ -235,7 +232,6 @@ class FakeManager(object):
 
     def list_inherited_users(self, project):
         project = self._project_from_id(project)
-        global identity_cache
         users = {}
 
         while project.parent_id:
@@ -263,7 +259,6 @@ class FakeManager(object):
     ):
         domain = self._domain_from_id(domain)
         default_project = self._project_from_id(default_project)
-        global identity_cache
         user = FakeUser(
             name=name,
             password=password,
@@ -296,7 +291,6 @@ class FakeManager(object):
         user.enabled = False
 
     def find_role(self, name):
-        global identity_cache
         for role in identity_cache["roles"].values():
             if role.name == name:
                 return role
@@ -305,7 +299,6 @@ class FakeManager(object):
     def get_roles(self, user, project, inherited=False):
         user = self._user_from_id(user)
         project = self._project_from_id(project)
-        global identity_cache
 
         roles = []
 
@@ -331,7 +324,6 @@ class FakeManager(object):
 
     def get_all_roles(self, user):
         user = self._user_from_id(user)
-        global identity_cache
         projects = {}
         for assignment in identity_cache["role_assignments"]:
             if assignment.user["id"] == user.id:
@@ -360,8 +352,6 @@ class FakeManager(object):
 
         role_assignment = self._make_role_assignment(user, role, project)
 
-        global identity_cache
-
         if role_assignment not in identity_cache["role_assignments"]:
             identity_cache["role_assignments"].append(role_assignment)
             identity_cache["new_role_assignments"].append(role_assignment)
@@ -375,14 +365,11 @@ class FakeManager(object):
             user, role, project, inherited=inherited
         )
 
-        global identity_cache
-
         if role_assignment in identity_cache["role_assignments"]:
             identity_cache["role_assignments"].remove(role_assignment)
 
     def find_project(self, project_name, domain):
         domain = self._domain_from_id(domain)
-        global identity_cache
         for project in identity_cache["projects"].values():
             if (
                 project.name.lower() == project_name.lower()
@@ -392,7 +379,6 @@ class FakeManager(object):
         return None
 
     def get_project(self, project_id, subtree_as_ids=False, parents_as_ids=False):
-        global identity_cache
         project = identity_cache["projects"].get(project_id, None)
 
         if subtree_as_ids:
@@ -431,7 +417,6 @@ class FakeManager(object):
     ):
         parent = self._project_from_id(parent)
         domain = self._domain_from_id(domain)
-        global identity_cache
 
         project = FakeProject(
             name=project_name,
@@ -453,26 +438,21 @@ class FakeManager(object):
         return project
 
     def find_domain(self, domain_name):
-        global identity_cache
         for domain in identity_cache["domains"].values():
             if domain.name.lower() == domain_name.lower():
                 return domain
         return None
 
     def get_domain(self, domain_id):
-        global identity_cache
         return identity_cache["domains"].get(domain_id, None)
 
     def get_region(self, region_id):
-        global identity_cache
         return identity_cache["regions"].get(region_id, None)
 
     def list_regions(self):
-        global identity_cache
         return identity_cache["regions"].values()
 
     def list_credentials(self, user_id, cred_type=None):
-        global identity_cache
         found = []
         for cred in identity_cache["credentials"]:
             if cred.user_id == user_id:
@@ -483,7 +463,6 @@ class FakeManager(object):
         return found
 
     def add_credential(self, user, cred_type, blob, project=None):
-        global identity_cache
         user = self._user_from_id(user)
         project = self._project_from_id(project)
         cred = FakeCredential(user_id=user.id, blob=blob, cred_type=cred_type)
@@ -493,7 +472,6 @@ class FakeManager(object):
         return cred
 
     def clear_credential_type(self, user_id, cred_type):
-        global identity_cache
         found = []
         for cred in identity_cache["credentials"]:
             if cred.user_id == user_id and cred.type == cred_type:
@@ -571,7 +549,6 @@ class FakeNeutronClient(object):
         self.region = region
 
     def create_network(self, body):
-        global neutron_cache
         project_id = body["network"]["tenant_id"]
         net = {
             "network": {
@@ -585,7 +562,6 @@ class FakeNeutronClient(object):
         return net
 
     def create_subnet(self, body):
-        global neutron_cache
         project_id = body["subnet"]["tenant_id"]
         subnet = {
             "subnet": {
@@ -599,7 +575,6 @@ class FakeNeutronClient(object):
         return subnet
 
     def create_router(self, body):
-        global neutron_cache
         project_id = body["router"]["tenant_id"]
         router = {
             "router": {
@@ -613,7 +588,6 @@ class FakeNeutronClient(object):
         return router
 
     def add_interface_router(self, router_id, body):
-        global neutron_cache
         port_id = "port_id_%s" % neutron_cache[self.region]["i"]
         neutron_cache[self.region]["i"] += 1
         interface = {
@@ -624,7 +598,6 @@ class FakeNeutronClient(object):
         return interface
 
     def update_quota(self, project_id, body):
-        global neutron_cache
         if self.region not in neutron_cache:
             neutron_cache[self.region] = {}
         if project_id not in neutron_cache[self.region]:
@@ -678,7 +651,6 @@ class FakeOctaviaClient(object):
     #               does not have quota commands
 
     def __init__(self, region):
-        global octavia_cache
         self.region = region
         if region not in octavia_cache:
             octavia_cache[region] = {}
@@ -724,7 +696,6 @@ class FakeOctaviaClient(object):
 
     def __getattr__(self, name):
         # NOTE(amelia): This is out of pure laziness
-        global octavia_cache
         if name[-5:] == "_list" and name[:-5] in self.resource_dict:
             return self.lister(name[:-5])
         else:
@@ -738,7 +709,6 @@ class FakeTroveClient(object):
         )
 
         def __init__(self, region):
-            global trove_cache
             self.region = region
             if region not in trove_cache:
                 trove_cache[region] = {}
@@ -768,7 +738,6 @@ class FakeTroveClient(object):
 
 class FakeNovaClient(FakeOpenstackClient):
     def __init__(self, region):
-        global nova_cache
         super(FakeNovaClient, self).__init__(region, nova_cache)
         self.limits = self.LimitFakers(nova_cache[region])
 
@@ -799,11 +768,9 @@ class FakeCinderClient(FakeOpenstackClient):
         def list(self, search_opts=None):
             if search_opts:
                 project_id = search_opts["project_id"]
-                global cinder_cache
                 return cinder_cache[self.region][project_id][self.key]
 
     def __init__(self, region):
-        global cinder_cache
         self.region = region
         self._cache = cinder_cache
         self.quotas = FakeOpenstackClient.Quotas(self)
@@ -820,7 +787,6 @@ class FakeResource(object):
 
 
 def setup_trove_cache(region, project_id):
-    global trove_cache
     if region not in trove_cache:
         trove_cache[region] = {}
     if project_id not in trove_cache[region]:
@@ -836,7 +802,6 @@ def setup_trove_cache(region, project_id):
 
 
 def setup_neutron_cache(region, project_id):
-    global neutron_cache
     if region not in neutron_cache:
         neutron_cache[region] = {"i": 0}
     else:
@@ -860,7 +825,6 @@ def setup_neutron_cache(region, project_id):
 
 
 def setup_cinder_cache(region, project_id):
-    global cinder_cache
     if region not in cinder_cache:
         cinder_cache[region] = {}
     if project_id not in cinder_cache[region]:
@@ -877,7 +841,6 @@ def setup_cinder_cache(region, project_id):
 
 
 def setup_nova_cache(region, project_id):
-    global nova_cache
     if region not in nova_cache:
         nova_cache[region] = {}
     if project_id not in nova_cache[region]:
@@ -898,8 +861,6 @@ def setup_nova_cache(region, project_id):
 
 def setup_quota_cache(region_name, project_id, size="small"):
     """Sets up the quota cache for a given region and project"""
-    global cinder_cache
-
     if region_name not in cinder_cache:
         cinder_cache[region_name] = {}
 
@@ -910,7 +871,6 @@ def setup_quota_cache(region_name, project_id, size="small"):
         CONF.quota.sizes[size]["cinder"]
     )
 
-    global nova_cache
     if region_name not in nova_cache:
         nova_cache[region_name] = {}
 
@@ -919,7 +879,6 @@ def setup_quota_cache(region_name, project_id, size="small"):
 
     nova_cache[region_name][project_id]["quota"] = dict(CONF.quota.sizes[size]["nova"])
 
-    global neutron_cache
     if region_name not in neutron_cache:
         neutron_cache[region_name] = {}
 
@@ -951,7 +910,6 @@ def get_fake_novaclient(region):
 
 
 def get_fake_cinderclient(region):
-    global cinder_cache
     return FakeCinderClient(region)
 
 
