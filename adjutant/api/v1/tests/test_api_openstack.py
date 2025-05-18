@@ -1588,7 +1588,6 @@ class QuotaAPITests(AdjutantAPITestCase):
         # Setup current quota as medium
         # Create a number of lists with limits higher than the small quota
 
-        global nova_cache
         nova_cache["RegionOne"][project.id]["absolute"]["totalInstancesUsed"] = 11
 
         url = "/v1/openstack/quotas/"
