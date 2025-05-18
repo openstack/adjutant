@@ -131,7 +131,6 @@ class ProjectSetupActionTests(AdjutantTestCase):
             },
         )
 
-        global neutron_cache
         self.assertEqual(
             len(neutron_cache["RegionOne"]["test_project_id"]["networks"]), 1
         )
@@ -148,8 +147,6 @@ class ProjectSetupActionTests(AdjutantTestCase):
         with the new implementation.
         """
         setup_neutron_cache("RegionOne", "test_project_id")
-
-        global neutron_cache
 
         task = Task.objects.create(
             keystone_user={"roles": ["admin"], "project_id": "test_project_id"}
@@ -262,7 +259,6 @@ class ProjectSetupActionTests(AdjutantTestCase):
 
         self.assertEqual(action.action.cache, {})
 
-        global neutron_cache
         self.assertEqual(
             len(neutron_cache["RegionOne"]["test_project_id"]["networks"]), 0
         )
@@ -332,7 +328,6 @@ class ProjectSetupActionTests(AdjutantTestCase):
             },
         )
 
-        global neutron_cache
         self.assertEqual(
             len(neutron_cache["RegionOne"]["test_project_id"]["networks"]), 1
         )
@@ -411,7 +406,6 @@ class ProjectSetupActionTests(AdjutantTestCase):
             },
         )
 
-        global neutron_cache
         self.assertEqual(
             len(neutron_cache["RegionOne"]["test_project_id"]["networks"]), 1
         )
@@ -436,7 +430,6 @@ class ProjectSetupActionTests(AdjutantTestCase):
         Should fail, but on re_approve will continue where it left off.
         """
         setup_neutron_cache("RegionOne", "test_project_id")
-        global neutron_cache
         task = Task.objects.create(
             keystone_user={"roles": ["admin"], "project_id": "test_project_id"}
         )
@@ -553,7 +546,6 @@ class ProjectSetupActionTests(AdjutantTestCase):
             },
         )
 
-        global neutron_cache
         self.assertEqual(
             len(neutron_cache["RegionOne"]["test_project_id"]["networks"]), 1
         )
@@ -587,7 +579,6 @@ class ProjectSetupActionTests(AdjutantTestCase):
 
         self.assertEqual(action.action.cache, {})
 
-        global neutron_cache
         self.assertEqual(
             len(neutron_cache["RegionOne"]["test_project_id"]["networks"]), 0
         )
@@ -633,7 +624,6 @@ class ProjectSetupActionTests(AdjutantTestCase):
 
         self.assertEqual(action.action.cache, {})
 
-        global neutron_cache
         self.assertEqual(
             len(neutron_cache["RegionOne"]["test_project_id"]["networks"]), 0
         )
@@ -650,7 +640,6 @@ class ProjectSetupActionTests(AdjutantTestCase):
         """
         setup_identity_cache()
         setup_neutron_cache("RegionOne", "test_project_id")
-        global neutron_cache
         task = Task.objects.create(keystone_user={"roles": ["admin"]})
 
         data = {
