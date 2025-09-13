@@ -1,14 +1,10 @@
-========================
-Team and repository tags
-========================
-
-.. image:: https://governance.openstack.org/tc/badges/adjutant.svg
-    :target: https://governance.openstack.org/tc/reference/tags/index.html
-
-.. Change things from this point on
-
+========
 Adjutant
 ========
+
+.. image:: https://governance.openstack.org/tc/badges/adjutant.svg
+
+.. Change things from this point on
 
 A basic workflow framework built using Django and
 Django-Rest-Framework to help automate basic Admin tasks within an
