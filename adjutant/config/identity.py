@@ -16,7 +16,6 @@ from confspirator import groups
 from confspirator import fields
 from confspirator import types
 
-
 config_group = groups.ConfigGroup("identity")
 
 config_group.register_child_config(

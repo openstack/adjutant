@@ -22,7 +22,6 @@ from rest_framework.response import Response
 from adjutant import exceptions
 from adjutant.notifications.utils import create_notification
 
-
 LOG = getLogger("adjutant")
 
 
