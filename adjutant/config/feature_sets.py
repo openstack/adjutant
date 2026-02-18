@@ -14,5 +14,4 @@
 
 from confspirator import groups
 
-
 config_group = groups.ConfigGroup("feature_sets", lazy_load=True)

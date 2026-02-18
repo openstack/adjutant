@@ -15,7 +15,6 @@
 from confspirator import groups
 from confspirator import fields
 
-
 config_group = groups.ConfigGroup("api")
 
 config_group.register_child_config(

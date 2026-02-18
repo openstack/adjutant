@@ -14,7 +14,6 @@
 
 from confspirator import groups
 
-
 config_group = groups.ConfigGroup("notifications")
 
 handler_defaults_group = groups.ConfigGroup("handler_defaults", lazy_load=True)

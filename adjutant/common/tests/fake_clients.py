@@ -18,7 +18,6 @@ from uuid import uuid4
 
 from adjutant.config import CONF
 
-
 identity_cache = {}
 neutron_cache = {}
 nova_cache = {}

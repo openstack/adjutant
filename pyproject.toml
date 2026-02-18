@@ -1,0 +1,51 @@
+[build-system]
+requires = ["pbr>=6.1.1"]
+build-backend = "pbr.build"
+
+[project]
+name = "python-adjutant"
+description = "An admin task workflow service for openstack."
+authors = [
+    {name = "OpenStack", email = "openstack-discuss@lists.openstack.org"},
+]
+readme = "package_readme.rst"
+# NOTE(callumdickinson): PBR only supports the now-deprecated dictionary
+# format. With upstream setuptools, this would be simply "Apache-2.0".
+license = {text = "Apache-2.0"}
+requires-python = ">=3.10"
+keywords = [
+    "openstack",
+    "keystone",
+    "users",
+    "tasks",
+    "registration",
+    "workflow",
+]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Framework :: Django :: 4.2",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Environment :: OpenStack",
+]
+dynamic = ["version", "dependencies"]
+
+[project.urls]
+"Bug Tracker" = "https://storyboard.openstack.org/#!/project/openstack/adjutant"
+Documentation = "https://docs.openstack.org/adjutant/latest"
+"Source Code" = "https://opendev.org/openstack/adjutant"
+
+[project.scripts]
+adjutant-api = "adjutant:management_command"
+
+[project.entry-points."adjutant.feature_sets"]
+core = "adjutant.core:AdjutantCore"
+
+[tool.setuptools.packages.find]
+include = ["adjutant", "adjutant.*"]

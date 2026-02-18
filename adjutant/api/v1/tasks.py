@@ -23,7 +23,6 @@ from adjutant import exceptions
 from adjutant.api import utils
 from adjutant.api.v1.base import BaseDelegateAPI
 
-
 # NOTE(adriant): We should deprecate these Views properly and switch tests
 # to work against the openstack ones.
 

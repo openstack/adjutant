@@ -18,7 +18,6 @@ from confspirator import types
 
 from adjutant.common import constants
 
-
 config_group = groups.ConfigGroup("workflow")
 
 config_group.register_child_config(

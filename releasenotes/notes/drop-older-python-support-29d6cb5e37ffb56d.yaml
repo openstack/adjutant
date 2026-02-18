@@ -1,0 +1,5 @@
+---
+upgrade:
+  - |
+    Support for unsupported versions of Python has been removed.
+    Adjutant now requires Python 3.10 or later.

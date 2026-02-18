@@ -16,7 +16,6 @@ from confspirator import groups
 from confspirator import fields
 from confspirator import types
 
-
 DEFAULT_QUOTA_SIZES = {
     "small": {
         "nova": {

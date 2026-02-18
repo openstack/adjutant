@@ -27,7 +27,6 @@ from adjutant.notifications.utils import create_notification
 from adjutant.config import CONF
 from adjutant import exceptions
 
-
 LOG = getLogger("adjutant")
 
 
