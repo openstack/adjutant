@@ -15,3 +15,5 @@ dev-db/mariadb [platform:gentoo]
 
 python3-all-dev [platform:dpkg]
 python3-devel [platform:fedora]
+
+tzdata
