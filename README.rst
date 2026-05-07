@@ -4,8 +4,6 @@ Adjutant
 
 .. image:: https://governance.openstack.org/tc/badges/adjutant.svg
 
-.. Change things from this point on
-
 A basic workflow framework built using Django and
 Django-Rest-Framework to help automate basic Admin tasks within an
 OpenStack cluster.

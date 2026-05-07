@@ -8,11 +8,10 @@ description = "An admin task workflow service for openstack."
 authors = [
     {name = "OpenStack", email = "openstack-discuss@lists.openstack.org"},
 ]
-readme = "package_readme.rst"
-# NOTE(callumdickinson): PBR only supports the now-deprecated dictionary
-# format. With upstream setuptools, this would be simply "Apache-2.0".
-license = {text = "Apache-2.0"}
-requires-python = ">=3.10"
+readme = {file = "README.rst", content-type = "text/x-rst"}
+license = "Apache-2.0"
+dynamic = ["version", "dependencies"]
+requires-python = ">=3.11"
 keywords = [
     "openstack",
     "keystone",
@@ -27,14 +26,13 @@ classifiers = [
     "Intended Audience :: Developers",
     "Intended Audience :: System Administrators",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
     "Environment :: OpenStack",
 ]
-dynamic = ["version", "dependencies"]
 
 [project.urls]
 "Bug Tracker" = "https://storyboard.openstack.org/#!/project/openstack/adjutant"
