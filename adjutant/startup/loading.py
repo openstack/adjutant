@@ -12,7 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import importlib_metadata as metadata
+import importlib.metadata as metadata
 
 
 def load_feature_sets():
