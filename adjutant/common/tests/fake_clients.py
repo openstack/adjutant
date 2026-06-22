@@ -24,6 +24,7 @@ nova_cache = {}
 cinder_cache = {}
 octavia_cache = {}
 trove_cache = {}
+aodh_cache = {}
 
 
 class FakeProject(object):
@@ -777,6 +778,60 @@ class FakeCinderClient(FakeOpenstackClient):
         self.volume_snapshots = self.FakeResourceGroup(region, "volume_snapshots")
 
 
+class FakeAodhClient(FakeOpenstackClient):
+    class FakeAodhAlarmManager(object):
+        def __init__(self, client):
+            self.client = client
+
+        def list(self, filters=None):
+            # If a specific project is requested, return only its alarms
+            if filters and "project_id" in filters:
+                project_id = filters["project_id"]
+                return aodh_cache[self.client.region][project_id].get("alarms", [])
+
+            # If no project is requested, return ALL alarms across ALL cached projects
+            all_alarms = []
+            for project_data in aodh_cache[self.client.region].values():
+                all_alarms.extend(project_data.get("alarms", []))
+            return all_alarms
+
+    class FakeAodhQuotasManager(object):
+        def __init__(self, client):
+            self.client = client
+
+        def list(self, project=None):
+            if project:
+                quota_dict = aodh_cache[self.client.region][project].get("quota", {})
+                return {
+                    "project_id": project,
+                    "quotas": [
+                        {"resource": key, "limit": value}
+                        for key, value in quota_dict.items()
+                    ],
+                }
+
+            raise Exception(
+                "Trying to get quotas for all projects - this should not happen!"
+            )
+
+        def create(self, project, resource_quotas):
+            # Initialize cache if doesn't exist
+            if "quota" not in aodh_cache[self.client.region][project]:
+                aodh_cache[self.client.region][project]["quota"] = {}
+
+            for q in resource_quotas:
+                resource_name = q["resource"]
+                limit_value = q["limit"]
+                aodh_cache[self.client.region][project]["quota"][
+                    resource_name
+                ] = limit_value
+
+    def __init__(self, region):
+        self.region = region
+        self.quota = self.FakeAodhQuotasManager(self)
+        self.alarm = self.FakeAodhAlarmManager(self)
+
+
 class FakeResource(object):
     """Stub class to represent an individual instance of a volume or
     snapshot"""
@@ -858,6 +913,17 @@ def setup_nova_cache(region, project_id):
     nova_cache[region][project_id]["quota"] = dict(CONF.quota.sizes["small"]["nova"])
 
 
+def setup_aodh_cache(region, project_id):
+    if region not in aodh_cache:
+        aodh_cache[region] = {}
+    if project_id not in aodh_cache[region]:
+        aodh_cache[region][project_id] = {}
+
+    aodh_cache[region][project_id] = {"alarms": []}
+
+    aodh_cache[region][project_id]["quota"] = dict(CONF.quota.sizes["small"]["aodh"])
+
+
 def setup_quota_cache(region_name, project_id, size="small"):
     """Sets up the quota cache for a given region and project"""
     if region_name not in cinder_cache:
@@ -894,6 +960,7 @@ def setup_mock_caches(region, project_id):
     setup_cinder_cache(region, project_id)
     setup_neutron_cache(region, project_id)
     setup_trove_cache(region, project_id)
+    setup_aodh_cache(region, project_id)
     client = FakeOctaviaClient(region)
     if project_id in octavia_cache[region]:
         del octavia_cache[region][project_id]
@@ -918,3 +985,7 @@ def get_fake_octaviaclient(region):
 
 def get_fake_troveclient(region):
     return FakeTroveClient(region)
+
+
+def get_fake_aodhclient(region):
+    return FakeAodhClient(region)

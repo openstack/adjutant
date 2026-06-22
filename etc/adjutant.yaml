@@ -567,6 +567,8 @@ quota:
         load_balancer: 10
         member: 10
         pool: 10
+      aodh:
+        alarms: 100
     medium:
       cinder:
         gigabytes: 10000
@@ -598,6 +600,8 @@ quota:
         load_balancer: 5
         member: 5
         pool: 5
+      aodh:
+        alarms: 50
     small:
       cinder:
         gigabytes: 5000
@@ -629,6 +633,8 @@ quota:
         load_balancer: 1
         member: 2
         pool: 1
+      aodh:
+        alarms: 20
   # List - An ascending list of all the quota size names, so that Adjutant knows their relative sizes/order.
   sizes_ascending:
     - small
@@ -640,4 +646,5 @@ quota:
       - cinder
       - neutron
       - nova
+      - aodh
 

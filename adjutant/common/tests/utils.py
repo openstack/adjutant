@@ -24,6 +24,7 @@ class AdjutantTestCase(TestCase):
         fake_clients.neutron_cache.clear()
         fake_clients.nova_cache.clear()
         fake_clients.cinder_cache.clear()
+        fake_clients.aodh_cache.clear()
 
 
 class AdjutantAPITestCase(APITestCase):
@@ -32,3 +33,4 @@ class AdjutantAPITestCase(APITestCase):
         fake_clients.neutron_cache.clear()
         fake_clients.nova_cache.clear()
         fake_clients.cinder_cache.clear()
+        fake_clients.aodh_cache.clear()

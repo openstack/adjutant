@@ -17,6 +17,7 @@ from keystoneauth1.identity import v3
 from keystoneauth1 import session
 from keystoneclient import client as ks_client
 
+from aodhclient.v2 import client as aodhclient
 from cinderclient import client as cinderclient
 from neutronclient.v2_0 import client as neutronclient
 from novaclient import client as novaclient
@@ -70,6 +71,10 @@ def get_novaclient(region, version=DEFAULT_COMPUTE_VERSION):
 
 def get_cinderclient(region, version=DEFAULT_VOLUME_VERSION):
     return cinderclient.Client(version, session=get_auth_session(), region_name=region)
+
+
+def get_aodhclient(region):
+    return aodhclient.Client(session=get_auth_session(), region_name=region)
 
 
 def get_octaviaclient(region):

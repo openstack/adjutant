@@ -27,19 +27,21 @@ from adjutant.common.tests.fake_clients import (
     FakeProject,
     FakeUser,
     FakeManager,
-    setup_identity_cache,
     get_fake_neutron,
     get_fake_novaclient,
     get_fake_cinderclient,
     get_fake_troveclient,
+    get_fake_aodhclient,
+    get_fake_octaviaclient,
+    setup_identity_cache,
     setup_neutron_cache,
+    setup_mock_caches,
     neutron_cache,
     cinder_cache,
     nova_cache,
-    setup_mock_caches,
-    get_fake_octaviaclient,
     octavia_cache,
     trove_cache,
+    aodh_cache,
 )
 from adjutant.common.tests.utils import AdjutantTestCase
 from adjutant.config import CONF
@@ -53,6 +55,7 @@ from adjutant.config import CONF
 @mock.patch("adjutant.common.openstack_clients.get_neutronclient", get_fake_neutron)
 @mock.patch("adjutant.common.openstack_clients.get_novaclient", get_fake_novaclient)
 @mock.patch("adjutant.common.openstack_clients.get_cinderclient", get_fake_cinderclient)
+@mock.patch("adjutant.common.openstack_clients.get_aodhclient", get_fake_aodhclient)
 @conf_utils.modify_conf(
     CONF,
     operations={
@@ -763,6 +766,7 @@ class ProjectSetupActionTests(AdjutantTestCase):
     "adjutant.common.openstack_clients.get_octaviaclient", get_fake_octaviaclient
 )
 @mock.patch("adjutant.common.openstack_clients.get_troveclient", get_fake_troveclient)
+@mock.patch("adjutant.common.openstack_clients.get_aodhclient", get_fake_aodhclient)
 class QuotaActionTests(AdjutantTestCase):
     def test_update_quota(self):
         """
@@ -1183,7 +1187,9 @@ class QuotaActionTests(AdjutantTestCase):
             "adjutant.quota.services": [
                 {
                     "operation": "override",
-                    "value": {"*": ["cinder", "neutron", "nova", "octavia", "trove"]},
+                    "value": {
+                        "*": ["cinder", "neutron", "nova", "octavia", "trove", "aodh"]
+                    },
                 }
             ]
         },
@@ -1236,6 +1242,8 @@ class QuotaActionTests(AdjutantTestCase):
         self.assertEqual(octaviaquota["load_balancer"], 10)
         trove_quota = trove_cache["RegionOne"]["test_project_id"]["quota"]
         self.assertEqual(trove_quota["instances"], 20)
+        aodhquota = aodh_cache["RegionOne"]["test_project_id"]["quota"]
+        self.assertEqual(aodhquota["alarms"], 50)
 
     @conf_utils.modify_conf(
         CONF,

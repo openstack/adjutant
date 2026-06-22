@@ -54,6 +54,28 @@ class QuotaManager(object):
                 "snapshots": len(snapshots),
             }
 
+    class ServiceQuotaAodhHelper(ServiceQuotaHelper):
+        def __init__(self, region_name, project_id):
+            self.client = openstack_clients.get_aodhclient(region=region_name)
+            self.project_id = project_id
+
+        def get_quota(self):
+            raw_quota = self.client.quota.list(project=self.project_id)
+
+            # Flatten the nested quotas list into a dictionary
+            return {q["resource"]: q["limit"] for q in raw_quota.get("quotas", [])}
+
+        def set_quota(self, values):
+            resource_quotas = [
+                {"resource": key, "limit": value} for key, value in values.items()
+            ]
+            self.client.quota.create(self.project_id, resource_quotas)
+
+        def get_usage(self):
+            alarms = self.client.alarm.list(filters={"project_id": self.project_id})
+            alarm_count = len(alarms)
+            return {"alarms": alarm_count}
+
     class ServiceQuotaNovaHelper(ServiceQuotaHelper):
         def __init__(self, region_name, project_id):
             self.client = openstack_clients.get_novaclient(region=region_name)
@@ -197,6 +219,7 @@ class QuotaManager(object):
         "neutron": ServiceQuotaNeutronHelper,
         "octavia": ServiceQuotaOctaviaHelper,
         "trove": ServiceQuotaTroveHelper,
+        "aodh": ServiceQuotaAodhHelper,
     }
 
     def __init__(self, project_id, size_difference_threshold=None):

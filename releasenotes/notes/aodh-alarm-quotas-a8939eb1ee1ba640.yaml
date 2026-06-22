@@ -1,0 +1,4 @@
+---
+features:
+  - |
+    Added support for Aodh alarm quotas to be managed via Adjutant.

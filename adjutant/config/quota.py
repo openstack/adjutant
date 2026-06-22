@@ -57,6 +57,9 @@ DEFAULT_QUOTA_SIZES = {
             "volumes": 3,
             "backups": 15,
         },
+        "aodh": {
+            "alarms": 3,
+        },
     },
     "medium": {
         "cinder": {"gigabytes": 10000, "volumes": 100, "snapshots": 300},
@@ -94,6 +97,9 @@ DEFAULT_QUOTA_SIZES = {
             "volumes": 10,
             "backups": 50,
         },
+        "aodh": {
+            "alarms": 20,
+        },
     },
     "large": {
         "cinder": {"gigabytes": 50000, "volumes": 200, "snapshots": 600},
@@ -130,6 +136,9 @@ DEFAULT_QUOTA_SIZES = {
             "instances": 20,
             "volumes": 20,
             "backups": 100,
+        },
+        "aodh": {
+            "alarms": 50,
         },
     },
 }
