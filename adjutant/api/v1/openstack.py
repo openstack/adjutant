@@ -77,6 +77,21 @@ class UserList(tasks.InviteUser):
             if skip:
                 continue
 
+            group_roles = []
+            for role in user.group_roles:
+                if role["role"].name in blacklisted_roles:
+                    skip = True
+                    continue
+                group_roles.append(
+                    {
+                        "role": role["role"].name,
+                        "group_id": role["group_id"],
+                        "group_name": role["group_name"],
+                    }
+                )
+            if skip:
+                continue
+
             email = getattr(user, "email", "")
             enabled = user.enabled
             user_status = "Active" if enabled else "Account Disabled"
@@ -88,6 +103,7 @@ class UserList(tasks.InviteUser):
                     "email": email,
                     "roles": roles,
                     "inherited_roles": inherited_roles,
+                    "group_roles": group_roles,
                     "cohort": "Member",
                     "status": user_status,
                     "manageable": set(can_manage_roles).issuperset(roles),
@@ -209,13 +225,29 @@ class UserDetail(BaseDelegateAPI):
         project = id_manager.get_project(project_id)
 
         roles = [role.name for role in id_manager.get_roles(user, project)]
-        roles_blacklisted = set(blacklisted_roles) & set(roles)
         inherited_roles = [
             role.name for role in id_manager.get_roles(user, project, True)
         ]
-        inherited_roles_blacklisted = set(blacklisted_roles) & set(inherited_roles)
 
-        if not roles or roles_blacklisted or inherited_roles_blacklisted:
+        raw_group_roles = id_manager.get_group_roles(user, project)
+        group_roles = []
+        group_role_names = []
+        for group_role in raw_group_roles:
+            role_name = group_role["role"].name
+            group_roles.append(
+                {
+                    "role": role_name,
+                    "group_id": group_role["group_id"],
+                    "group_name": group_role["group_name"],
+                }
+            )
+            group_role_names.append(role_name)
+
+        all_role_names = set(roles) | set(inherited_roles) | set(group_role_names)
+        is_blacklisted = bool(set(blacklisted_roles) & all_role_names)
+        has_no_access = not all_role_names
+
+        if is_blacklisted or has_no_access:
             return Response(no_user, status=404)
         return Response(
             {
@@ -224,6 +256,7 @@ class UserDetail(BaseDelegateAPI):
                 "email": getattr(user, "email", ""),
                 "roles": roles,
                 "inherited_roles": inherited_roles,
+                "group_roles": group_roles,
             }
         )
 
@@ -293,15 +326,39 @@ class UserRoles(BaseDelegateAPI):
         blacklisted_roles = class_conf.blacklisted_roles
 
         roles = [role.name for role in id_manager.get_roles(user, project)]
-        roles_blacklisted = set(blacklisted_roles) & set(roles)
         inherited_roles = [
             role.name for role in id_manager.get_roles(user, project, True)
         ]
-        inherited_roles_blacklisted = set(blacklisted_roles) & set(inherited_roles)
 
-        if not roles or roles_blacklisted or inherited_roles_blacklisted:
+        raw_group_roles = id_manager.get_group_roles(user, project)
+        group_roles = []
+        group_role_names = []
+
+        for group_role in raw_group_roles:
+            role_name = group_role["role"].name
+            group_roles.append(
+                {
+                    "role": role_name,
+                    "group_id": group_role["group_id"],
+                    "group_name": group_role["group_name"],
+                }
+            )
+            group_role_names.append(role_name)
+
+        all_role_names = set(roles) | set(inherited_roles) | set(group_role_names)
+
+        is_blacklisted = bool(set(blacklisted_roles) & all_role_names)
+        has_no_access = not all_role_names
+
+        if is_blacklisted or has_no_access:
             return Response(no_user, status=404)
-        return Response({"roles": roles, "inherited_roles": inherited_roles})
+        return Response(
+            {
+                "roles": roles,
+                "inherited_roles": inherited_roles,
+                "group_roles": group_roles,
+            }
+        )
 
     @utils.mod_or_admin
     def put(self, args, **kwargs):

@@ -81,23 +81,61 @@ class IdentityManager(object):  # pragma: no cover
             role_dict = {role.id: role for role in roles}
 
             users = {}
+            groups = {}
 
             user_assignments = self.ks_client.role_assignments.list(project=project)
             for assignment in user_assignments:
                 try:
-                    user = users.get(assignment.user["id"], None)
-                    if not user:
-                        user = self.ks_client.users.get(assignment.user["id"])
-                        user.roles = []
-                        user.inherited_roles = []
-                        users[user.id] = user
+                    if hasattr(assignment, "user") and assignment.user:
+                        # Handle user-assigned roles
 
-                    if assignment.scope.get("OS-INHERIT:inherited_to"):
-                        user.inherited_roles.append(role_dict[assignment.role["id"]])
-                    else:
-                        user.roles.append(role_dict[assignment.role["id"]])
+                        user = users.get(assignment.user["id"], None)
+                        if not user:
+                            user = self.ks_client.users.get(assignment.user["id"])
+                            user.roles = []
+                            user.inherited_roles = []
+                            user.group_roles = []
+                            users[user.id] = user
+
+                        if assignment.scope.get("OS-INHERIT:inherited_to"):
+                            user.inherited_roles.append(
+                                role_dict[assignment.role["id"]]
+                            )
+                        else:
+                            user.roles.append(role_dict[assignment.role["id"]])
+
+                    elif hasattr(assignment, "group") and assignment.group:
+                        # Handle group-assigned roles
+                        group_id = assignment.group["id"]
+
+                        # Fetch group details and cache it
+                        if group_id not in groups:
+                            groups[group_id] = self.ks_client.groups.get(group_id)
+                        group_obj = groups[group_id]
+
+                        # Fetch the actual users inside this group
+                        group_users = self.ks_client.users.list(group=group_id)
+
+                        for g_user in group_users:
+                            user = users.get(g_user.id, None)
+                            if not user:
+                                user = self.ks_client.users.get(g_user.id)
+                                user.roles = []
+                                user.inherited_roles = []
+                                user.group_roles = []
+                                users[user.id] = user
+
+                            # Append the role along with the group context
+                            user.group_roles.append(
+                                {
+                                    "role": role_dict[assignment.role["id"]],
+                                    "group_id": group_id,
+                                    "group_name": group_obj.name,
+                                }
+                            )
+
                 except AttributeError:
-                    # Just means the assignment is a group, so ignore it.
+                    # Just means the assignment is higher level e.g. domain, so ignore it.
                     pass
         except ks_exceptions.NotFound:
             return []
@@ -191,6 +229,40 @@ class IdentityManager(object):  # pragma: no cover
             user_roles.append(role_dict[assignment.role["id"]])
         return user_roles
 
+    def get_group_roles(self, user, project):
+        """
+        Fetches roles assigned to a specific user via their user group for a specific project.
+        """
+        roles = self.ks_client.roles.list()
+        role_dict = {role.id: role for role in roles}
+
+        user_id = getattr(user, "id", user)
+        project_id = getattr(project, "id", project)
+
+        group_roles = []
+
+        # Get all role assignments for the project
+        project_assignments = self.ks_client.role_assignments.list(project=project_id)
+
+        for assignment in project_assignments:
+            # Get the group assignments for the project
+            if hasattr(assignment, "group") and assignment.group:
+                group_id = assignment.group["id"]
+
+                # Get the actual users inside this group and check if the user is in them
+                group_users = self.ks_client.users.list(group=group_id)
+                if any(g_user.id == user_id for g_user in group_users):
+                    group_obj = self.ks_client.groups.get(group_id)
+                    group_roles.append(
+                        {
+                            "role": role_dict[assignment.role["id"]],
+                            "group_id": group_id,
+                            "group_name": group_obj.name,
+                        }
+                    )
+
+        return group_roles
+
     def get_all_roles(self, user):
         """
         Returns roles for a given user across all projects.
@@ -207,6 +279,20 @@ class IdentityManager(object):  # pragma: no cover
             projects[project].append(role_dict[assignment.role["id"]])
 
         return projects
+
+    def get_effective_roles(self, user, project):
+        """
+        Returns the set of effective role names for a user on a project.
+        Includes direct, inherited, and group-assigned roles.
+        """
+        role_names = set()
+        for role in self.get_roles(user, project):
+            role_names.add(role.name)
+        for role in self.get_roles(user, project, inherited=True):
+            role_names.add(role.name)
+        for gr in self.get_group_roles(user, project):
+            role_names.add(gr["role"].name)
+        return list(role_names)
 
     def add_user_role(self, user, role, project, inherited=False):
         try:

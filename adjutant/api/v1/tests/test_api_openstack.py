@@ -271,6 +271,102 @@ class OpenstackAPITests(AdjutantAPITestCase):
         self.assertEqual(response.json()["roles"], ["member"])
         self.assertEqual(response.json()["inherited_roles"], ["member"])
 
+    def test_user_detail_group_roles(self):
+        """
+        Confirm that group-assigned roles appear in the group_roles field
+        of the user detail response.
+        """
+        project = fake_clients.FakeProject(name="test_project")
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com"
+        )
+
+        group = fake_clients.FakeGroup(name="test_group")
+
+        assignments = [
+            fake_clients.FakeRoleAssignment(
+                scope={"project": {"id": project.id}},
+                role_name="project_mod",
+                group={"id": group.id},
+            ),
+        ]
+
+        setup_identity_cache(
+            projects=[project],
+            users=[user],
+            groups=[group],
+            group_memberships={group.id: [user]},
+            role_assignments=assignments,
+        )
+
+        headers = {
+            "project_name": "test_project",
+            "project_id": project.id,
+            "roles": "project_admin,member,project_mod",
+            "username": "test@example.com",
+            "user_id": "test_user_id",
+            "authenticated": True,
+        }
+
+        url = "/v1/openstack/users/%s" % user.id
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["roles"], [])
+        self.assertEqual(len(response.json()["group_roles"]), 1)
+        group_role = response.json()["group_roles"][0]
+        self.assertEqual(group_role["role"], "project_mod")
+        self.assertEqual(group_role["group_id"], group.id)
+        self.assertEqual(group_role["group_name"], "test_group")
+
+    def test_user_roles_group_roles(self):
+        """
+        Confirm that group-assigned roles appear in the group_roles field
+        of the user roles endpoint response.
+        """
+        project = fake_clients.FakeProject(name="test_project")
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com"
+        )
+
+        group = fake_clients.FakeGroup(name="test_group")
+
+        assignments = [
+            fake_clients.FakeRoleAssignment(
+                scope={"project": {"id": project.id}},
+                role_name="project_mod",
+                group={"id": group.id},
+            ),
+        ]
+
+        setup_identity_cache(
+            projects=[project],
+            users=[user],
+            groups=[group],
+            group_memberships={group.id: [user]},
+            role_assignments=assignments,
+        )
+
+        headers = {
+            "project_name": "test_project",
+            "project_id": project.id,
+            "roles": "project_admin,member,project_mod",
+            "username": "test@example.com",
+            "user_id": "test_user_id",
+            "authenticated": True,
+        }
+
+        url = "/v1/openstack/users/%s/roles" % user.id
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json()["roles"], [])
+        self.assertEqual(len(response.json()["group_roles"]), 1)
+        group_role = response.json()["group_roles"][0]
+        self.assertEqual(group_role["role"], "project_mod")
+        self.assertEqual(group_role["group_id"], group.id)
+        self.assertEqual(group_role["group_name"], "test_group")
+
     def test_user_list_manageable(self):
         """
         Confirm that the manageable value is set correctly.
@@ -333,6 +429,271 @@ class OpenstackAPITests(AdjutantAPITestCase):
                 self.assertFalse(adj_user["manageable"])
             if adj_user["id"] == user2.id:
                 self.assertTrue(adj_user["manageable"])
+
+    def test_user_list_group_roles(self):
+        """
+        Confirm that group-assigned roles appear in the group_roles field
+        and that a user who only has group roles is still included in the list.
+        """
+        project = fake_clients.FakeProject(name="test_project")
+
+        # user1 has a direct role assignment
+        user1 = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com"
+        )
+        # user2 only has a role via a group
+        user2 = fake_clients.FakeUser(
+            name="test2@example.com", password="123", email="test2@example.com"
+        )
+
+        group = fake_clients.FakeGroup(name="test_group")
+
+        assignments = [
+            fake_clients.FakeRoleAssignment(
+                scope={"project": {"id": project.id}},
+                role_name="member",
+                user={"id": user1.id},
+            ),
+            fake_clients.FakeRoleAssignment(
+                scope={"project": {"id": project.id}},
+                role_name="project_mod",
+                group={"id": group.id},
+            ),
+        ]
+
+        setup_identity_cache(
+            projects=[project],
+            users=[user1, user2],
+            groups=[group],
+            group_memberships={group.id: [user2]},
+            role_assignments=assignments,
+        )
+
+        url = "/v1/openstack/users"
+        headers = {
+            "project_name": "test_project",
+            "project_id": project.id,
+            "roles": "project_admin,member,project_mod",
+            "username": "test@example.com",
+            "user_id": "test_user_id",
+            "authenticated": True,
+        }
+
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        users_by_id = {u["id"]: u for u in response.json()["users"]}
+
+        # user1 has a direct role, no group roles
+        self.assertIn(user1.id, users_by_id)
+        self.assertEqual(users_by_id[user1.id]["roles"], ["member"])
+        self.assertEqual(users_by_id[user1.id]["group_roles"], [])
+
+        # user2 has no direct roles but appears via group
+        self.assertIn(user2.id, users_by_id)
+        self.assertEqual(users_by_id[user2.id]["roles"], [])
+        self.assertEqual(len(users_by_id[user2.id]["group_roles"]), 1)
+        group_role = users_by_id[user2.id]["group_roles"][0]
+        self.assertEqual(group_role["role"], "project_mod")
+        self.assertEqual(group_role["group_id"], group.id)
+        self.assertEqual(group_role["group_name"], group.name)
+
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.api.delegate_apis.UserList.blacklisted_roles": [
+                {"operation": "override", "value": ["admin"]},
+            ],
+        },
+    )
+    def test_user_list_group_roles_blacklisted(self):
+        """
+        Confirm that a user is excluded from the list if a group-assigned
+        role is blacklisted.
+        """
+        project = fake_clients.FakeProject(name="test_project")
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com"
+        )
+
+        group = fake_clients.FakeGroup(name="admin_group")
+
+        assignments = [
+            fake_clients.FakeRoleAssignment(
+                scope={"project": {"id": project.id}},
+                role_name="admin",
+                group={"id": group.id},
+            ),
+        ]
+
+        setup_identity_cache(
+            projects=[project],
+            users=[user],
+            groups=[group],
+            group_memberships={group.id: [user]},
+            role_assignments=assignments,
+        )
+
+        url = "/v1/openstack/users"
+        headers = {
+            "project_name": "test_project",
+            "project_id": project.id,
+            "roles": "project_admin,member,project_mod",
+            "username": "test@example.com",
+            "user_id": "test_user_id",
+            "authenticated": True,
+        }
+
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        user_ids = [u["id"] for u in response.json()["users"]]
+        self.assertNotIn(user.id, user_ids)
+
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.api.delegate_apis.UserList.blacklisted_roles": [
+                {"operation": "override", "value": ["admin"]},
+            ],
+        },
+    )
+    def test_user_list_blacklisted_direct_role(self):
+        """
+        Confirm that a user with a blacklisted direct role is excluded
+        from the user list.
+        """
+        project = fake_clients.FakeProject(name="test_project")
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com"
+        )
+
+        assignments = [
+            fake_clients.FakeRoleAssignment(
+                scope={"project": {"id": project.id}},
+                role_name="admin",
+                user={"id": user.id},
+            ),
+        ]
+
+        setup_identity_cache(
+            projects=[project], users=[user], role_assignments=assignments
+        )
+
+        url = "/v1/openstack/users"
+        headers = {
+            "project_name": "test_project",
+            "project_id": project.id,
+            "roles": "project_admin,member,project_mod",
+            "username": "test@example.com",
+            "user_id": "test_user_id",
+            "authenticated": True,
+        }
+
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        user_ids = [u["id"] for u in response.json()["users"]]
+        self.assertNotIn(user.id, user_ids)
+
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.api.delegate_apis.UserList.blacklisted_roles": [
+                {"operation": "override", "value": ["admin"]},
+            ],
+        },
+    )
+    def test_user_list_blacklisted_inherited_role(self):
+        """
+        Confirm that a user with a blacklisted inherited role is excluded
+        from the user list.
+        """
+        project = fake_clients.FakeProject(name="test_project")
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com"
+        )
+
+        assignments = [
+            fake_clients.FakeRoleAssignment(
+                scope={"project": {"id": project.id}},
+                role_name="admin",
+                user={"id": user.id},
+                inherited=True,
+            ),
+        ]
+
+        setup_identity_cache(
+            projects=[project], users=[user], role_assignments=assignments
+        )
+
+        url = "/v1/openstack/users"
+        headers = {
+            "project_name": "test_project",
+            "project_id": project.id,
+            "roles": "project_admin,member,project_mod",
+            "username": "test@example.com",
+            "user_id": "test_user_id",
+            "authenticated": True,
+        }
+
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        user_ids = [u["id"] for u in response.json()["users"]]
+        self.assertNotIn(user.id, user_ids)
+
+    @conf_utils.modify_conf(
+        CONF,
+        operations={
+            "adjutant.api.delegate_apis.UserList.blacklisted_roles": [
+                {"operation": "override", "value": ["admin"]},
+            ],
+        },
+    )
+    def test_user_list_blacklisted_inherited_user(self):
+        """
+        Confirm that an inherited user with a blacklisted role is excluded
+        from the user list.
+        """
+        project = fake_clients.FakeProject(name="test_project")
+        child = fake_clients.FakeProject(
+            name="test_project/child", parent_id=project.id
+        )
+
+        user = fake_clients.FakeUser(
+            name="test@example.com", password="123", email="test@example.com"
+        )
+
+        assignments = [
+            fake_clients.FakeRoleAssignment(
+                scope={"project": {"id": project.id}},
+                role_name="admin",
+                user={"id": user.id},
+                inherited=True,
+            ),
+        ]
+
+        setup_identity_cache(
+            projects=[project, child],
+            users=[user],
+            role_assignments=assignments,
+        )
+
+        url = "/v1/openstack/users"
+        headers = {
+            "project_name": "test_project/child",
+            "project_id": child.id,
+            "roles": "project_admin,member,project_mod",
+            "username": "test@example.com",
+            "user_id": "test_user_id",
+            "authenticated": True,
+        }
+
+        response = self.client.get(url, headers=headers)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        user_ids = [u["id"] for u in response.json()["users"]]
+        self.assertNotIn(user.id, user_ids)
 
     def test_remove_user_role(self):
         """Remove all roles on a user from our project"""

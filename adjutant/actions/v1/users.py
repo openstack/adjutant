@@ -324,10 +324,9 @@ class EditUserRolesAction(UserIdAction, ProjectMixin, UserMixin):
     def _validate_role_permissions(self):
         id_manager = user_store.IdentityManager()
 
-        current_user_roles = id_manager.get_roles(
-            project=self.project_id, user=self.user_id
+        current_user_roles = id_manager.get_effective_roles(
+            self.user_id, self.project_id
         )
-        current_user_roles = [role.name for role in current_user_roles]
 
         current_roles_manageable = self.are_roles_manageable(
             self.action.task.keystone_user["roles"], current_user_roles

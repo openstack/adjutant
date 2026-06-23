@@ -73,6 +73,13 @@ class FakeUser(object):
             setattr(self, key, value)
 
 
+class FakeGroup(object):
+    def __init__(self, name, domain_id="default"):
+        self.id = uuid4().hex
+        self.name = name
+        self.domain_id = domain_id
+
+
 class FakeRole(object):
     def __init__(self, name):
         self.id = uuid4().hex
@@ -109,7 +116,13 @@ class FakeRoleAssignment(object):
 
 
 def setup_identity_cache(
-    projects=None, users=None, role_assignments=None, credentials=None, extra_roles=None
+    projects=None,
+    users=None,
+    groups=None,
+    group_memberships=None,
+    role_assignments=None,
+    credentials=None,
+    extra_roles=None,
 ):
     if extra_roles is None:
         extra_roles = []
@@ -117,6 +130,10 @@ def setup_identity_cache(
         projects = []
     if not users:
         users = []
+    if not groups:
+        groups = []
+    if not group_memberships:
+        group_memberships = {}
     if not role_assignments:
         role_assignments = []
     if not credentials:
@@ -155,6 +172,8 @@ def setup_identity_cache(
     identity_cache = {
         "users": {u.id: u for u in users},
         "new_users": [],
+        "groups": {g.id: g for g in groups},
+        "group_memberships": group_memberships,
         "projects": {p.id: p for p in projects},
         "new_projects": [],
         "role_assignments": role_assignments,
@@ -213,20 +232,46 @@ class FakeManager(object):
         users = {}
 
         for assignment in identity_cache["role_assignments"]:
-            if assignment.scope["project"]["id"] == project.id:
+            if assignment.scope["project"]["id"] != project.id:
+                continue
+
+            r = self.find_role(assignment.role["name"])
+
+            if hasattr(assignment, "user") and assignment.user:
                 user = users.get(assignment.user["id"])
                 if not user:
                     user = self.get_user(assignment.user["id"])
                     user.roles = []
                     user.inherited_roles = []
+                    user.group_roles = []
                     users[user.id] = user
-
-                r = self.find_role(assignment.role["name"])
 
                 if assignment.scope.get("OS-INHERIT:inherited_to"):
                     user.inherited_roles.append(r)
                 else:
                     user.roles.append(r)
+
+            elif hasattr(assignment, "group") and assignment.group:
+                group_id = assignment.group["id"]
+                group_obj = identity_cache["groups"].get(group_id)
+                group_members = identity_cache["group_memberships"].get(group_id, [])
+
+                for member in group_members:
+                    user = users.get(member.id)
+                    if not user:
+                        user = self.get_user(member.id)
+                        user.roles = []
+                        user.inherited_roles = []
+                        user.group_roles = []
+                        users[user.id] = user
+
+                    user.group_roles.append(
+                        {
+                            "role": r,
+                            "group_id": group_id,
+                            "group_name": group_obj.name if group_obj else group_id,
+                        }
+                    )
 
         return users.values()
 
@@ -303,6 +348,8 @@ class FakeManager(object):
         roles = []
 
         for assignment in identity_cache["role_assignments"]:
+            if not (hasattr(assignment, "user") and assignment.user):
+                continue
             if (
                 assignment.user["id"] == user.id
                 and assignment.scope["project"]["id"] == project.id
@@ -318,6 +365,47 @@ class FakeManager(object):
                 roles.append(r)
 
         return roles
+
+    def get_group_roles(self, user, project):
+        user = self._user_from_id(user)
+        project = self._project_from_id(project)
+
+        user_group_ids = {
+            group_id
+            for group_id, members in identity_cache["group_memberships"].items()
+            if any(m.id == user.id for m in members)
+        }
+
+        group_roles = []
+        for assignment in identity_cache["role_assignments"]:
+            if not (hasattr(assignment, "group") and assignment.group):
+                continue
+            if assignment.group["id"] not in user_group_ids:
+                continue
+            if assignment.scope["project"]["id"] != project.id:
+                continue
+
+            group_id = assignment.group["id"]
+            group_obj = identity_cache["groups"].get(group_id)
+            r = self.find_role(assignment.role["name"])
+            group_roles.append(
+                {
+                    "role": r,
+                    "group_id": group_id,
+                    "group_name": group_obj.name if group_obj else group_id,
+                }
+            )
+        return group_roles
+
+    def get_effective_roles(self, user, project):
+        role_names = set()
+        for role in self.get_roles(user, project):
+            role_names.add(role.name)
+        for role in self.get_roles(user, project, inherited=True):
+            role_names.add(role.name)
+        for gr in self.get_group_roles(user, project):
+            role_names.add(gr["role"].name)
+        return list(role_names)
 
     def _get_roles_as_names(self, user, project, inherited=False):
         return [r.name for r in self.get_roles(user, project, inherited)]
