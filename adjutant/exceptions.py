@@ -25,7 +25,7 @@ class BaseServiceException(Exception):
     to the user as an ServiceUnavailable error with a 503 response.
     """
 
-    default_message = "A internal service error has occured."
+    default_message = "A internal service error has occurred."
 
     def __init__(self, message=None):
         self.message = message

@@ -343,7 +343,7 @@ class DelegateAPITests(AdjutantAPITestCase):
     def test_new_project_invalid_on_submit(self):
         """
         Ensures that when a project becomes invalid at the submit stage
-        that the a 400 is recieved and no final emails are sent.
+        that the a 400 is received and no final emails are sent.
         """
 
         setup_identity_cache()
