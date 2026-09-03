@@ -31,7 +31,7 @@ django:
       USER: ''
   # Dict - A full override of the Django logging config for more customised logging.
   # logging:
-  # String - The name and location of the Adjutant log file, superceded by 'adjutant.django.logging'.
+  # String - The name and location of the Adjutant log file, superseded by 'adjutant.django.logging'.
   log_file: adjutant.log
   email:
     # String - Django email backend to use.
@@ -647,4 +647,3 @@ quota:
       - neutron
       - nova
       - aodh
-

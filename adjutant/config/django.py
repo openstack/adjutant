@@ -82,7 +82,7 @@ config_group.register_child_config(
     fields.StrConfig(
         "log_file",
         help_text="The name and location of the Adjutant log file, "
-        "superceded by 'adjutant.django.logging'.",
+        "superseded by 'adjutant.django.logging'.",
         default="adjutant.log",
     )
 )
