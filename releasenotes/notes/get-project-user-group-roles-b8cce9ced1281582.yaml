@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    The project user list API now returns all role assignments for a user
+    provided by Keystone user group memberships. This is provided in a new
+    ``group_roles`` attribute for each user, which lists role assignments
+    and provides details of the user group the role assignment is being
+    inherited from.
